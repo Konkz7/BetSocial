@@ -1,9 +1,9 @@
-/*
-CREATE TABLE IF NOT EXISTS Threads (
-    TID INT PRIMARY KEY AUTO_INCREMENT, -- Unique identifier for the thread
-    Title VARCHAR(255) NOT NULL,        -- Title of the thread, cannot be empty
-    Description TEXT,                   -- Optional description of the thread
-    Category VARCHAR(100),              -- Category of the thread (e.g., sports, gaming, etc.)
-    CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP -- Timestamp for thread creation
-);
-*/
+
+
+-- Insert a specific user if they do not already exist
+--INSERT INTO User_ (user_name, email, pass_word, phone_number,user_role)
+--SELECT 'test_user', 'test@example.com', 'hashed_password', '+1234567890',2
+--WHERE NOT EXISTS (
+ --   SELECT 1 FROM User_ WHERE email = 'test@example.com'
+--);
+

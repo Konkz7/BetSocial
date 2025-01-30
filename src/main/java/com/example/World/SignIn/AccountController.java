@@ -59,7 +59,7 @@ public class AccountController {
                 user.phone_number(),        // Retain the phone number
                 LocalDateTime.now(),          // Retain the creation timestamp
                 user.deleted_at(),
-                UserRole.roleToInt(UserRole.ADMIN),          // Retain the user role
+                UserRole.roleToInt(UserRole.USER),          // Retain the user role
                 user.u_version()            // Retain the version for optimistic locking
         );
 

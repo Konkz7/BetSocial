@@ -78,7 +78,7 @@ public class SuperUserController {
 
 
                 if (prediction.prediction().equals(bet.outcome())) {
-                    payout = (prediction.amount_bet() / chosen) * other;
+                    payout = (prediction.amount_bet() / chosen) * other * 0.8f;
                 } else {
                     payout = -prediction.amount_bet();
                 }

@@ -49,6 +49,9 @@ public class SecurityConfig {
             registry.requestMatchers("/req/***").permitAll();
             registry.requestMatchers("/superusers/***").hasAnyRole("SUPERUSER","ADMIN");
             registry.requestMatchers("/admin/***").hasRole("ADMIN");
+            registry.requestMatchers("/api/bets/***").hasRole("USER");
+            registry.requestMatchers("/api/predictions/***").hasRole("USER");
+
             registry.anyRequest().authenticated();
         })
         .formLogin(httpform -> {

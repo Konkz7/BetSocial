@@ -52,8 +52,6 @@ public class BetController {
     @PostMapping("/make")
     void makeBet(@Valid @RequestBody BetDTO bet) {
 
-
-
         betRepository.save(new Bet_(null, bet.tid(), Status.statusToInt(Status.ACTIVE), null, 0f,0f, bet.description(),
                 LocalDateTime.now(), null, LocalDateTime.now().plusSeconds(bet.secondsEndsAt())/*bet.ends_at()*/, null));
 
