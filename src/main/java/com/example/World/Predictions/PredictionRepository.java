@@ -8,13 +8,14 @@ import org.springframework.data.repository.ListCrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.List;
 
 public interface PredictionRepository extends ListCrudRepository<Prediction_,Long> {
     @Modifying
     @Transactional
-    @Query("UPDATE Prediction_ SET prediction = :prediction, amount_bet = :amount WHERE pid = :id")
+    @Query("UPDATE Prediction_ SET prediction = :prediction, amount_bet = :amount WHERE pid = :id AND deleted_at IS NULL")
     int updatePrediction(@Param("id") Long id,
                      @Param("prediction") Boolean prediction,
                      @Param("amount") Float amount);
@@ -24,7 +25,7 @@ public interface PredictionRepository extends ListCrudRepository<Prediction_,Lon
                   @Param("id") Long id);
 
     @Query("SELECT * FROM Prediction_ WHERE uid = :uid AND bid = :bid")
-    List<Prediction_> findByUidAndBid(
+    Optional<Prediction_> findByUidAndBid(
             @Param("uid") Long uid,
             @Param("bid") Long bid
 
@@ -48,9 +49,12 @@ public interface PredictionRepository extends ListCrudRepository<Prediction_,Lon
     int updateAmountAgainst(@Param("id") Long id,
                         @Param("amount") Float amount);
 
+
     @Modifying
     @Transactional
-    @Query("UPDATE Bet_ SET  amount_against = 0 , amount_for = 0 WHERE bid = :id")
-    int resetPredictionAmount(@Param("id") Long id);
+    @Query("UPDATE Bet_ SET  deleted_at = :deleted_at WHERE bid = :id")
+    int remove(
+            @Param("id") Long id,
+            @Param("deleted_at") LocalDateTime deleted_at);
 
 }

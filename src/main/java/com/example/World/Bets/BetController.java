@@ -50,7 +50,16 @@ public class BetController {
 
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/make")
-    void makeBet(@Valid @RequestBody BetDTO bet) {
+    void makeBet(@Valid @RequestBody BetDTO bet, HttpSession session){
+
+        Long uid = (Long) session.getAttribute("userId");
+        threadRepository.findById(bet.tid()).ifPresentOrElse(thread ->{
+            if(!thread.uid().equals(uid)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not the owner of this thread");
+            }
+        }, () -> {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Thread not found");
+        });
 
         betRepository.save(new Bet_(null, bet.tid(), Status.statusToInt(Status.ACTIVE), null, 0f,0f, bet.description(),
                 LocalDateTime.now(), null, LocalDateTime.now().plusSeconds(bet.secondsEndsAt())/*bet.ends_at()*/, null));
@@ -86,7 +95,8 @@ public class BetController {
         betRepository.makeDecision( decision.bid(), decision.reason(), decision.decision(), LocalDateTime.now(), userId );
     }
 
-    @PostMapping("/cancel/{bid}")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @PutMapping("/cancel/{bid}")
     void cancelBet(@PathVariable Long bid , HttpSession session){
         Long userId = (Long) session.getAttribute("userId");
         Optional<Bet_> optionalBet = betRepository.findById(bid);
