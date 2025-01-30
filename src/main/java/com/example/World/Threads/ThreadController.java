@@ -1,5 +1,7 @@
 package com.example.World.Threads;
 
+import com.example.World.Bets.BetRepository;
+import com.example.World.Bets.Status;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -16,9 +18,11 @@ public class ThreadController {
 
 
     private final ThreadRepository threadRepository;
+    private final BetRepository betRepository;
 
-    public ThreadController(ThreadRepository threadRepository) {
+    public ThreadController(ThreadRepository threadRepository, BetRepository betRepository) {
         this.threadRepository = threadRepository;
+        this.betRepository = betRepository;
     }
 
     @GetMapping("/all")
@@ -46,6 +50,33 @@ public class ThreadController {
     void makeThread(@Valid @RequestBody ThreadDTO thread, HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
         threadRepository.save(new Thread_(null,uid,thread.title(), thread.description(), thread.category(), LocalDateTime.now(),null,null));
+    }
+
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PutMapping("/remove/{tid}")
+    void removeThread(@PathVariable Long tid,HttpSession session){
+
+        Long userId = (Long) session.getAttribute("userId");
+        Optional<Thread_> optionalThread = threadRepository.findById(tid);
+        Thread_ thread;
+        if(optionalThread.isEmpty()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Thread not found");
+        }else{
+            thread = optionalThread.get();
+        }
+
+        if(!thread.uid().equals(userId)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not the owner of this thread");
+        }
+
+
+        threadRepository.remove(tid, LocalDateTime.now());
+
+        betRepository.findByThread(tid).forEach(bet -> {
+            betRepository.updateStatus(bet.bid(), Status.statusToInt(Status.CANCELLED));
+            betRepository.remove(bet.bid(), LocalDateTime.now());
+        });
+
     }
 
     @ResponseStatus(HttpStatus.NO_CONTENT)

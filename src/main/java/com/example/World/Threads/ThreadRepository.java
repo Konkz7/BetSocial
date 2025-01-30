@@ -7,10 +7,19 @@ import org.springframework.data.repository.ListCrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 public interface ThreadRepository extends ListCrudRepository<Thread_, Long> {
+
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Thread_ SET  deleted_at = :deleted_at WHERE tid = :id AND deleted_at IS NULL")
+    int remove(
+            @Param("id") Long id,
+            @Param("deleted_at") LocalDateTime deleted_at);
 
 
 /*

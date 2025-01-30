@@ -29,6 +29,11 @@ public interface BetRepository extends ListCrudRepository<Bet_,Long> {
                       @Param("status") Integer status);
 
 
+        @Query("SELECT * FROM Bet_ WHERE tid = :tid AND deleted_at IS NULL")
+        List<Bet_> findByThread(
+                @Param("tid") Long tid);
+
+
         @Modifying
         @Transactional
         @Query("UPDATE Bet_ SET status = :status WHERE bid = :id AND deleted_at IS NULL")
@@ -50,6 +55,13 @@ public interface BetRepository extends ListCrudRepository<Bet_,Long> {
                          @Param("decision") Boolean decision,
                          @Param("decided_at") LocalDateTime decided_at,
                          @Param("user_id") Long user_id);
+
+        @Modifying
+        @Transactional
+        @Query("UPDATE Bet_ SET  deleted_at = :deleted_at WHERE bid = :id AND deleted_at IS NULL")
+        int remove(
+                @Param("id") Long id,
+                @Param("deleted_at") LocalDateTime deleted_at);
 
 }
 
