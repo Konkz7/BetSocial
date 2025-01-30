@@ -1,0 +1,81 @@
+HELP.md
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+# Compiled class files
+*.class
+
+# Log files
+logs/
+*.log
+
+# IDE files
+#.idea/
+
+# Maven files
+mvnw
+mvnw.cmd
+/.mvn/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Environment and configuration files
+.env
+#*.properties
+*.yml
+*.yaml
+
+# Dependency and package files
+node_modules/
+
+# Test coverage reports
+coverage/
+jacoco.exec
+jacoco-report/
+
+# Spring Boot-specific files
+spring-boot-loader/
+
+# Security-related files
+keystore.jks
+*.pfx
+*.pem
+*.crt
+*.key
+*.der
+
+# Generated documentation
+/target/site/
+
