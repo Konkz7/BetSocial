@@ -12,7 +12,7 @@ import java.util.Optional;
 
 public interface UserRepository extends ListCrudRepository<User_, Long> {
 
-    @Query("SELECT * FROM User_ WHERE user_name = :username")
+    @Query("SELECT * FROM User_ WHERE user_name = :username AND deleted_at IS NULL")
     Optional<User_> findByUsername(String username);
 
 

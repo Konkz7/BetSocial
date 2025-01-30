@@ -15,7 +15,7 @@ public interface BetRepository extends ListCrudRepository<Bet_,Long> {
 
         @Modifying
         @Transactional
-        @Query("UPDATE Bet SET result = :result, amount_for = :amount_for , amount_against = :amount_against, status = :status WHERE bid = :id")
+        @Query("UPDATE Bet SET result = :result, amount_for = :amount_for , amount_against = :amount_against, status = :status WHERE bid = :id AND deleted_at IS NULL")
         int updateBet(@Param("id") Integer id,
                          @Param("outcome") Boolean outcome,
                          @Param("amount_for") Float amount_for,
@@ -24,20 +24,20 @@ public interface BetRepository extends ListCrudRepository<Bet_,Long> {
 
 
 
-        @Query("SELECT * FROM Bet_ WHERE status = :status")
+        @Query("SELECT * FROM Bet_ WHERE status = :status AND deleted_at IS NULL")
         List<Bet_> findByStatus(
                       @Param("status") Integer status);
 
 
         @Modifying
         @Transactional
-        @Query("UPDATE Bet_ SET status = :status WHERE bid = :id")
+        @Query("UPDATE Bet_ SET status = :status WHERE bid = :id AND deleted_at IS NULL")
         int updateStatus(@Param("id") Long id,
                       @Param("status") Integer status);
 
         @Modifying
         @Transactional
-        @Query("UPDATE Bet_ SET outcome = :outcome WHERE bid = :id")
+        @Query("UPDATE Bet_ SET outcome = :outcome WHERE bid = :id AND deleted_at IS NULL")
         int updateOutcome(@Param("id") Long id,
                          @Param("outcome") Boolean outcome);
 
