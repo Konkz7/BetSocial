@@ -30,6 +30,10 @@ public class UserService implements UserDetailsService {
         if(user.isPresent()){
             User_ user_obj = user.get();
 
+            if (user_obj.deleted_at() != null) {
+                throw new UsernameNotFoundException("User has been deleted");
+            }
+
             List<GrantedAuthority> authorities = getGrantedAuthorities(user_obj);
 
             // Create CustomUserDetails object directly

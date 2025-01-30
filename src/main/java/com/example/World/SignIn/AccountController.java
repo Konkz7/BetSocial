@@ -31,7 +31,7 @@ public class AccountController {
      * Accepts POST requests and validates the input.
      */
     @PostMapping("/register")
-    public ResponseEntity<String> register(@Valid @RequestBody User_ user) {
+    public ResponseEntity<String> register(@Valid @RequestBody User_ user, HttpSession session) {
 
         /*
         if (userRepository.existsByEmail(user.email())) {
@@ -39,10 +39,14 @@ public class AccountController {
         }
 
          */
-        if (userRepository.findByUsername(user.
+        if(session.getAttribute("userId") != null){
+            return ResponseEntity.badRequest().body("Logout first to register as a new user.");
+        } else if (userRepository.findByUsername(user.
                 user_name()).isPresent()) {
             return ResponseEntity.badRequest().body("Username is already in use.");
         }
+
+
 
         // Hash the password
         String hashedPassword = passwordEncoder.encode(user.pass_word());
@@ -55,43 +59,15 @@ public class AccountController {
                 hashedPassword,             // Use the hashed password
                 user.phone_number(),        // Retain the phone number
                 LocalDateTime.now(),          // Retain the creation timestamp
-                user.deleted_at(),
+                null,
                 UserRole.roleToInt(UserRole.USER),          // Retain the user role
-                user.u_version()            // Retain the version for optimistic locking
+                null            // Retain the version for optimistic locking
         );
 
         userRepository.save(userWithHashedPassword);
         return ResponseEntity.ok("User registered successfully!");
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestParam String username, @RequestParam String password, HttpSession session
-    ) {
-
-        User_ user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if(user.deleted_at() != null){
-            return ResponseEntity.badRequest().body("User is deleted");
-        }
-
-
-
-        if(session.getAttribute("userId") != null){
-            return ResponseEntity.badRequest().body("You are already logged in");
-        }
-
-        // Check if the provided password matches the hashed password in the database
-        if (passwordEncoder.matches(password, user.pass_word())) {
-
-
-            // Store user ID in the session
-            session.setAttribute("userId", user.uid());
-            return ResponseEntity.ok("Login successful!");
-        } else {
-            return ResponseEntity.badRequest().body("Invalid credentials");
-        }
-    }
 
     @GetMapping("/profile")
     public ResponseEntity<UserDTO> getProfile(HttpSession session) {
