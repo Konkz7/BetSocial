@@ -2,6 +2,7 @@ package com.example.World.Bets;
 
 
 import com.example.World.Threads.ThreadDTO;
+import com.example.World.Threads.ThreadRepository;
 import com.example.World.Threads.Thread_;
 import com.example.World.Users.User_;
 import jakarta.servlet.http.HttpSession;
@@ -13,15 +14,18 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @RequestMapping("/api/bets")
 @RestController
 public class BetController {
     private final BetRepository betRepository;
+    private final ThreadRepository threadRepository;
 
-    public BetController(BetRepository betRepository) {
+    public BetController(BetRepository betRepository, ThreadRepository threadRepository) {
         this.betRepository = betRepository;
+        this.threadRepository = threadRepository;
     }
 
     @GetMapping("/all")
@@ -48,6 +52,8 @@ public class BetController {
     @PostMapping("/make")
     void makeBet(@Valid @RequestBody BetDTO bet) {
 
+
+
         betRepository.save(new Bet_(null, bet.tid(), Status.statusToInt(Status.ACTIVE), null, 0f,0f, bet.description(),
                 LocalDateTime.now(), null, LocalDateTime.now().plusSeconds(bet.secondsEndsAt())/*bet.ends_at()*/, null));
 
@@ -56,14 +62,27 @@ public class BetController {
     @PostMapping("/decide")
     void decideOutcome(@Valid @RequestBody DecisionDTO decision, HttpSession session){
         Long userId = (Long) session.getAttribute("userId");
-        Optional<Bet_> bet = betRepository.findById(decision.bid());
-        if(bet.isEmpty()){
+        Optional<Bet_> optionalBet = betRepository.findById(decision.bid());
+        Bet_ bet;
+        if(optionalBet.isEmpty()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "bet not found");
+        }else{
+            bet = optionalBet.get();
         }
 
-        if(!(bet.get().status() == Status.statusToInt(Status.PENDING) && bet.get().outcome() == null)){
+        if(!(bet.status() == Status.statusToInt(Status.PENDING) && bet.outcome() == null)){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "bet cannot be decided at this time");
         }
+
+        threadRepository.findById(bet.tid()).ifPresentOrElse(thread -> {
+            if (!userId.equals( thread.uid())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not the owner of this bet");
+            }
+        }, () -> {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Bet has no valid thread");
+        });
+
+
 
         betRepository.updateOutcome(decision.bid(), decision.decision());
         betRepository.makeDecision( decision.bid(), decision.reason(), decision.decision(), LocalDateTime.now(), userId );
