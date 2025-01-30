@@ -8,14 +8,11 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/req")
@@ -71,9 +68,18 @@ public class AccountController {
     public ResponseEntity<String> login(@RequestParam String username, @RequestParam String password, HttpSession session
     ) {
 
-
         User_ user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if(user.deleted_at() != null){
+            return ResponseEntity.badRequest().body("User is deleted");
+        }
+
+
+
+        if(session.getAttribute("userId") != null){
+            return ResponseEntity.badRequest().body("You are already logged in");
+        }
 
         // Check if the provided password matches the hashed password in the database
         if (passwordEncoder.matches(password, user.pass_word())) {
