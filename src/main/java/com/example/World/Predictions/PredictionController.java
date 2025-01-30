@@ -2,7 +2,9 @@ package com.example.World.Predictions;
 
 
 import com.example.World.Bets.BetRepository;
+import com.example.World.Bets.Bet_;
 import com.example.World.Threads.ThreadDTO;
+import com.example.World.Threads.ThreadRepository;
 import com.example.World.Threads.Thread_;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -19,11 +21,13 @@ import java.util.Optional;
 public class PredictionController {
     private final PredictionRepository predictionRepository;
     private final BetRepository betRepository;
+    private final ThreadRepository threadRepository;
 
 
-    public PredictionController(PredictionRepository predictionRepository, BetRepository betRepository) {
+    public PredictionController(PredictionRepository predictionRepository, BetRepository betRepository, ThreadRepository threadRepository) {
         this.predictionRepository = predictionRepository;
         this.betRepository = betRepository;
+        this.threadRepository = threadRepository;
     }
 
     @GetMapping("/all")
@@ -52,12 +56,30 @@ public class PredictionController {
 
 
         Long uid = (Long) session.getAttribute("userId");
+        Bet_ bet;
 
-        if (betRepository.findById(prediction.bid()).get().status() != 0) {
+        Optional<Bet_> optionalBet = betRepository.findById(prediction.bid());
+        if (optionalBet.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Bet not found");
+        } else {
+            bet = optionalBet.get();
+        }
+
+
+        if (bet.status() != 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bet isnt active anymore");
-        }else if(!predictionRepository.findByUidAndBid(uid,prediction.bid()).isEmpty()){
+        } else if(!predictionRepository.findByUidAndBid(uid,prediction.bid()).isEmpty()){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User has already made a prediction for this bid");
         }
+
+        threadRepository.findById(bet.tid()).ifPresentOrElse((thread -> {
+            if(thread.uid().equals(uid)){
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User cant make a prediction on their own bet");
+                }
+            }),
+            () -> {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Thread not found");
+            });
 
         predictionRepository.save(new Prediction_(null,prediction.bid(),uid, prediction.prediction(),prediction.amount_bet(),0f,LocalDateTime.now(),null,null));
 

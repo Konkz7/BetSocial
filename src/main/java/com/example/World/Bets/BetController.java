@@ -85,6 +85,34 @@ public class BetController {
         betRepository.updateOutcome(decision.bid(), decision.decision());
         betRepository.makeDecision( decision.bid(), decision.reason(), decision.decision(), LocalDateTime.now(), userId );
     }
+
+    @PostMapping("/cancel/{bid}")
+    void cancelBet(@PathVariable Long bid , HttpSession session){
+        Long userId = (Long) session.getAttribute("userId");
+        Optional<Bet_> optionalBet = betRepository.findById(bid);
+        Bet_ bet;
+        if(optionalBet.isEmpty()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "bet not found");
+        }else{
+            bet = optionalBet.get();
+        }
+
+        if(!(bet.status() == Status.statusToInt(Status.PENDING) && bet.outcome() != null)){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "bet cannot be cancelled at this time");
+        }
+
+        threadRepository.findById(bet.tid()).ifPresentOrElse(thread -> {
+            if (!userId.equals( thread.uid())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not the owner of this bet");
+            }
+        }, () -> {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Bet has no valid thread");
+        });
+
+        betRepository.updateStatus(bid, Status.statusToInt(Status.CANCELLED));
+    }
+
+
 /*
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping("/update/{bid}")
