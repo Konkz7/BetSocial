@@ -43,22 +43,8 @@ public class MessageController {
         messageRepository.save(message);
     }
 
-    /*
-    ***LEAVING MESSAGE STORING UNTIL WE IMPLEMENT/PLAN OTHER USER INTERACTIONS
-    @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping("/make")
-    void makeThread(@Valid @RequestBody ThreadDTO thread, HttpSession session){
-        Long uid = (Long) session.getAttribute("userId");
-        threadRepository.save(new Thread_(null,uid,thread.title(), thread.description(), thread.category(), LocalDateTime.now(),null,null));
-    }
 
 
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PutMapping("/update/{mid}")
-    void update(@Valid @RequestBody Message message, @PathVariable Integer mid){
-        messageRepository.updateMessage(mid, message.result(), message.amount(), message.status());
-    }
-*/
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/delete/{mid}")
     void delete(@PathVariable Long mid){

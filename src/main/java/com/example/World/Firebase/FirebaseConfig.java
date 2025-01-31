@@ -11,7 +11,7 @@ import java.io.IOException;
 @Configuration
 public class FirebaseConfig {
     @Bean
-    public void initializeFirebase() throws IOException {
+    public int initializeFirebase() throws IOException {
         FileInputStream serviceAccount = new FileInputStream("src/main/resources/firebaseAPI.json");
 
         FirebaseOptions.Builder builder = FirebaseOptions.builder();
@@ -22,5 +22,6 @@ public class FirebaseConfig {
         if (FirebaseApp.getApps().isEmpty()) {
             FirebaseApp.initializeApp(options);
         }
+        return 1;
     }
 }

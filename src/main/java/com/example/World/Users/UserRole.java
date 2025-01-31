@@ -9,8 +9,8 @@ public enum UserRole {
     UserRole(int i) {
     }
 
-    public static int roleToInt(UserRole role){
-        return switch (role) {
+    public int toInt(){
+        return switch (this) {
             case USER -> 0;
             case SUPERUSER -> 1;
             case ADMIN -> 2;

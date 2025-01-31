@@ -56,7 +56,7 @@ public class Startup {
                 phoneNumber,        // Retain the phone number
                 LocalDateTime.now(),          // Retain the creation timestamp
                 null,
-                UserRole.roleToInt(role),          // Retain the user role
+                role.toInt(),          // Retain the user role
                 null            // Retain the version for optimistic locking
         );
 

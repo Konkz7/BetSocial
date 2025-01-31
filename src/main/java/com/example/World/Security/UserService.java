@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static com.example.World.Users.UserRole.*;
+
 @Service
 public class UserService implements UserDetailsService {
 
@@ -55,11 +57,11 @@ public class UserService implements UserDetailsService {
 
     private List<GrantedAuthority> getGrantedAuthorities(User_ user_obj) {
         List<GrantedAuthority> authorities = new ArrayList<>();
-        if(user_obj.user_role() == UserRole.roleToInt(UserRole.USER)){
+        if(user_obj.user_role() == USER.toInt()){
             authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
-        } else if (user_obj.user_role() == UserRole.roleToInt(UserRole.SUPERUSER)){
+        } else if (user_obj.user_role() == SUPERUSER.toInt()){
             authorities = List.of(new SimpleGrantedAuthority("ROLE_SUPERUSER"));
-        } else if (user_obj.user_role() == UserRole.roleToInt(UserRole.ADMIN)){
+        } else if (user_obj.user_role() == ADMIN.toInt()){
             authorities = List.of(new SimpleGrantedAuthority("ROLE_ADMIN"),new SimpleGrantedAuthority("ROLE_SUPERUSER"));
         }
         return authorities;

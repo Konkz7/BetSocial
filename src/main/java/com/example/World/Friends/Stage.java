@@ -1,16 +1,10 @@
 package com.example.World.Friends;
 
 public enum Stage {
-    NONE(0),
-    PENDING(1),
-    ACCEPTED(2),
-    REJECTED(3);
-
-    private final int stage;
-
-    Stage(int stage) {
-        this.stage = stage;
-    }
+    NONE,
+    PENDING,
+    ACCEPTED,
+    REJECTED;
 
     public int toInt (){
         return switch (this) {

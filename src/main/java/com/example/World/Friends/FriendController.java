@@ -1,32 +1,53 @@
 package com.example.World.Friends;
 
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/friends")
+@RequestMapping("/api/friends")
 public class FriendController {
-    private FriendService friendService;
+    private final FriendService friendService;
 
-    @PostMapping("/send")
-    public String sendFriendRequest(@RequestParam Long requesterId, @RequestParam Long receiverId) {
-        return friendService.sendFriendRequest(requesterId, receiverId);
+    public FriendController(FriendService friendService) {
+        this.friendService = friendService;
     }
 
-    @PostMapping("/accept/{friendshipId}")
+    @PostMapping("/send")
+    public String sendFriendRequest(@RequestParam Long receiverId , HttpSession session) {
+        Long uid = (Long) session.getAttribute("userId");
+        return friendService.sendFriendRequest(uid, receiverId);
+    }
+
+    @PutMapping("/accept/{friendshipId}")
     public String acceptFriendRequest(@PathVariable Long friendshipId) {
         return friendService.acceptFriendRequest(friendshipId);
     }
 
-    @PostMapping("/reject/{friendshipId}")
+    @PutMapping("/reject/{friendshipId}")
     public String rejectFriendRequest(@PathVariable Long friendshipId) {
         return friendService.rejectFriendRequest(friendshipId);
     }
 
-    @GetMapping("/list/{userId}")
-    public List<Friendship_> getFriends(@PathVariable Long userId) {
-        return friendService.getFriends(userId);
+    @GetMapping("/received")
+    public List<Friendship_> getReceivedFriendRequests(HttpSession session) {
+        Long uid = (Long) session.getAttribute("userId");
+        return friendService.getReceivedFriendRequests(uid);
+    }
+
+    @GetMapping("/sent")
+    public List<Friendship_> getSentFriendRequests(HttpSession session) {
+        Long uid = (Long) session.getAttribute("userId");
+        return friendService.getSentFriendRequests(uid);
+    }
+
+
+    @GetMapping("/list")
+    public List<Friendship_> getFriends(HttpSession session) {
+        Long uid = (Long) session.getAttribute("userId");
+        return friendService.getFriends(uid);
     }
 }

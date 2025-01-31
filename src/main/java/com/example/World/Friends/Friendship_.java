@@ -14,6 +14,6 @@ public record Friendship_(
 
         Integer gid,
         @NonNull
-        Integer f_status
+        Integer stage
 ) {
 }

@@ -16,6 +16,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 
+import static com.example.World.Users.UserRole.USER;
+
 @RestController
 @RequestMapping("/req")
 public class AccountController {
@@ -65,7 +67,7 @@ public class AccountController {
                 user.phone_number(),        // Retain the phone number
                 LocalDateTime.now(),          // Retain the creation timestamp
                 null,
-                UserRole.roleToInt(UserRole.USER),          // Retain the user role
+                USER.toInt(),          // Retain the user role
                 null            // Retain the version for optimistic locking
         );
 
