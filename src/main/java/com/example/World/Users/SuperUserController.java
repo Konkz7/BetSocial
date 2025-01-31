@@ -48,6 +48,10 @@ public class SuperUserController {
         return user.get();
     }
 
+    @GetMapping("/bets")
+    List<Bet_> findAllBets(){
+        return betRepository.findAll();
+    }
 
     @PostMapping("/approval")
     void decideApproval(@RequestBody DecisionDTO decision, HttpSession session){

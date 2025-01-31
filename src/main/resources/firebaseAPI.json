@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "betsocial-e7e93",
+  "private_key_id": "89bac29c10986b4d5a2d2e0a556c08385a20f321",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCh2O1rOBRWxGpn\nozGO2z/iEofwqVQZy9E1uoYQmmNW4/wZi+00d3rA6AWlDL+Ps9IfKb3iYQsW+1Hi\nq6QOv/m8x9ePHwGiYCUDLtcTVXnHxpKv8g/sPPnpFveysLEp0UPxcRZcC6+J70OV\noGnIfHomnD4w5PtAuLf9NdqxDSXSY5+hpQUDuCKQxuB0x0rBPd9jOZaAhNNh6SLa\nBuPFFo8FTTpGALX+C3faLbVvbspkFEUdpCFvv1RBVEzrXqLWD6jGt/1MYeAMeqQ2\nT0D/kyB4mdewqIPJK0D8N1PBztw7cZFQDbg6eW7CrCATLfhPs078ysiSoRzCvcvx\nXEWcDz/RAgMBAAECggEAA3DwwduJM6vVERdrQKTE4cQ3+ZgJFKwUqnw4+OIGeBDM\ngbjL2iZq8M5yHcd0zHvz3ROisN00Opis/dk9SY6/gyn62WU88DhT+yKIIkYqSuMM\nCAOJHwJQJDqHuVf4SVnEpH3dfkcllCTHIqecri2G3ZqreBfLR43R5CdsqyBq4CNz\nU8X7KDnO6tOb2kX8EDo15Ci+/pMgChsBoPhsbJECShFzRhPbamKitxIjFKizPhVs\nMZuyp/s/m6XkWRyx1lMyqW7gpg8ry9v3hg6V77IpksCTY6inr7jZLvmYSN2ulU1g\nYl28k5rGd5l0zNSVwX8jJ9blCBenzdvVY4n2dUue4QKBgQDYSIvfIEBqo1wJy+WX\n0Ys79Ycw46ye6hp/JJgg9/ns597IJYEBse2h7TV6vVQh60+AFziwHVHOABIAp/7G\nmI33C+JCF3G8sCdiPGm4P4mz4ghjGwCVCDSW2Szcj8s/k3/blBFj7klWNGpFpt58\ndXc+1hdCCV2I7yoITUqq5xVd8QKBgQC/kVnr5h1t11fn0xYclNJdjDEcg6RFpjL5\nvTVGyB4p+NPUd/KcINdrK5w9Kt7LpciiV7NU0A0f8V1OIlH8xxrt4o6GgLKSthqI\nghSovuqXJWefO6kKWHekBrhXfPoxuS/Irn6eeucLEF3pY69zBN2L5rZOFGJ+3lV5\nAXt76N+f4QKBgQDPdJaliPwAzXzk8Kzi+N2Cv7nTDS9wpsCPn/xD81fJA4fPlxmt\nFIwJO8yGVMA0YM864AtB8n2bCLo74uggeggCJWX7Wx1/jb/ZHHWTg26EGpVM6oOe\nb+ZxoxLC5TJhYwvLBLXBkrjJdTFSagMSgmHE5fodH3qWdEFvASRT1Z/LIQKBgHPF\nLaioeqSE/XT2VmiTb8ZlENEApWgKFshili3ehowq+ilvC8la95Sm2FcG73n3CJdD\nlPbufOAPB6pOh2nSEe4teqDCaijLsKFKq52HM1KAomzSq0e7SyJvhTwqJTGjjsMi\n4RZ5g+Nl0rtXKRLDn/gKR6ZMH3I4f0MPqEar52lBAoGAUCMhyM8zoAYQWHTqrtk9\nFKirYQuZueEF91LMJP1jv1IoFMZdqbfMBrHCnMWN6mtDPBNr0BIrgvO+rvh6TCBF\nWLs/mKjQMISWR6VSgO+Mpyj7nLbqyv6uX23z8YxTBOFCIrOJAnNbZ9RPBv4YPzh4\n3YZbH3qLCPdfDxzgLqAzSMg=\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@betsocial-e7e93.iam.gserviceaccount.com",
+  "client_id": "118218780621938718465",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40betsocial-e7e93.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

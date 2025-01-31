@@ -1,5 +1,6 @@
 package com.example.World.SignIn;
 
+import com.example.World.Firebase.AuthService;
 import com.example.World.Users.UserDTO;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.UserRole;
@@ -20,10 +21,13 @@ public class AccountController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthService authService;
+    //private final OtpService otpService;
 
-    public AccountController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AccountController(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthService authService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.authService = authService;
     }
 
     /**
@@ -68,6 +72,27 @@ public class AccountController {
         return ResponseEntity.ok("User registered successfully!");
     }
 
+    @PostMapping("/send-email-verification")
+    public String sendVerificationEmail(@RequestParam String email) throws Exception {
+        return authService.sendEmailVerification(email);
+    }
+
+    @GetMapping("/check-email-verification")
+    public boolean checkVerificationEmail(@RequestParam String email) throws Exception {
+        return authService.checkEmailVerified(email);
+    }
+/*
+    @PostMapping("/send-otp")
+    public String sendOtp(@RequestParam String phoneNumber) throws Exception {
+        return otpService.sendOtp(phoneNumber);
+    }
+
+    @PostMapping("/verify-otp")
+    public boolean verifyOtp(@RequestParam String otp, @RequestParam String verificationId) {
+        return otpService.verifyOtp(otp, verificationId);
+    }
+
+ */
 
     @GetMapping("/profile")
     public ResponseEntity<UserDTO> getProfile(HttpSession session) {
