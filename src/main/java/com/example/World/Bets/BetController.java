@@ -61,7 +61,7 @@ public class BetController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Thread not found");
         });
 
-        betRepository.save(new Bet_(null, bet.tid(), Status.statusToInt(Status.ACTIVE), null, 0f,0f, bet.description(),
+        betRepository.save(new Bet_(null, bet.tid(), Status.ACTIVE.toInt(), null, 0f,0f, bet.description(),
                 LocalDateTime.now(), null, LocalDateTime.now().plusSeconds(bet.secondsEndsAt())/*bet.ends_at()*/, null));
 
     }
@@ -77,7 +77,7 @@ public class BetController {
             bet = optionalBet.get();
         }
 
-        if(!(bet.status() == Status.statusToInt(Status.PENDING) && bet.outcome() == null)){
+        if(!(bet.status() == Status.PENDING.toInt() && bet.outcome() == null)){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "bet cannot be decided at this time");
         }
 
@@ -107,7 +107,7 @@ public class BetController {
             bet = optionalBet.get();
         }
 
-        if(!(bet.status() == Status.statusToInt(Status.PENDING) && bet.outcome() != null)){
+        if(!(bet.status() == Status.PENDING.toInt() && bet.outcome() != null)){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "bet cannot be cancelled at this time");
         }
 
@@ -119,7 +119,7 @@ public class BetController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Bet has no valid thread");
         });
 
-        betRepository.updateStatus(bid, Status.statusToInt(Status.CANCELLED));
+        betRepository.updateStatus(bid, Status.CANCELLED.toInt());
     }
 
 

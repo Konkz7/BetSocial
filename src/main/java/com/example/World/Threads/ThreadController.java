@@ -73,7 +73,7 @@ public class ThreadController {
         threadRepository.remove(tid, LocalDateTime.now());
 
         betRepository.findByThread(tid).forEach(bet -> {
-            betRepository.updateStatus(bet.bid(), Status.statusToInt(Status.CANCELLED));
+            betRepository.updateStatus(bet.bid(), Status.CANCELLED.toInt());
             betRepository.remove(bet.bid(), LocalDateTime.now());
         });
 

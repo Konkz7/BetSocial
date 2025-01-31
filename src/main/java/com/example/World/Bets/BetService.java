@@ -16,7 +16,7 @@ public class BetService {
 
     @Scheduled(fixedRate = 60000) // Runs every 60 seconds
     public void closeExpiredBets() {
-        List<Bet_> activeBets = betRepository.findByStatus(Status.statusToInt(Status.ACTIVE));
+        List<Bet_> activeBets = betRepository.findByStatus(Status.ACTIVE.toInt());
 
         List<Bet_> expiredBets = activeBets.stream()
                 .filter(bet -> bet.ends_at().isBefore(LocalDateTime.now()))
@@ -25,7 +25,7 @@ public class BetService {
         System.out.println("Expired bets: " + expiredBets.size());
 
         for (Bet_ bet : expiredBets) {
-            betRepository.updateStatus(bet.bid(), Status.statusToInt(Status.PENDING)); // Mark bet as closed
+            betRepository.updateStatus(bet.bid(), Status.PENDING.toInt()); // Mark bet as closed
         }
     }
 }

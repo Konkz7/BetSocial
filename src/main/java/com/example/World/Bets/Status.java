@@ -13,8 +13,8 @@ public enum Status {
 
     }
 
-    public static int statusToInt(Status status){
-        return switch (status) {
+    public int toInt(){
+        return switch (this) {
             case ACTIVE -> 0;
             case PENDING -> 1;
             case ACCEPTED -> 2;

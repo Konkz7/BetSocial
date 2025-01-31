@@ -8,8 +8,8 @@ public enum Sort {
 
     }
 
-    public static int sortToInt(Sort sort){
-        return switch (sort) {
+    public int sortToInt(){
+        return switch (this) {
             case PRIVATE -> 0;
             case GROUP -> 1;
         };

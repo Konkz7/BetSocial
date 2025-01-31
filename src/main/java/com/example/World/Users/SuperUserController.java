@@ -65,7 +65,7 @@ public class SuperUserController {
             bet = user_bet.get();
         }
 
-        if(bet.status() != Status.statusToInt(Status.PENDING) || bet.outcome() == null ){
+        if(bet.status() != Status.PENDING.toInt() || bet.outcome() == null ){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bet isn't in the correct state");
         }
 
@@ -89,9 +89,9 @@ public class SuperUserController {
                 predictionRepository.updateAmountWon(prediction.pid(), payout);
             }
 
-            betRepository.updateStatus(bet.bid(), Status.statusToInt(Status.APPROVED));
+            betRepository.updateStatus(bet.bid(), Status.APPROVED.toInt());
         }else{
-            betRepository.updateStatus(bet.bid(), Status.statusToInt(Status.REJECTED));
+            betRepository.updateStatus(bet.bid(), Status.REJECTED.toInt());
         }
 
     }
