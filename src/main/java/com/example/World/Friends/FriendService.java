@@ -33,6 +33,13 @@ public class FriendService {
         return "Friend request accepted!";
     }
 
+    public String rejectFriendRequest(Long friendshipId) {
+        Friendship_ friendship = friendRepository.findById(friendshipId).orElseThrow();
+        friendRepository.updateFriendship(friendshipId,Stage.REJECTED.toInt());
+        friendRepository.save(friendship);
+        return "Friend request accepted!";
+    }
+
     public List<Friendship_> getFriends(Long userId) {
         return friendRepository.findByRequesterIdAndStatus(userId, Stage.ACCEPTED.toInt());
     }
