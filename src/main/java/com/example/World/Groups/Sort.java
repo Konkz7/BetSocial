@@ -1,12 +1,10 @@
 package com.example.World.Groups;
 
 public enum Sort {
-    PRIVATE(0),
-    GROUP(1);
+    PRIVATE,
+    GROUP;
 
-    Sort(int i) {
 
-    }
 
     public int sortToInt(){
         return switch (this) {

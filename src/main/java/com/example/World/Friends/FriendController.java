@@ -16,8 +16,8 @@ public class FriendController {
         this.friendService = friendService;
     }
 
-    @PostMapping("/send")
-    public String sendFriendRequest(@RequestParam Long receiverId , HttpSession session) {
+    @PostMapping("/send/{receiverId}")
+    public String sendFriendRequest(@PathVariable Long receiverId , HttpSession session) {
         Long uid = (Long) session.getAttribute("userId");
         return friendService.sendFriendRequest(uid, receiverId);
     }

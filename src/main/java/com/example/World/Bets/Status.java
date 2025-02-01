@@ -1,17 +1,13 @@
 package com.example.World.Bets;
 
 public enum Status {
-    ACTIVE(0),
-    PENDING(1),
-    ACCEPTED(2),
-    REJECTED(3),
-    CANCELLED(4),
-    APPROVED(5)
-   ;
+    ACTIVE,
+    PENDING,
+    ACCEPTED,
+    REJECTED,
+    CANCELLED,
+    APPROVED;
 
-    Status(int i) {
-
-    }
 
     public int toInt(){
         return switch (this) {

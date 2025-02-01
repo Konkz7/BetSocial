@@ -2,12 +2,10 @@ package com.example.World.Users;
 
 
 public enum UserRole {
-    USER(0),
-    SUPERUSER(1),
-    ADMIN(2);
+    USER,
+    SUPERUSER,
+    ADMIN;
 
-    UserRole(int i) {
-    }
 
     public int toInt(){
         return switch (this) {
