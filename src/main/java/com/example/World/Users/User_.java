@@ -34,6 +34,11 @@ public record User_(
         @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid phone number format")
         String phone_number, // Phone number in international format, unique and validated
 
+        String verification_token, // Token used for email verification
+
+        @NonNull
+        Boolean is_verified, // Boolean to check if the email is verified
+
         @NonNull
         LocalDateTime created_at, // Timestamp of account creation (defaulted in the database)
 

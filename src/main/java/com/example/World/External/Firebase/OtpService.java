@@ -1,9 +1,8 @@
-package com.example.World.Firebase;
+package com.example.World.External.Firebase;
 
-/*
+
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
-import com.google.firebase.auth.PhoneAuthProvider;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,10 +12,8 @@ public class OtpService {
                 .createCustomToken(phoneNumber);
     }
 
-    public boolean verifyOtp(String otp, String verificationId) {
-        return PhoneAuthProvider.getCredential(verificationId, otp) != null;
-    }
+
 }
 
- */
+
 

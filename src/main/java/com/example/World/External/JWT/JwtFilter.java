@@ -1,4 +1,4 @@
-package com.example.World.JWT;
+package com.example.World.External.JWT;
 
 
 import io.jsonwebtoken.JwtException;

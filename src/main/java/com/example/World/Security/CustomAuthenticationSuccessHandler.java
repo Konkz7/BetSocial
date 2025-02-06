@@ -22,9 +22,12 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
         CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
 
+        /*
         if(session.getAttribute("userId") != null){
             throw new RuntimeException("User is already logged in.");
         }
+
+         */
 
         session.setAttribute("userId",user.getUserId());
         System.out.println("User " + authentication.getName() + " has logged in.");
@@ -32,6 +35,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         // Example: Redirect to a specific URL or return a response
         response.setStatus(HttpServletResponse.SC_OK);
         response.getWriter().write("{\"message\":\"Login successful!\"}");
+        response.getWriter().write("{\"userId\":\"" + user.getUserId() + "\"}");
         response.getWriter().flush();
     }
 

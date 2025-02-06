@@ -54,6 +54,8 @@ public class Startup {
                 username + "03@live.co.uk",               // Retain the email
                 hashedPassword,             // Use the hashed password
                 phoneNumber,        // Retain the phone number
+                null, // Token used for email verification
+                true, // Boolean to check if the email is verified
                 LocalDateTime.now(),          // Retain the creation timestamp
                 null,
                 role.toInt(),          // Retain the user role

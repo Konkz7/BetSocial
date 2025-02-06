@@ -1,4 +1,4 @@
-package com.example.World.Firebase;
+package com.example.World.External.Firebase;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.UserRecord;

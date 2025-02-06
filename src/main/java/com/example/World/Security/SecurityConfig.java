@@ -1,5 +1,6 @@
 package com.example.World.Security;
 
+import com.example.World.Users.UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -55,7 +56,7 @@ public class SecurityConfig {
             registry.anyRequest().authenticated();
         })
         .formLogin(httpform -> {
-            httpform.loginProcessingUrl("/req/login")
+            httpform.loginProcessingUrl("/login")
                     .successHandler(new CustomAuthenticationSuccessHandler());
         })
         .build();

@@ -15,5 +15,26 @@ public interface UserRepository extends ListCrudRepository<User_, Long> {
     @Query("SELECT * FROM User_ WHERE user_name = :username AND deleted_at IS NULL")
     Optional<User_> findByUsername(String username);
 
+    @Query("SELECT * FROM User_ WHERE email = :email AND deleted_at IS NULL")
+    Optional<User_> findByEmail(String email);
+
+    @Query("SELECT * FROM User_ WHERE verification_token = :token AND deleted_at IS NULL")
+    Optional<User_> findByVerificationToken(String token);
+
+    @Query(value = "SELECT EXISTS (SELECT 1 FROM User_ WHERE phone_number = :phone_number AND deleted_at IS NULL)")
+    boolean existsByPhoneNumber(@Param("phone_number") String phone_number);
+
+    @Query(value = "SELECT EXISTS (SELECT 1 FROM User_ WHERE email = :email AND deleted_at IS NULL)")
+    boolean existsByEmail(@Param("email") String email);
+
+    @Query(value = "SELECT EXISTS (SELECT 1 FROM User_ WHERE user_name = :user_name AND deleted_at IS NULL)")
+    boolean existsByUserName(@Param("user_name") String user_name);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE User_ SET is_verified = true , verification_token = NULL WHERE uid = :id AND deleted_at IS NULL")
+    int verify(@Param("id") Long id);
+
+
 
 }

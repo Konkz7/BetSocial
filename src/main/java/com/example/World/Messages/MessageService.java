@@ -4,10 +4,12 @@ import com.example.World.Groups.GroupRepository;
 import com.example.World.Groups.Group_;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.User_;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Service
 public class MessageService {
 
     private final MessageRepository messageRepository;
