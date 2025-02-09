@@ -22,12 +22,12 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
         CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
 
-        /*
+
         if(session.getAttribute("userId") != null){
             throw new RuntimeException("User is already logged in.");
         }
 
-         */
+
 
         session.setAttribute("userId",user.getUserId());
         System.out.println("User " + authentication.getName() + " has logged in.");
