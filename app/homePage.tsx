@@ -1,4 +1,4 @@
-import React, { useState} from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import {
   MessageCircle,
@@ -20,6 +22,9 @@ import {
   Menu,
   CirclePlus,
 } from "lucide-react-native";
+import { useFocusEffect ,} from "@react-navigation/native";
+import axios, { Axios, AxiosError } from "axios";
+import { IP_STRING } from "./Constants";
 
 const categories = [
   "All",
@@ -33,10 +38,49 @@ const categories = [
 
 const HomeScreen = ({navigation}:any) => {
   const [activeCategory, setActiveCategory] = useState("All");
-  const [activePage , setActivePage] = useState("Home");
+  const [threads, setActiveThreads] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true); // Show loading indicator
+
+  const getAllthreads = async() =>{
+    try {
+      const threadResponse = await axios.get(IP_STRING + "/api/threads/all");
+      const updatedThreads = await Promise.all(threadResponse.data.map(async (thread: any) => ({
+        ...thread,
+        user: await getUserFromThread(thread), // Await user data resolution
+      })));
+    
+      setActiveThreads(updatedThreads);
+    } catch (error) {
+      Alert.alert("Error:", "Failed to fetch threads");
+    }finally {
+      setLoading(false); // Hide loading indicator
+    }
+  }
+
+  const getUserFromThread = async(threadObject:any) => {
+    try {
+      const userResponse = await axios.get(IP_STRING + "/api/users/"+threadObject.uid);
+      return userResponse.data;
+    } catch (error) {
+      Alert.alert("Error:", "User ${threadObject.uid} could not be fetched");
+    }
+  }
+  
+  useFocusEffect(
+      useCallback(() => {
+        console.log("Screen is focused! Perform refresh or action here.");  
+        getAllthreads();
+        
+        return () => {
+          console.log("Screen is unfocused! Cleanup if needed.");
+        console.log(threads)
+
+        };
+      }, [])
+  );
 
   return (
-    <SafeAreaView style={styles.container} >
+    <SafeAreaView style={styles.container}  >
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
@@ -71,22 +115,28 @@ const HomeScreen = ({navigation}:any) => {
 
 
       {/* Main Content */}
+    {loading ? (
+        <ActivityIndicator size="large" color="blue" /> // Show loading spinner
+      ) : (
       <FlatList
-        data={[1, 2, 3, 4,5,6]}
-        keyExtractor={(item) => item.toString()}
+        data={threads}
+        ListEmptyComponent={<Text>No data available</Text>}
+        keyExtractor={(item) => item.tid.toString()}
         removeClippedSubviews={false}
-        renderItem={() => (
+        onRefresh={getAllthreads} // Enable pull-to-refresh
+        refreshing={loading} // Show loading state during refresh
+        renderItem={( item ) => (
+
           <View style={styles.post}>
             <View style={styles.postHeader}>
               <View style={styles.avatar} />
               <View>
-                <Text style={styles.userName}>User Name</Text>
+                <Text style={styles.userName}>{ threads.at(item.index).user.user_name }</Text>
                 <Text style={styles.timestamp}>2h ago</Text>
               </View>
             </View>
             <Text style={styles.postText}>
-              Who's betting on the championship game tonight? I've got a good
-              feeling about the underdogs! 🏆
+                {threads.at(item.index).title}
             </Text>
             <View style={styles.postFooter}>
               <View style={styles.actionsLeft}>
@@ -113,6 +163,7 @@ const HomeScreen = ({navigation}:any) => {
           </View>
         )}
       />
+    )}
 
       
     </SafeAreaView>
