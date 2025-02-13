@@ -47,9 +47,9 @@ const LoginScreen = ({navigation}:any) => {
 
   const handleLogin = async () => {
     try {
-      const response = await axios.post("http://192.168.0.103:8080/login?username="+email+"&password="+password)
-      console.log("Login successful!", response.data);
-      const token = response.data.token;
+      const response = await axios.post(IP_STRING + "/login?username="+email+"&password="+password);
+      console.log("Login request sent!", response.data);
+      console.log("Login request sent!", response.status);
 
       // Store token for future API calls
       //await AsyncStorage.setItem("authToken", token);
@@ -59,7 +59,7 @@ const LoginScreen = ({navigation}:any) => {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error("Axios error:", error.response?.data);
-        Alert.alert("Login Failed", error.response?.data || "Invalid credentials.");
+        Alert.alert("Login Failed", JSON.stringify(error.response?.data) || "Invalid credentials.");
       } else {
         console.error("Unexpected error:", (error as Error).message);
         Alert.alert("Error", "Something went wrong.");
