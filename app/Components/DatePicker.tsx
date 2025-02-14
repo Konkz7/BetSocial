@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { View, TouchableOpacity, Text, StyleSheet, Platform } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 interface DatePickerButtonProps {
@@ -19,6 +19,13 @@ const DatePickerButton: React.FC<DatePickerButtonProps> = ({ onDateSelect }) => 
   };
 
   const handleConfirm = (date: Date) => {
+
+    const now = new Date();
+    if(date.getTime() <= now.getTime()){
+      hideDatePicker();
+      return;
+    }
+
     setSelectedDate(date); // Save the selected date
     hideDatePicker(); // Close the picker
 
@@ -31,15 +38,16 @@ const DatePickerButton: React.FC<DatePickerButtonProps> = ({ onDateSelect }) => 
     <View>
       {/* Button to open date picker */}
       <TouchableOpacity style={styles.button} onPress={showDatePicker}>
-        <Text style={styles.buttonText}>
-          {selectedDate ? selectedDate.toDateString() : "Pick a Date"}
+        <Text style={styles.buttonText} >
+          {selectedDate ? selectedDate.toLocaleString(): "Pick a Date"}
         </Text>
       </TouchableOpacity>
 
       {/* Date Picker Modal */}
       <DateTimePickerModal
         isVisible={isDatePickerVisible}
-        mode="date"
+        mode="datetime"
+        display={Platform.OS === "ios" ? "spinner" : "default"}
         onConfirm={handleConfirm}
         onCancel={hideDatePicker}
       />
@@ -53,6 +61,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
     alignItems: "center",
+    maxWidth: 160,
   },
   buttonText: {
     color: "white",

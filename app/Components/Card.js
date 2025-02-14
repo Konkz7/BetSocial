@@ -16,7 +16,7 @@ const styles = StyleSheet.create({
     shadowRadius: 5, // Shadow blur
     elevation: 5, // Shadow for Android
     margin: 10, // Space around the card
-    height:300,
+    height:310,
     width: 350,
     marginTop:30,
   },
