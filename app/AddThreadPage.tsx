@@ -194,8 +194,8 @@ const AddThreadScreen = ({navigation}:any) => {
             </ScrollView>
            </View>
           </View>
-
-
+                
+    
           <View>
             {bets.map((bet:any, index:any) => (
               <Card key={index}>
@@ -215,10 +215,12 @@ const AddThreadScreen = ({navigation}:any) => {
                 </View>
 
                 <View style = {{flexDirection: "row"}}>
-                  <View>
-                    <ToggleSwitch onClick={() => handleBetKingChange(index)}>
-
-                    </ToggleSwitch>
+                  <View style = {{borderRightWidth: 1, borderRightColor: "#ddd"}}>
+                    <TouchableOpacity style = {[styles.betButtonContainer, {marginTop: 10,padding:7},
+                        bet.verified ? {backgroundColor: "#4CAF50" } : {backgroundColor: "#ccc"}]}
+                        onPress={() => handleBetVerifiedChange(index)}>
+                        <ShieldCheck  size={36} color={bet.verified ? "white" : "black"}></ShieldCheck>
+                      </TouchableOpacity>
                     
                     <TouchableOpacity style = {[styles.betButtonContainer, 
                       bet.profitMode ? {backgroundColor: "#4CAF50" } : {backgroundColor: "#ccc"}]}
@@ -228,33 +230,32 @@ const AddThreadScreen = ({navigation}:any) => {
                   </View>
 
                   <View style = {{}}>
-                    <View style = {{marginHorizontal: 20, marginVertical:5 , flexDirection: "row" , justifyContent:"space-between", width: 220}}>
+                    <View style = {{marginHorizontal: 20, marginVertical:5 , flexDirection: "row" , 
+                      justifyContent:"space-between", width: 220}}>
+  
+                      <ToggleSwitch onClick={() => handleBetKingChange(index)}/>
+
                       <TextInput style = {[styles.maxInputBox, bet.kingMode ? {backgroundColor: "gray", opacity: 0.2} : 
-                      {backgroundColor: "white", opacity: 1}]}
-                      disabled = {bet.kingMode}
-                      value={bet.maxBet}
-                      onChangeText={(text) => handleBetMaxChange(Number.parseFloat(text), index)}
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="Max Bet:">
+                        {backgroundColor: "white", opacity: 1}]}
+                        disabled = {bet.kingMode}
+                        value={bet.maxBet}
+                        onChangeText={(text) => handleBetMaxChange(Number.parseFloat(text), index)}
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="Max Bet:">
 
                       </TextInput>
-                      
-                      <TouchableOpacity style = {[styles.betButtonContainer, {marginTop: 10,padding:7},
-                        bet.verified ? {backgroundColor: "#4CAF50" } : {backgroundColor: "#ccc"}]}
-                        onPress={() => handleBetVerifiedChange(index)}>
-                        <ShieldCheck  size={36} color={bet.verified ? "white" : "black"}></ShieldCheck>
-                      </TouchableOpacity>
-                      
+                        
+               
                     </View>
 
                     
 
-                    <View style = {{flexDirection: "row", alignItems: "center", marginLeft:20}}>
+                    <View style = {{flexDirection: "row", alignItems: "center", marginLeft:20, marginTop:15}}>
                         <Text style = {{marginRight: 20}}>Ends at:</Text>
                         <DatePickerButton onDateSelect={(number) => handleBetEndChange(number,index)}/>
-                      </View>
-                    <View>
+                    </View>
+                  <View>
 
                  </View>
                     
@@ -331,7 +332,6 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding:5,
     margin:10,
-    marginTop: 20,
   },maxInputBox:{
     marginVertical: 10,
     height:40,
