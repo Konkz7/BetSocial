@@ -48,6 +48,13 @@ const AddThreadScreen = ({navigation}:any) => {
     "is_private": is_private,
   }
 
+  const reset = () =>{
+    setThreadText("");
+    setCategory("");
+    setPrivacy(false);
+    setBets(([]));
+  }
+
   const getUsername = async() =>{
     try {
         const profile = await axios.get(IP_STRING + "/req/profile");
@@ -58,13 +65,47 @@ const AddThreadScreen = ({navigation}:any) => {
   }
 
   const post = async() =>{
+
+
+    for (const bet of bets) {
+      if (bet.maxBet === null) {
+        bet.maxBet = 0;
+      }
+  
+      if (bet.ends_at <= new Date().getTime()) {
+        Alert.alert("Error", "A bet has an invalid end time.");
+        return; 
+      }
+
+      if (bet.description.trim() === "") {
+        Alert.alert("Error", "A bet has an empty description.");
+        return; 
+      }
+    }
+    
+
     try {
-       const threadResponse = await axios.post(IP_STRING + "/api/threads/make", thread); 
-       Alert.alert("Well done!", "Thread successfully made!");
-       navigation.navigate("Home");
+      const threadResponse = await axios.post(IP_STRING + "/api/threads/make", thread); 
+      Alert.alert("Well done!", "Thread successfully made!");
+
+      for (const bet of bets) {
+        bet.tid = Number.parseInt(threadResponse.data);
+        console.log(bet);
+        try {
+          const betResponse = await axios.post(IP_STRING + "/api/bets/make", bet); 
+        } catch (error) {
+          Alert.alert("Error:", "Apologies! Bet couldnt be saved");
+        }
+      }
+      reset();
+      navigation.navigate("Home");
     } catch (error) {
       Alert.alert("Error:", "Make sure all thread fields are filled out correctly.");
     }
+
+    
+    
+
   }
 
   const deleteTempBetAt = (index: number) => {
@@ -74,29 +115,31 @@ const AddThreadScreen = ({navigation}:any) => {
   const addTempBet = () =>{
     console.log(addBetOptions());
     setBets((prevBets:any) => [...prevBets, { 
-      verified: false,
-      kingMode: false, 
-      description: "", 
-      profitMode: false , 
-      maxBet: 0 , 
-      ends_at: 0}]);
+      "tid": null,
+      "description": "", 
+      "ends_at": 0,
+      "is_verified": false,
+      "king_mode": false, 
+      "profit_mode": false , 
+      "max_amount": 0 , 
+      }]);
   }
 
   const handleBetProfitChange = ( index:number) => {
     const updatedBets = [...bets];
-    updatedBets[index].profitMode = !updatedBets[index].profitMode;
+    updatedBets[index].profit_mode = !updatedBets[index].profit_mode;
     setBets(updatedBets); // Assuming you have setBets as a state updater
   };
 
   const handleBetKingChange = ( index:number) => {
     const updatedBets = [...bets];
-    updatedBets[index].kingMode = !updatedBets[index].kingMode;
+    updatedBets[index].king_mode = !updatedBets[index].king_mode;
     setBets(updatedBets); // Assuming you have setBets as a state updater
   };
 
   const handleBetVerifiedChange = ( index:number) => {
     const updatedBets = [...bets];
-    updatedBets[index].verified = !updatedBets[index].verified;
+    updatedBets[index].is_verified = !updatedBets[index].is_verified;
     setBets(updatedBets); // Assuming you have setBets as a state updater
   };
 
@@ -108,7 +151,7 @@ const AddThreadScreen = ({navigation}:any) => {
 
   const handleBetMaxChange = ( text:number ,index:number) => {
     const updatedBets = [...bets];
-    updatedBets[index].maxBet = text;
+    updatedBets[index].max_amount = text;
     setBets(updatedBets); // Assuming you have setBets as a state updater
   };
 
@@ -226,29 +269,29 @@ const AddThreadScreen = ({navigation}:any) => {
 
                 <View style = {{flexDirection: "row"}}>
                   <View style = {{borderRightWidth: 1, borderRightColor: "#ddd"}}>
-                    <TouchableOpacity style = {[styles.betButtonContainer, {marginTop: 10,padding:7},
-                        bet.verified ? {backgroundColor: "#4CAF50" } : {backgroundColor: "#ccc"}]}
+                    <TouchableOpacity style = {[styles.betButtonContainer, {marginTop: 10},
+                        bet.is_verified ? {backgroundColor: "#4CAF50" } : {backgroundColor: "#ccc"}]}
                         onPress={() => handleBetVerifiedChange(index)}>
-                        <ShieldCheck  size={36} color={bet.verified ? "white" : "black"}></ShieldCheck>
+                        <ShieldCheck  size={36} color={bet.is_verified ? "white" : "black"}></ShieldCheck>
                       </TouchableOpacity>
                     
                     <TouchableOpacity style = {[styles.betButtonContainer, 
-                      bet.profitMode ? {backgroundColor: "#4CAF50" } : {backgroundColor: "#ccc"}]}
+                      bet.profit_mode ? {backgroundColor: "#4CAF50" } : {backgroundColor: "#ccc"}]}
                       onPress={() => handleBetProfitChange(index)}>
-                      <HandCoins  size={36} color={bet.profitMode ? "white" : "black"}></HandCoins>
+                      <HandCoins  size={36} color={bet.profit_mode ? "white" : "black"}></HandCoins>
                     </TouchableOpacity>
                   </View>
 
                   <View style = {{}}>
                     <View style = {{marginHorizontal: 20, marginVertical:5 , flexDirection: "row" , 
-                      justifyContent:"space-between", width: 220}}>
+                      justifyContent:"space-between", width: 208}}>
   
                       <ToggleSwitch onClick={() => handleBetKingChange(index)}/>
 
-                      <TextInput style = {[styles.maxInputBox, bet.kingMode ? {backgroundColor: "gray", opacity: 0.2} : 
+                      <TextInput style = {[styles.maxInputBox, bet.king_mode ? {backgroundColor: "gray", opacity: 0.2} : 
                         {backgroundColor: "white", opacity: 1}]}
-                        disabled = {bet.kingMode}
-                        value={bet.maxBet}
+                        disabled = {bet.king_mode}
+                        value={bet.max_amount}
                         onChangeText={(text) => handleBetMaxChange(Number.parseFloat(text), index)}
                         inputMode="numeric"
                         maxLength={6}
@@ -340,12 +383,12 @@ const styles = StyleSheet.create({
     height:50,
     width:50,
     borderRadius: 15,
-    padding:5,
+    padding:7,
     margin:10,
   },maxInputBox:{
     marginVertical: 10,
     height:40,
-    width: 130,
+    width: 120,
   },inputBox:{
     flex:1,
     backgroundColor: "white",
@@ -411,8 +454,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 }, // Shadow position
     shadowOpacity: 0.2, // Shadow transparency
     shadowRadius: 5, // Shadow blur
-    elevation: 7, 
-    
+    elevation: 7,
+
   },fab: {
     position: "absolute", // Ensures it floats
     bottom: 120, // Distance from bottom
