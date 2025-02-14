@@ -18,6 +18,7 @@ const AddThreadScreen = ({navigation}:any) => {
   const [threadText,setThreadText] = useState("");
   const [category, setCategory] = useState("");
   const [username, setUsername] = useState("Loading...");
+  const [is_private, setPrivacy] = useState(false);
   const [bets, setBets]= useState <any>([]);
   const maxCharacters = 280;
   const maxBetCharacters = 50;
@@ -44,6 +45,7 @@ const AddThreadScreen = ({navigation}:any) => {
     "title": threadText,
     "description": "",
     "category": category,
+    "is_private": is_private,
   }
 
   const getUsername = async() =>{
@@ -112,7 +114,7 @@ const AddThreadScreen = ({navigation}:any) => {
 
   const handleBetEndChange = ( text:number ,index:number) => {
     const updatedBets = [...bets];
-    updatedBets[index].maxBet = text;
+    updatedBets[index].ends_at = text;
     setBets(updatedBets); // Assuming you have setBets as a state updater
   };
 
@@ -153,10 +155,18 @@ const AddThreadScreen = ({navigation}:any) => {
         <View style = {{justifyContent: "center", alignItems: "center"}}>
           <View style = { styles.threadShadow }>
             <View style = {styles.postHeader}>
-              <View style={styles.avatar} />
-                <View>
+
+                <View style = {{flexDirection: "row", alignItems: "center"}}>
+                  <View style={styles.avatar} />
                   <Text style={styles.userName}>{username}</Text>
                 </View>
+
+                <View style = {{ marginRight:0}}>
+                  <Button style = {styles.postbutton} onPress={() => setPrivacy(!is_private)}>
+                    <Text style = {{color: "white"}}>{is_private ? "Private" : "Public"}</Text> 
+                  </Button>
+                </View>
+    
             </View>
             <View style = {styles.inputContainer}>
               <TextInput style = {styles.inputBox}
@@ -366,8 +376,7 @@ const styles = StyleSheet.create({
   postHeader: {
     width:380,
     backgroundColor: "white",
-    justifyContent:"flex-start",
-    alignSelf:"flex-start",
+    justifyContent:"space-between",
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 2,
