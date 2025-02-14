@@ -16,7 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -69,7 +70,7 @@ public class SuperUserController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bet isn't in the correct state");
         }
 
-        betRepository.makeDecision(  bet.bid(), decision.reason(),decision.decision(), LocalDateTime.now(),userId);
+        betRepository.makeDecision(  bet.bid(), decision.reason(),decision.decision(), new Date().getTime(),userId);
 
         if(decision.decision()) {
 

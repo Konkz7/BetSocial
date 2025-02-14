@@ -6,7 +6,8 @@ import com.example.World.Users.UserRepository;
 import com.example.World.Users.User_;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -29,7 +30,7 @@ public class MessageService {
                 senderId,
                 recipientId,
                 content,
-                LocalDateTime.now(),
+                new Date().getTime(),
                 null,
                 gid,
                 false,

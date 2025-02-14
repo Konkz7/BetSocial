@@ -3,7 +3,8 @@ package com.example.World.Bets;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -19,7 +20,7 @@ public class BetService {
         List<Bet_> activeBets = betRepository.findByStatus(Status.ACTIVE.toInt());
 
         List<Bet_> expiredBets = activeBets.stream()
-                .filter(bet -> bet.ends_at().isBefore(LocalDateTime.now()))
+                .filter(bet -> bet.ends_at() <= new Date().getTime())
                 .toList();
 
         System.out.println("Expired bets: " + expiredBets.size());

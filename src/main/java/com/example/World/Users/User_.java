@@ -11,7 +11,7 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.lang.NonNull;
 
 import javax.annotation.processing.Generated;
-import java.time.LocalDateTime;
+
 
 public record User_(
         @Id
@@ -40,9 +40,9 @@ public record User_(
         Boolean is_verified, // Boolean to check if the email is verified
 
         @NonNull
-        LocalDateTime created_at, // Timestamp of account creation (defaulted in the database)
+        Long created_at, // Timestamp of account creation (defaulted in the database)
 
-        LocalDateTime deleted_at,
+        Long deleted_at,
 
         Integer user_role, // Role of the user, 0 for normal user, 1 for superuser, 2 for admin
         @Version
@@ -50,9 +50,9 @@ public record User_(
 ) {
         @Override
         @NonNull
-        public LocalDateTime created_at() {
+        public Long created_at() {
                 if(deleted_at() != null){
-                        if (created_at.isAfter(deleted_at())){
+                        if (created_at >= deleted_at){
                                 throw new IllegalStateException("created_at cannot be after deleted_at");
                         }
                 }

@@ -5,10 +5,13 @@ import com.example.World.Bets.Status;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,9 +50,16 @@ public class ThreadController {
 
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/make")
-    void makeThread(@Valid @RequestBody ThreadDTO thread, HttpSession session){
+    ResponseEntity<String> makeThread(@Valid @RequestBody ThreadDTO thread, HttpSession session , BindingResult result){
+
+        if(result.hasErrors()){
+            return ResponseEntity.badRequest().body("Error: Please make sure fields are filled out properly");
+        }
         Long uid = (Long) session.getAttribute("userId");
-        threadRepository.save(new Thread_(null,uid,thread.title(), thread.description(), thread.category(), LocalDateTime.now(),null,null));
+        Long tid = threadRepository.save(new Thread_(null,uid,thread.title(), thread.description(), thread.category(),
+                new Date().getTime(),null,thread.is_private(),null)).tid();
+
+        return ResponseEntity.ok(String.valueOf(tid));
     }
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -70,11 +80,11 @@ public class ThreadController {
         }
 
 
-        threadRepository.remove(tid, LocalDateTime.now());
+        threadRepository.remove(tid, new Date().getTime());
 
         betRepository.findByThread(tid).forEach(bet -> {
             betRepository.updateStatus(bet.bid(), Status.CANCELLED.toInt());
-            betRepository.remove(bet.bid(), LocalDateTime.now());
+            betRepository.remove(bet.bid(), new Date().getTime());
         });
 
     }

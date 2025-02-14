@@ -9,7 +9,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.util.Date;
+
 
 @Component
 public class Startup {
@@ -56,7 +57,7 @@ public class Startup {
                 phoneNumber,        // Retain the phone number
                 null, // Token used for email verification
                 true, // Boolean to check if the email is verified
-                LocalDateTime.now(),          // Retain the creation timestamp
+                new Date().getTime(),          // Retain the creation timestamp
                 null,
                 role.toInt(),          // Retain the user role
                 null            // Retain the version for optimistic locking

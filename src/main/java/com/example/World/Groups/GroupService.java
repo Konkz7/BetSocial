@@ -2,7 +2,8 @@ package com.example.World.Groups;
 
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -21,7 +22,7 @@ public class GroupService {
             null,
             name,
             sort,
-            LocalDateTime.now(),
+            new Date().getTime(),
    null,
     null
         );

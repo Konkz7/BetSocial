@@ -11,7 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,7 +49,7 @@ public class CommentController {
     @PostMapping("/make")
     void makeComment(@Valid @RequestBody CommentDTO comment, HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
-        commentRepository.save(new Comment_(null, comment.tid(), uid, comment.parent_cid(), comment.description(), LocalDateTime.now(),null,null));
+        commentRepository.save(new Comment_(null, comment.tid(), uid, comment.parent_cid(), comment.description(),new Date().getTime(),null,null));
     }
 
 /*

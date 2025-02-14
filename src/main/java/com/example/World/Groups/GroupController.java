@@ -10,7 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,7 +48,7 @@ public class GroupController {
     @PostMapping("/make")
     void makeBet(@Valid @RequestBody GroupDTO group) {
 
-        groupRepository.save(new Group_(null,group.group_name(),group.sort(),LocalDateTime.now(),null,null));
+        groupRepository.save(new Group_(null,group.group_name(),group.sort(),new Date().getTime(),null,null));
 
     }
 /*

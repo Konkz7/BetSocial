@@ -12,7 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -86,7 +87,8 @@ public class PredictionController {
             predictionRepository.updatePrediction(old.pid(),prediction.prediction(), prediction.amount_bet());
 
         }), () ->{
-            predictionRepository.save(new Prediction_(null,prediction.bid(),uid, prediction.prediction(),prediction.amount_bet(),0f,LocalDateTime.now(),null,null));
+            predictionRepository.save(new Prediction_(null,prediction.bid(),uid, prediction.prediction(),prediction.amount_bet(),
+                    0f,new Date().getTime(),null,null));
 
             if(prediction.prediction()){
                 predictionRepository.updateAmountFor(prediction.bid(), prediction.amount_bet());
@@ -143,7 +145,7 @@ public class PredictionController {
             predictionRepository.updateAmountAgainst(prediction.bid(), -prediction.amount_bet());
         }
 
-        predictionRepository.remove(pid, LocalDateTime.now());
+        predictionRepository.remove(pid, new Date().getTime());
     }
 
 

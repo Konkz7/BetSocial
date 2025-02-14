@@ -8,7 +8,6 @@ import org.springframework.data.relational.core.mapping.AggregatePath;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.lang.NonNull;
 
-import java.time.LocalDateTime;
 
 public record Bet_(
         @Id
@@ -25,24 +24,33 @@ public record Bet_(
         @NotEmpty
         String description,
         @NonNull
-        LocalDateTime created_at,
-        LocalDateTime deleted_at,
-        LocalDateTime ends_at,
+        Long created_at,
+        Long deleted_at,
+        @NonNull
+        Long ends_at,
+        @NonNull
+        Boolean is_verified,
+        @NonNull
+        Boolean king_mode,
+        @NonNull
+        Boolean profit_mode,
+        @NonNull
+        Float max_amount,
         @Version
         Integer b_version
 
 ) {
         @Override
         @NonNull
-        public LocalDateTime created_at() {
+        public Long created_at() {
                 if(deleted_at() != null){
-                        if (created_at.isAfter(deleted_at())){
+                        if (created_at >= deleted_at){
                                 throw new IllegalStateException("created_at cannot be after deleted_at");
+                        }else if (deleted_at <= ends_at){
+                                throw new IllegalStateException("cannot be ended after bet has been deleted");
                         }
-                }else if(ends_at() != null){
-                        if (created_at.isAfter(ends_at())){
-                                throw new IllegalStateException("created_at cannot be after deleted_at");
-                        }
+                }else if (created_at >= ends_at){
+                        throw new IllegalStateException("created_at cannot be after ends_at");
                 }
 
                 return created_at;

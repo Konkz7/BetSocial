@@ -7,7 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -54,7 +54,7 @@ public interface BetRepository extends ListCrudRepository<Bet_,Long> {
                          @Param("bet_id") Long bet_id,
                          @Param("reason") String reason,
                          @Param("decision") Boolean decision,
-                         @Param("decided_at") LocalDateTime decided_at,
+                         @Param("decided_at") Long decided_at,
                          @Param("user_id") Long user_id);
 
         @Modifying
@@ -62,7 +62,7 @@ public interface BetRepository extends ListCrudRepository<Bet_,Long> {
         @Query("UPDATE Bet_ SET  deleted_at = :deleted_at WHERE bid = :id AND deleted_at IS NULL")
         int remove(
                 @Param("id") Long id,
-                @Param("deleted_at") LocalDateTime deleted_at);
+                @Param("deleted_at") Long deleted_at);
 
 }
 

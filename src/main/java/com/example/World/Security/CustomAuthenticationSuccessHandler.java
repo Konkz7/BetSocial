@@ -24,6 +24,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
 
         if(session.getAttribute("userId") != null){
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             throw new RuntimeException("User is already logged in.");
         }
 

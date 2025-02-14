@@ -8,7 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Version;
 import org.springframework.lang.NonNull;
 
-import java.time.LocalDateTime;
+
 
 public record UserDTO(
         @Id
@@ -28,7 +28,7 @@ public record UserDTO(
         String phone_number, // Phone number in international format, unique and validated
 
         @NonNull
-        LocalDateTime created_at // Timestamp of account creation (defaulted in the database)
+        Long created_at // Timestamp of account creation (defaulted in the database)
 
 ) {
 }

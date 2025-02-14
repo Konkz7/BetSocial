@@ -15,7 +15,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+
+import java.util.Date;
 import java.util.UUID;
 
 import static com.example.World.Users.UserRole.USER;
@@ -110,7 +111,7 @@ public class AccountController {
                 user.phone_number(),        // Retain the phone number
                 token,                       // Retain the verification token
                 false,                      // Email is not verified
-                LocalDateTime.now(),          // Retain the creation timestamp
+                new Date().getTime(),          // Retain the creation timestamp
                 null,
                 USER.toInt(),          // Retain the user role
                 null            // Retain the version for optimistic locking

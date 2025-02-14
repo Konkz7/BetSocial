@@ -6,7 +6,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Version;
 import org.springframework.lang.NonNull;
 
-import java.time.LocalDateTime;
+
 
 public record BetDTO(
 
@@ -14,6 +14,15 @@ public record BetDTO(
      Long tid,
      @NotEmpty
      String description,
-     Long secondsEndsAt
+     @NonNull
+     Long ends_at,
+     @NonNull
+     Boolean is_verified,
+     @NonNull
+     Boolean king_mode,
+     @NonNull
+     Boolean profit_mode,
+     @NonNull
+     Float max_amount
     ) {
 }

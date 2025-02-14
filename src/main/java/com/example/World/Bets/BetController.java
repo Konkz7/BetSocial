@@ -12,7 +12,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -61,9 +62,9 @@ public class BetController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Thread not found");
         });
 
-        betRepository.save(new Bet_(null, bet.tid(), Status.ACTIVE.toInt(), null, 0f,0f, bet.description(),
-                LocalDateTime.now(), null, LocalDateTime.now().plusSeconds(bet.secondsEndsAt())/*bet.ends_at()*/, null));
-
+        betRepository.save(new Bet_(null, bet.tid(), Status.ACTIVE.toInt(), null, 0f,0f,
+                bet.description(), new Date().getTime(), null,bet.ends_at(),bet.is_verified(),bet.king_mode(),
+                bet.profit_mode(),bet.max_amount(), null));
     }
 
     @PostMapping("/decide")
@@ -92,7 +93,7 @@ public class BetController {
 
 
         betRepository.updateOutcome(decision.bid(), decision.decision());
-        betRepository.makeDecision( decision.bid(), decision.reason(), decision.decision(), LocalDateTime.now(), userId );
+        betRepository.makeDecision( decision.bid(), decision.reason(), decision.decision(), new Date().getTime(), userId );
     }
 
     @ResponseStatus(HttpStatus.ACCEPTED)

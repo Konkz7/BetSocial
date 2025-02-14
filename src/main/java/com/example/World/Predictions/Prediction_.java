@@ -5,7 +5,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Version;
 import org.springframework.lang.NonNull;
 
-import java.time.LocalDateTime;
+
 
 public record Prediction_(
         @Id
@@ -20,16 +20,16 @@ public record Prediction_(
         Float amount_bet ,
         Float amount_won ,
         @NonNull
-        LocalDateTime created_at,
-        LocalDateTime deleted_at,
+        Long created_at,
+        Long deleted_at,
         @Version
         Integer p_version // Version number for optimistic locking
 ) {
         @Override
         @NonNull
-        public LocalDateTime created_at() {
+        public Long created_at() {
                 if(deleted_at() != null){
-                        if (created_at.isAfter(deleted_at())){
+                        if (created_at >= deleted_at){
                                 throw new IllegalStateException("created_at cannot be after deleted_at");
                         }
                 }
