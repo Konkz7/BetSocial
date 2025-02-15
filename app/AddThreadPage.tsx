@@ -21,7 +21,7 @@ const AddThreadScreen = ({navigation}:any) => {
   const [is_private, setPrivacy] = useState(false);
   const [bets, setBets]= useState <any>([]);
   const maxCharacters = 280;
-  const maxBetCharacters = 50;
+  const maxBetCharacters = 125;
   const maxBets = 4;
   const addBetOptions = () => {
     if(bets.length >= maxBets){
@@ -252,13 +252,15 @@ const AddThreadScreen = ({navigation}:any) => {
           <View>
             {bets.map((bet:any, index:any) => (
               <Card key={index}>
-                <Text style = {[styles.title,{fontSize: 20 , paddingVertical: 0}]}>Bet {index+1}: </Text>
-                <View style={styles.betContainer}>
+                <View style = {{borderBottomColor: "#ccc" , borderBottomWidth: 1, paddingBottom: 5}}>
+                 <Text style = {[styles.title,{fontSize: 20 , paddingVertical: 0}]}>Bet {index+1}: </Text>
+                </View>
+                <View style={[styles.betContainer]}>
                   <TouchableOpacity style = {styles.fab} onPress={() => deleteTempBetAt(index)}>
                       <CircleX size={24}></CircleX>
                   </TouchableOpacity>
                   <TextInput
-                    style={styles.inputBox}
+                    style={styles.betInput}
                     value={bet.description}
                     onChangeText={(text) => handleBetTextChange(text, index)}
                     multiline
@@ -394,10 +396,10 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
 
   },betContainer:{
-    width:300,
-    height:105,
+    width:312,
     backgroundColor: "white",
-
+    minHeight: 105, 
+   
   },title:{
     fontSize: 35,
     fontWeight: "bold",
@@ -471,7 +473,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
-  },
+  },betInput:{
+    width: 310, 
+    minHeight: 105,
+    backgroundColor: "white", 
+    textAlign: "center" , 
+    padding: 20, 
+    fontSize: 24,
+  }
 
 });
 

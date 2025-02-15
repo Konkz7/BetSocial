@@ -22,18 +22,31 @@ import { NavigationContainer } from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import OtpScreen from './app/otpPage';
 import HomeScreen from './app/homePage';
-import AddThreadScreen from './app/AddThreadPage';
+import AddThreadScreen from './app/addThreadPage';
+import ThreadScreen from './app/threadPage';
 import { Home, Search, Bell, Mail, CirclePlus, LucideAArrowDown, BanIcon } from "lucide-react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
 
-const Stack = createNativeStackNavigator();
+const LoginStack = createNativeStackNavigator();
+const HomeStack = createNativeStackNavigator();
 
-const Tab = createBottomTabNavigator();
+const MainTab = createBottomTabNavigator();
+
+
+
+function HomeStackNavigator() {
+  return (
+    <HomeStack.Navigator screenOptions={{ headerShown: false }}>
+      <HomeStack.Screen name="Home" component={HomeScreen}  />
+      <HomeStack.Screen name="Thread" component={ThreadScreen} />
+    </HomeStack.Navigator>
+  );
+};
 
 function TabNavigator(){
     return(
-    <Tab.Navigator
+    <MainTab.Navigator
        screenOptions={({ route }) => ({
          tabBarIcon: ({ focused, color, size }) => {
  
@@ -50,14 +63,23 @@ function TabNavigator(){
          headerShown: false, // Hide header on all screens
        })}
      >
-       <Tab.Screen name="Home" component={HomeScreen} />
-       <Tab.Screen name="Search" component={HomeScreen} />
-       <Tab.Screen name="Add" component={AddThreadScreen} />
-       <Tab.Screen name="Notifications" component={HomeScreen} />
-       <Tab.Screen name="Messages" component={HomeScreen} />
-     </Tab.Navigator>
+       <MainTab.Screen name="Home" component={HomeStackNavigator} />
+       <MainTab.Screen name="Search" component={HomeScreen} />
+       <MainTab.Screen name="Add" component={AddThreadScreen} />
+       <MainTab.Screen name="Notifications" component={HomeScreen} />
+       <MainTab.Screen name="Messages" component={HomeScreen} />
+     </MainTab.Navigator>
     );
 }
+
+
+
+
+
+
+
+
+
 
 function App(): React.JSX.Element {
 
@@ -66,15 +88,15 @@ function App(): React.JSX.Element {
 
     
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen
+      <LoginStack.Navigator screenOptions={{ headerShown: false }}>
+        <LoginStack.Screen
           name="Login"
           component={LoginScreen}
         />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="OTP" component={OtpScreen} />
-        <Stack.Screen name="MainApp" component={TabNavigator} />
-      </Stack.Navigator>  
+        <LoginStack.Screen name="Register" component={RegisterScreen} />
+        <LoginStack.Screen name="OTP" component={OtpScreen} />
+        <LoginStack.Screen name="MainApp" component={TabNavigator} />
+      </LoginStack.Navigator>  
 
     </NavigationContainer>
   

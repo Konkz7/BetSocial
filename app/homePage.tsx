@@ -128,6 +128,8 @@ const HomeScreen = ({navigation}:any) => {
         renderItem={( item ) => (
 
           <View style={styles.post}>
+            <TouchableOpacity onPress={() => navigation.navigate("Thread",threads.at(item.index))}>
+
             <View style={styles.postHeader}>
               <View style={styles.avatar} />
               <View>
@@ -135,9 +137,9 @@ const HomeScreen = ({navigation}:any) => {
                 <Text style={styles.timestamp}>2h ago</Text>
               </View>
             </View>
-            <Text style={styles.postText}>
-                {threads.at(item.index).title}
-            </Text>
+              <Text style={styles.postText}>
+                  {threads.at(item.index).title}
+              </Text>
             <View style={styles.postFooter}>
               <View style={styles.actionsLeft}>
                 <TouchableOpacity style={styles.actionButton}>
@@ -160,6 +162,7 @@ const HomeScreen = ({navigation}:any) => {
                 </View>
               </View>
             </View>
+            </TouchableOpacity>
           </View>
         )}
       />
