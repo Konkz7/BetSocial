@@ -126,7 +126,7 @@ const ThreadScreen = ({navigation,route}:any) => {
                   </View>
 
                   <View style = {{}}>
-                    <View style = {{marginHorizontal: 20, marginTop:35 , flexDirection: "row" , 
+                    <View style = {{marginLeft: 30, marginTop:30 , flexDirection: "row" , 
                        width: 208}}>
   
                       <View style = {styles.kingIcon}>
@@ -146,10 +146,10 @@ const ThreadScreen = ({navigation,route}:any) => {
 
                     
 
-                    <View style = {{flexDirection: "row", alignItems: "center", marginLeft:20, marginTop:5}}>
+                    <View style = {{flexDirection: "row", alignItems: "center", marginLeft:30, marginTop:5}}>
                         <Text style = {{marginRight: 20}}>Ends at:</Text>
                         <View style = {styles.dateBox}>
-                            <Text style = {styles.dateBoxText}> {bet.ends_at} </Text>
+                            <Text style = {styles.dateBoxText}> {new Date(bet.ends_at).toLocaleString()} </Text>
                         </View>
                     </View>
                   <View>
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     height:40,
     width: 120,
     fontWeight: "bold",
-    marginLeft: 43,
+    marginLeft: 30,
     textAlign: "center",
     
   },inputBox:{
@@ -318,6 +318,7 @@ const styles = StyleSheet.create({
   dateBoxText: {
     color: "white",
     fontSize: 16,
+    textAlign: "center",
   },
   actionButton: {
     flexDirection: "row",
