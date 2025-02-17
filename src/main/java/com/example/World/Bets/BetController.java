@@ -8,6 +8,7 @@ import com.example.World.Users.User_;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,15 +24,22 @@ import java.util.Optional;
 public class BetController {
     private final BetRepository betRepository;
     private final ThreadRepository threadRepository;
+    private final BetSaveRepository betSaveRepository;
 
-    public BetController(BetRepository betRepository, ThreadRepository threadRepository) {
+    public BetController(BetRepository betRepository, ThreadRepository threadRepository, BetSaveRepository betSaveRepository) {
         this.betRepository = betRepository;
         this.threadRepository = threadRepository;
+        this.betSaveRepository = betSaveRepository;
     }
 
     @GetMapping("/all")
     List<Bet_> findAll(){
         return betRepository.findAll();
+    }
+
+    @GetMapping("/find-by-thread/{tid}")
+    List<Bet_>findByThread(@PathVariable Long tid){
+        return betRepository.findByThread(tid);
     }
 
     @GetMapping("/{bid}")
@@ -64,7 +72,22 @@ public class BetController {
 
         betRepository.save(new Bet_(null, bet.tid(), Status.ACTIVE.toInt(), null, 0f,0f,
                 bet.description(), new Date().getTime(), null,bet.ends_at(),bet.is_verified(),bet.king_mode(),
-                bet.profit_mode(),bet.max_amount(), null));
+                bet.profit_mode(),bet.max_amount(),bet.min_amount(), null));
+    }
+
+    @PostMapping("set-bet")
+    void setBet(@RequestParam Long bid, @RequestParam Long uid){
+        Betsave_ temp = betSaveRepository.findByBetAndUser(bid,uid);
+        if(temp == null){
+            betSaveRepository.save(new Betsave_(null,bid,uid));
+        }else{
+            betSaveRepository.delete(temp);
+        }
+    }
+
+    @GetMapping("saved")
+    Betsave_ getBetSave(@RequestParam Long bid, @RequestParam Long uid){
+        return betSaveRepository.findByBetAndUser(bid,uid);
     }
 
     @PostMapping("/decide")

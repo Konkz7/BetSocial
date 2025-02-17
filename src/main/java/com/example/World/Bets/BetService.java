@@ -18,7 +18,6 @@ public class BetService {
     @Scheduled(fixedRate = 60000) // Runs every 60 seconds
     public void closeExpiredBets() {
         List<Bet_> activeBets = betRepository.findByStatus(Status.ACTIVE.toInt());
-
         List<Bet_> expiredBets = activeBets.stream()
                 .filter(bet -> bet.ends_at() <= new Date().getTime())
                 .toList();

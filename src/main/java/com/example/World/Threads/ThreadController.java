@@ -33,6 +33,8 @@ public class ThreadController {
         return threadRepository.findAll();
     }
 
+
+
     @GetMapping("/{tid}")
     Thread_ findById(@PathVariable Long tid){
         Optional<Thread_> thread = threadRepository.findById(tid);

@@ -36,6 +36,8 @@ public record Bet_(
         Boolean profit_mode,
         @NonNull
         Float max_amount,
+        @NonNull
+        Float min_amount,
         @Version
         Integer b_version
 
