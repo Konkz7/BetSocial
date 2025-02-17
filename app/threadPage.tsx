@@ -6,10 +6,21 @@ import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { errorHandler, IP_STRING } from "./Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { SquarePlus, ArrowLeft,HandCoins, ShieldCheck, Heart, Crown, Percent } from "lucide-react-native";
+import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { 
+  Bookmark,
+  BookmarkCheck, 
+  ArrowLeft,
+  HandCoins, 
+  ShieldCheck, 
+  Heart, 
+  Crown, 
+  Percent, 
+  Users, 
+  DollarSign } 
+  from "lucide-react-native";
 import Card from "./Components/Card"; 
-import ToggleSwitch from "./Components/ToggleSwitch"; 
-import DatePickerButton from "./Components/DatePicker"; 
+import { getProfile } from "./API";
 
 
 
@@ -17,10 +28,50 @@ import DatePickerButton from "./Components/DatePicker";
 const ThreadScreen = ({navigation,route}:any) => {
 
   const [bets, setBets] = useState<any>([]);
+  const [betStats, setBetStats] = useState<boolean[]>([]);
+  const [betSaves, setBetSaves] = useState<boolean[]>([]);
   const [loading, setLoading] = useState(true); // Show loading indicator
+  
 
   const threadObject = route.params;
 
+  const statusStrings = [
+    "Active" ,
+    "Pending",
+    "Accepted",
+    "Rejected",
+    "Cancelled",
+    "Approved"
+  ]
+
+  const statusColors = [
+    "lightgreen",
+    "gray",
+    "blue",
+    "black",
+    "red",
+    "purple",
+  ]
+
+  const { data, isLoading, error } = useQuery({ queryKey: ["user"], queryFn: getProfile });
+
+
+  const toggleStat = (index: number) => {
+    setBetStats((prev) =>
+      prev.map((item, i) => (i === index ? !item : item))
+    );
+  };
+
+  const toggleSave = (index: number) => {
+    setBetSaves((prev) =>
+      prev.map((item, i) => (i === index ? !item : item))
+    );
+  };
+
+  const addStates = () => {
+    setBetStats((prev) => [...prev, false]); // adding `false` to the list
+    setBetSaves((prev) => [...prev, false]); // adding `false` to the list
+  };
 
   const getBets = async () => {
     try {
@@ -32,6 +83,40 @@ const ThreadScreen = ({navigation,route}:any) => {
         setLoading(false); // Hide loading indicator
     }
   }
+
+  const getSaves = async () => {
+    
+    for(let i = 0; i < bets.length; i++){
+      try {
+
+          const getResponse = await axios.get(IP_STRING +  "/api/bets/saved?bid="+bets[i].bid+"&uid="+data.uid);
+          
+          if(getResponse.data !== ""){
+            toggleSave(i);
+          }
+      } catch (error) {
+          Alert.alert("Error:", "Unable to get saved bet.")
+      }
+    }
+  }
+
+  
+  const setBet = async (bid:number) => {
+    try {
+      if(data){
+        const saveResponse = await axios.post(IP_STRING + "/api/bets/set-bet?bid="+bid+"&uid="+data.uid);
+      }
+    } catch (error) {
+        Alert.alert("Error:", "Unable to save bets.")
+    }
+  }
+
+  const changeSave  = (bid:number, index: number) => {
+      setBet(bid);
+      toggleSave(index);
+      console.log(betSaves[index]);
+  }
+
     
 
   useFocusEffect(
@@ -44,6 +129,16 @@ const ThreadScreen = ({navigation,route}:any) => {
       }, [])
     );
   
+
+    // Wait for `bets` to be updated before setting `betStats` and `betSaves`
+  useEffect(() => {
+    if (bets.length > 0) {
+      console.log("Bets updated, setting initial states...");
+      setBetStats(new Array(bets.length).fill(false));
+      setBetSaves(new Array(bets.length).fill(false));
+      getSaves();
+    }
+}, [bets]);
 
     
   return (
@@ -72,7 +167,7 @@ const ThreadScreen = ({navigation,route}:any) => {
 
                 <View style = {{ marginRight:10}}>
                   <View style = {{}}>
-                    <Text style = {{fontWeight: "bold",fontStyle: "italic",fontSize: 18, color: "green"}}>
+                    <Text style = {{fontSize: 18, color: "green"}}>
                         {threadObject.is_private ? "Private" : "Public"}
                     </Text> 
                   </View>
@@ -91,8 +186,8 @@ const ThreadScreen = ({navigation,route}:any) => {
                 </Text> 
 
                 <TouchableOpacity style={styles.actionButton}>
-                  <Heart size={24} color="gray" />
-                  <Text style = {{fontSize: 18,marginLeft:5}}>24</Text>
+                  <Heart size={18} color="gray" />
+                  <Text style = {{fontSize: 15,marginLeft:5}}>24</Text>
                 </TouchableOpacity>
             
             </View>
@@ -101,11 +196,38 @@ const ThreadScreen = ({navigation,route}:any) => {
         {loading ? (
                 <ActivityIndicator size="large" color="blue" /> // Show loading spinner
               ) : (
-          <View>
+        
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} key={null}/*refreshControl={() => getBets()}*/ >
             {bets.map((bet:any, index:any) => (
+              <View>
               <Card key={index}>
-                <View style = {{borderBottomWidth: 1, borderBottomColor: "#ccc",paddingBottom: 5,}}>
+                <TouchableOpacity style ={styles.fab} onPress={() => changeSave(bet.bid,index)}>
+                      {betSaves.at(index)? (<BookmarkCheck size = {32}></BookmarkCheck>) :(<Bookmark size = {32}></Bookmark>)}
+                </TouchableOpacity>
+                <View style = {{borderBottomWidth: 1, borderBottomColor: "#ccc",paddingBottom: 5, flexDirection: "row" , 
+                    justifyContent: "space-between" , alignItems: "center"}}>
+
+                    
+
                     <Text style = {[styles.title,{fontSize: 20 , paddingVertical: 0}]}>Bet {index+1}: </Text>
+
+                    <TouchableOpacity  onPress={() => toggleStat(index)}>
+                        {betStats.at(index) ? 
+                        (<View style = {{flexDirection: "row"}}>
+                            <Users size={18} color={"#03FB52"}></Users>
+                            <Text style = {{color: "#03FB52",fontWeight: "bold"}}> for </Text> 
+                            <Text style = {{color: "black",fontWeight: "bold"}}> / </Text> 
+                            <Text style = {{color: "red",fontWeight: "bold"}}> against </Text> 
+                        </View>) :
+                        (<View style = {{flexDirection: "row"}}>
+                            <DollarSign size={18} color={"#03FB52"}></DollarSign>
+                            <Text style = {{color: "#03FB52",fontWeight: "bold"}}> for </Text> 
+                            <Text style = {{color: "black",fontWeight: "bold"}}> / </Text> 
+                            <Text style = {{color: "red",fontWeight: "bold"}}> against </Text> 
+                        </View>)}      
+                    </TouchableOpacity>
+
+                    
                 </View>
                 <View style = {styles.betTextContainer}>
                     <Text style = {styles.betText}>
@@ -126,22 +248,22 @@ const ThreadScreen = ({navigation,route}:any) => {
                   </View>
 
                   <View style = {{}}>
-                    <View style = {{marginLeft: 30, marginTop:30 , flexDirection: "row" , 
-                       width: 208}}>
+                    <View style = {{marginLeft: 30 , flexDirection: "row" , width: 208}}>
   
-                      <View style = {styles.kingIcon}>
+                      <View style = {bet.king_mode ? styles.kingIcon : styles.percentIcon}>
                         {bet.king_mode? 
-                        <Crown size = {36} style = {{backgroundColor: "yellow", borderRadius: 30 , padding:20}}></Crown> : 
-                        <Percent size = {36} style = {{backgroundColor: "dodgerblue", borderRadius: 30 , padding:20}}></Percent>
+                        <Crown size = {64}  style = {{backgroundColor: "pink", borderRadius: 10 , padding:20 }}></Crown> : 
+                        <Percent size = {64}  style = {{backgroundColor: "dodgerblue", borderRadius: 10 , padding:20}}></Percent>
                         }
                       </View>
 
-                      <Text style = {[styles.maxInputBox, bet.king_mode ? {backgroundColor: "gray", opacity: 0.2} : 
-                        {backgroundColor: "white", opacity: 1}]}>
-                            Max Bet: {bet.max_amount}
-                      </Text>
+                      {bet.king_mode ? (null) : 
+                      (<View style = {{marginTop: 20}}>
+                        <Text style = {styles.maxInputBox}>Max Bet: {(bet.max_amount == 0) ? "N/A" : bet.max_amount}</Text>
+                        <Text style = {styles.maxInputBox}> Min Bet: {bet.min_amount}</Text>
+                      </View>)}
+                      
                         
-               
                     </View>
 
                     
@@ -161,10 +283,23 @@ const ThreadScreen = ({navigation,route}:any) => {
                 </View>
                 
               </Card>
+
+              <View style = {[styles.statusContainer,{backgroundColor: statusColors.at(bet.status)}]}>       
+                  <Text style = {styles.statusText}>{statusStrings.at(bet.status)}</Text>
+              </View>
+              <View style = {{marginTop:10}}>
+
+              </View>
+             </View>
             ))}
-          </View>
+            </ScrollView>
               
            )}
+
+
+           
+
+           
 
 
 
@@ -206,10 +341,8 @@ const styles = StyleSheet.create({
   },inputContainer:{
     maxWidth: 380,
     padding: 20,
-    paddingVertical:40,
     backgroundColor: "white",
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    
   },categoryContainer:{
     padding:20,
     maxWidth:380,
@@ -240,16 +373,12 @@ const styles = StyleSheet.create({
     height:40,
     width: 120,
     fontWeight: "bold",
-    marginLeft: 30,
+    marginLeft: 10,
     textAlign: "center",
     
   },inputBox:{
     fontWeight: "bold",
-    fontSize: 18,
-    backgroundColor:"#eee",
-    borderRadius: 20,
-    padding:20,
-    textAlign: "center",
+    fontSize: 20,
   },betContainer:{
     width:300,
     height:105,
@@ -286,8 +415,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 10,
   },categoryText: {
     fontSize: 18,
-    fontWeight: "bold",
-    fontStyle:"italic",
     color: "green"
   },betButtons:{
     color: "green",
@@ -300,14 +427,14 @@ const styles = StyleSheet.create({
     elevation: 7,
     marginTop:40,
 
-  },kingIcon:{
-    width: 30,
-    height: 30,
+  },percentIcon:{
     borderRadius: 10,
     backgroundColor: "white",
-    marginLeft: 7,
     alignItems: "center",
     justifyContent: "center",
+},kingIcon:{
+    margin:10,
+    marginLeft: 50,
 },dateBox: {
     backgroundColor: "green",
     padding: 10,
@@ -324,6 +451,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginRight: 10,
+  },statusContainer: {
+    borderRadius:70,
+    width: 180,
+    height:40,
+    alignSelf:"center",
+    justifyContent:"center",
+    backgroundColor: "blue",
+    marginTop: -25,
+    
+  },statusText: {
+    textAlign:"center",
+    color: "white",
+    fontWeight: "bold",
+  },fab: {
+    
+    position: "absolute",
+    left: -5,
+    top: -15,
+    width: 40,
+    height: 40,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    
   }
 
 });

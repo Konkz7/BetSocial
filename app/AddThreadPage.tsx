@@ -10,6 +10,8 @@ import { SquarePlus, ArrowLeft,HandCoins, ShieldCheck, CircleX } from "lucide-re
 import Card from "./Components/Card"; 
 import ToggleSwitch from "./Components/ToggleSwitch"; 
 import DatePickerButton from "./Components/DatePicker"; 
+import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {getProfile} from "./API";
 
 
 
@@ -55,14 +57,11 @@ const AddThreadScreen = ({navigation}:any) => {
     setBets(([]));
   }
 
-  const getUsername = async() =>{
-    try {
-        const profile = await axios.get(IP_STRING + "/req/profile");
-        setUsername(profile.data.user_name);
-    } catch (error) {
-      errorHandler(error);
-    }
-  }
+  
+
+  // Fetch data using React Query
+  const { data, isLoading, error } = useQuery({ queryKey: ["user"], queryFn: getProfile });
+
 
   const post = async() =>{
 
@@ -81,6 +80,15 @@ const AddThreadScreen = ({navigation}:any) => {
         Alert.alert("Error", "A bet has an empty description.");
         return; 
       }
+
+      if(!bet.king_mode){
+        if (bet.min_amount >=  bet.max_amount && bet.max_amount !== 0) {
+          Alert.alert("Error", "A bet's min and max bet values arent set correctly.");
+          return; 
+        }
+      }
+
+      
     }
     
 
@@ -122,6 +130,7 @@ const AddThreadScreen = ({navigation}:any) => {
       "king_mode": false, 
       "profit_mode": false , 
       "max_amount": 0 , 
+      "min_amount": 0,
       }]);
   }
 
@@ -155,6 +164,13 @@ const AddThreadScreen = ({navigation}:any) => {
     setBets(updatedBets); // Assuming you have setBets as a state updater
   };
 
+  const handleBetMinChange = ( text:number ,index:number) => {
+    const updatedBets = [...bets];
+    updatedBets[index].min_amount = text;
+    setBets(updatedBets); // Assuming you have setBets as a state updater
+  };
+
+
   const handleBetEndChange = ( text:number ,index:number) => {
     const updatedBets = [...bets];
     updatedBets[index].ends_at = text;
@@ -168,7 +184,6 @@ const AddThreadScreen = ({navigation}:any) => {
   useFocusEffect(
       useCallback(() => {
         console.log("Screen is focused! Perform refresh or action here.");  
-        getUsername();
         return () => {
           console.log("Screen is unfocused! Cleanup if needed.");
         };
@@ -201,7 +216,7 @@ const AddThreadScreen = ({navigation}:any) => {
 
                 <View style = {{flexDirection: "row", alignItems: "center"}}>
                   <View style={styles.avatar} />
-                  <Text style={styles.userName}>{username}</Text>
+                  <Text style={styles.userName}>{isLoading? "loading... ":data.user_name}</Text>
                 </View>
 
                 <View style = {{ marginRight:0}}>
@@ -287,9 +302,10 @@ const AddThreadScreen = ({navigation}:any) => {
                   <View style = {{}}>
                     <View style = {{marginHorizontal: 20, marginVertical:5 , flexDirection: "row" , 
                       justifyContent:"space-between", width: 208}}>
-  
+                      <View style = {{marginTop: 10}}>
                       <ToggleSwitch onClick={() => handleBetKingChange(index)}/>
-
+                      </View>
+                    <View>
                       <TextInput style = {[styles.maxInputBox, bet.king_mode ? {backgroundColor: "gray", opacity: 0.2} : 
                         {backgroundColor: "white", opacity: 1}]}
                         disabled = {bet.king_mode}
@@ -300,6 +316,17 @@ const AddThreadScreen = ({navigation}:any) => {
                         placeholder="Max Bet:">
 
                       </TextInput>
+                      <TextInput style = {[styles.maxInputBox, bet.king_mode ? {backgroundColor: "gray", opacity: 0.2} : 
+                        {backgroundColor: "white", opacity: 1}]}
+                        disabled = {bet.king_mode}
+                        value={bet.min_amount}
+                        onChangeText={(text) => handleBetMinChange(Number.parseFloat(text), index)}
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="Min Bet:">
+
+                      </TextInput>
+                    </View>
                         
                
                     </View>
@@ -388,7 +415,6 @@ const styles = StyleSheet.create({
     padding:7,
     margin:10,
   },maxInputBox:{
-    marginVertical: 10,
     height:40,
     width: 120,
   },inputBox:{
@@ -459,8 +485,8 @@ const styles = StyleSheet.create({
     elevation: 7,
 
   },fab: {
-    position: "absolute", // Ensures it floats
-    bottom: 120, // Distance from bottom
+    position: "absolute",
+    bottom: 130, // Distance from bottom
     right: -35, // Distance from right
     backgroundColor: "red",
     width: 40,

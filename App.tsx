@@ -26,7 +26,10 @@ import AddThreadScreen from './app/addThreadPage';
 import ThreadScreen from './app/threadPage';
 import { Home, Search, Bell, Mail, CirclePlus, LucideAArrowDown, BanIcon } from "lucide-react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+
+const queryClient = new QueryClient();
 
 const LoginStack = createNativeStackNavigator();
 const HomeStack = createNativeStackNavigator();
@@ -38,37 +41,37 @@ const MainTab = createBottomTabNavigator();
 function HomeStackNavigator() {
   return (
     <HomeStack.Navigator screenOptions={{ headerShown: false }}>
-      <HomeStack.Screen name="Home" component={HomeScreen}  />
-      <HomeStack.Screen name="Thread" component={ThreadScreen} />
+      <HomeStack.Screen name="Home_S" component={HomeScreen}  />
+      <HomeStack.Screen name="Thread_S" component={ThreadScreen} />
     </HomeStack.Navigator>
   );
 };
 
 function TabNavigator(){
     return(
-    <MainTab.Navigator
-       screenOptions={({ route }) => ({
-         tabBarIcon: ({ focused, color, size }) => {
- 
-           if (route.name === "Home") return < Home size={size} color={focused ? "green" : "gray"} />;
-           else if (route.name === "Search") return < Search size={size} color={focused ? "green" : "gray"} />;
-           else if (route.name === "Add") return < CirclePlus size={size} color={focused ? "green" : "gray"} /> ;
-           else if (route.name === "Notifications") return < Bell size={size} color={focused ? "green" : "gray"} />;
-           else if (route.name === "Messages") return < Mail size={size} color={focused ? "green" : "gray"} />;
+      <MainTab.Navigator
+          screenOptions={({ route }) => ({
+            tabBarIcon: ({ focused, color, size }) => {
 
-           return < BanIcon size={size} color={focused ? "green" : "gray"} />;
-         },
-         tabBarActiveTintColor: "green",
-         tabBarInactiveTintColor: "gray",
-         headerShown: false, // Hide header on all screens
-       })}
-     >
-       <MainTab.Screen name="Home" component={HomeStackNavigator} />
-       <MainTab.Screen name="Search" component={HomeScreen} />
-       <MainTab.Screen name="Add" component={AddThreadScreen} />
-       <MainTab.Screen name="Notifications" component={HomeScreen} />
-       <MainTab.Screen name="Messages" component={HomeScreen} />
-     </MainTab.Navigator>
+              if (route.name === "Home") return < Home size={size} color={focused ? "green" : "gray"} />;
+              else if (route.name === "Search") return < Search size={size} color={focused ? "green" : "gray"} />;
+              else if (route.name === "Add") return < CirclePlus size={size} color={focused ? "green" : "gray"} /> ;
+              else if (route.name === "Notifications") return < Bell size={size} color={focused ? "green" : "gray"} />;
+              else if (route.name === "Messages") return < Mail size={size} color={focused ? "green" : "gray"} />;
+
+              return < BanIcon size={size} color={focused ? "green" : "gray"} />;
+            },
+            tabBarActiveTintColor: "green",
+            tabBarInactiveTintColor: "gray",
+            headerShown: false, // Hide header on all screens
+          })}
+        >
+          <MainTab.Screen name="Home" component={HomeStackNavigator} />
+          <MainTab.Screen name="Search" component={HomeScreen} />
+          <MainTab.Screen name="Add" component={AddThreadScreen} />
+          <MainTab.Screen name="Notifications" component={HomeScreen} />
+          <MainTab.Screen name="Messages" component={HomeScreen} />
+        </MainTab.Navigator>
     );
 }
 
@@ -86,19 +89,20 @@ function App(): React.JSX.Element {
 
   return (
 
-    
-    <NavigationContainer>
-      <LoginStack.Navigator screenOptions={{ headerShown: false }}>
-        <LoginStack.Screen
-          name="Login"
-          component={LoginScreen}
-        />
-        <LoginStack.Screen name="Register" component={RegisterScreen} />
-        <LoginStack.Screen name="OTP" component={OtpScreen} />
-        <LoginStack.Screen name="MainApp" component={TabNavigator} />
-      </LoginStack.Navigator>  
+      <NavigationContainer>
+       <QueryClientProvider client={queryClient}>
+        <LoginStack.Navigator screenOptions={{ headerShown: false }}>
+          <LoginStack.Screen
+            name="Login"
+            component={LoginScreen}
+          />
+          <LoginStack.Screen name="Register" component={RegisterScreen} />
+          <LoginStack.Screen name="OTP" component={OtpScreen} />
+          <LoginStack.Screen name="MainApp" component={TabNavigator} />
+        </LoginStack.Navigator>  
+       </QueryClientProvider>
+      </NavigationContainer>
 
-    </NavigationContainer>
   
   );
 }

@@ -128,7 +128,7 @@ const HomeScreen = ({navigation}:any) => {
         renderItem={( item ) => (
 
           <View style={styles.post}>
-            <TouchableOpacity onPress={() => navigation.navigate("Thread",threads.at(item.index))}>
+            <TouchableOpacity onPress={() => navigation.navigate("Thread_S",threads.at(item.index))}>
 
             <View style={styles.postHeader}>
               <View style={styles.avatar} />
