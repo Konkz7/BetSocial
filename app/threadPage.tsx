@@ -17,10 +17,16 @@ import {
   Crown, 
   Percent, 
   Users, 
-  DollarSign } 
+  DollarSign,
+  X,
+  Check,
+  Undo2,
+} 
   from "lucide-react-native";
 import Card from "./Components/Card"; 
 import { getProfile } from "./API";
+import { opacity } from "react-native-reanimated/lib/typescript/Colors";
+
 
 
 
@@ -30,6 +36,13 @@ const ThreadScreen = ({navigation,route}:any) => {
   const [bets, setBets] = useState<any>([]);
   const [betStats, setBetStats] = useState<boolean[]>([]);
   const [betSaves, setBetSaves] = useState<boolean[]>([]);
+
+  const [betClicked, setBetClicked] = useState<boolean[]>([]);
+
+  const [prediction, setPrediction] = useState<(boolean | null)[]>([]);
+  const [wager, setWager] = useState<number[]>([]);
+  const [expected, setExpected] = useState<number[]>([]);
+
   const [loading, setLoading] = useState(true); // Show loading indicator
   
 
@@ -56,21 +69,24 @@ const ThreadScreen = ({navigation,route}:any) => {
   const { data, isLoading, error } = useQuery({ queryKey: ["user"], queryFn: getProfile });
 
 
-  const toggleStat = (index: number) => {
-    setBetStats((prev) =>
+
+  const toggle = (func: Function ,index: number) => {
+    func((prev: boolean[]) =>
       prev.map((item, i) => (i === index ? !item : item))
     );
   };
 
-  const toggleSave = (index: number) => {
-    setBetSaves((prev) =>
-      prev.map((item, i) => (i === index ? !item : item))
+  const togglePrediction = (index: number , choice:boolean) => {
+    setPrediction((prev) =>
+      prev.map((item, i) => (i === index ? (item == choice ? null : choice) 
+        : item))
     );
   };
 
-  const addStates = () => {
-    setBetStats((prev) => [...prev, false]); // adding `false` to the list
-    setBetSaves((prev) => [...prev, false]); // adding `false` to the list
+  const changeWager = (index: number , text:string) => {
+    setWager((prev) =>
+      prev.map((item, i) => (i === index ? (text ? Number.parseInt(text):0) : item))
+    );
   };
 
   const getBets = async () => {
@@ -88,11 +104,9 @@ const ThreadScreen = ({navigation,route}:any) => {
     
     for(let i = 0; i < bets.length; i++){
       try {
-
-          const getResponse = await axios.get(IP_STRING +  "/api/bets/saved?bid="+bets[i].bid+"&uid="+data.uid);
-          
+          const getResponse = await axios.get(IP_STRING +  "/api/bets/saved?bid="+bets[i].bid+"&uid="+data.uid);         
           if(getResponse.data !== ""){
-            toggleSave(i);
+            toggle(setBetSaves,i);
           }
       } catch (error) {
           Alert.alert("Error:", "Unable to get saved bet.")
@@ -101,20 +115,16 @@ const ThreadScreen = ({navigation,route}:any) => {
   }
 
   
-  const setBet = async (bid:number) => {
+  const setBetSave = async (bid:number, index: number) => {
     try {
       if(data){
         const saveResponse = await axios.post(IP_STRING + "/api/bets/set-bet?bid="+bid+"&uid="+data.uid);
+        toggle(setBetSaves,index);
+        console.log(betSaves[index]);
       }
     } catch (error) {
         Alert.alert("Error:", "Unable to save bets.")
     }
-  }
-
-  const changeSave  = (bid:number, index: number) => {
-      setBet(bid);
-      toggleSave(index);
-      console.log(betSaves[index]);
   }
 
     
@@ -136,8 +146,13 @@ const ThreadScreen = ({navigation,route}:any) => {
       console.log("Bets updated, setting initial states...");
       setBetStats(new Array(bets.length).fill(false));
       setBetSaves(new Array(bets.length).fill(false));
+      setBetClicked(new Array(bets.length).fill(false));
+      setExpected(new Array(bets.length).fill(0))
+      setWager(new Array(bets.length).fill(0))
+      setPrediction(new Array(bets.length).fill(null));
       getSaves();
     }
+
 }, [bets]);
 
     
@@ -199,19 +214,62 @@ const ThreadScreen = ({navigation,route}:any) => {
         
             <ScrollView horizontal showsHorizontalScrollIndicator={false} key={null}/*refreshControl={() => getBets()}*/ >
             {bets.map((bet:any, index:any) => (
-              <View>
-              <Card key={index}>
-                <TouchableOpacity style ={styles.fab} onPress={() => changeSave(bet.bid,index)}>
+             <View>
+              <Card key={index} variant= {betClicked.at(index)? "pcard" : ""}>
+                {betClicked.at(index) ? (
+                 
+                <View>
+                  <View style = {[styles.predictionRow,{borderBottomLeftRadius:0,borderBottomRightRadius:0,marginTop:10}]}>
+                    <TouchableOpacity style = {[styles.predictionContainer,{borderRightWidth: 1,borderTopLeftRadius:18}, 
+                    prediction.at(index) === false? {backgroundColor: "red"} : {backgroundColor: "#eee"} ]} 
+                    onPress={() => togglePrediction(index,false)}>
+                      <X size = {100} color={prediction.at(index) === false? "white" : "red"}></X>
+                    </TouchableOpacity>
+                    <TouchableOpacity style = {[styles.predictionContainer , {borderTopRightRadius:18},
+                      prediction.at(index)? {backgroundColor: "green"}: {backgroundColor: "#eee"} 
+                    ]} onPress={() => togglePrediction(index,true)}>
+                      <Check size = {100} color={prediction.at(index)? "white" : "green"}></Check>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style = {[styles.predictionRow, {borderTopLeftRadius:0,borderTopRightRadius:0,marginTop:-2}]}>
+                    <View style = {[styles.predictionContainer,prediction.at(index) === null? {opacity: 0.2} : {opacity: 1}]}>
+                      <Text style = {{fontSize:20,fontWeight:"bold",alignSelf:"flex-start",marginLeft:16,marginBottom:5}}>Wager:</Text>
+                      <TextInput style = {{borderRadius: 5, backgroundColor:"white",width:130, height:35}}
+                      inputMode="numeric"
+                      placeholder="Bet..."
+                      value={wager.at(index)?.toString()}
+                      onChangeText={(text) => changeWager(index,text)}
+                      disabled={prediction.at(index) === null}
+                      />
+                    </View>
+
+                    <View style = {[styles.predictionContainer,prediction.at(index) === null? {opacity: 0.2} : {opacity: 1}]}>
+                      <Text style = {{fontSize:15,fontWeight:"bold",marginBottom:5}}>Expected currently:</Text>
+                      <Text style = {[{fontSize: 56, fontWeight: "bold", color: "dodgerblue"},]}>£{expected.at(index)}</Text>
+                    </View>
+                    
+                  </View>
+
+                  <TouchableOpacity style = {[styles.fab,{top: -45 , left: -20,padding: 10,backgroundColor:"red"}]}
+                  onPress={() => toggle(setBetClicked,index)}>
+                    <Undo2 size = {36} color={"white"}></Undo2>
+                  </TouchableOpacity>
+                </View>
+                
+                ) : (
+                <View> 
+                <TouchableOpacity style ={[styles.fab,{left: -28,top: -34,}]} onPress={() => setBetSave(bet.bid,index)}>
                       {betSaves.at(index)? (<BookmarkCheck size = {32}></BookmarkCheck>) :(<Bookmark size = {32}></Bookmark>)}
                 </TouchableOpacity>
-                <View style = {{borderBottomWidth: 1, borderBottomColor: "#ccc",paddingBottom: 5, flexDirection: "row" , 
+                <View style = {{paddingBottom: 5, flexDirection: "row" , 
                     justifyContent: "space-between" , alignItems: "center"}}>
 
                     
 
                     <Text style = {[styles.title,{fontSize: 20 , paddingVertical: 0}]}>Bet {index+1}: </Text>
 
-                    <TouchableOpacity  onPress={() => toggleStat(index)}>
+                    <TouchableOpacity  onPress={() => toggle(setBetStats,index)}>
                         {betStats.at(index) ? 
                         (<View style = {{flexDirection: "row"}}>
                             <Users size={18} color={"#03FB52"}></Users>
@@ -229,11 +287,13 @@ const ThreadScreen = ({navigation,route}:any) => {
 
                     
                 </View>
-                <View style = {styles.betTextContainer}>
-                    <Text style = {styles.betText}>
-                        {bet.description}
-                    </Text>
-                </View>
+                <TouchableOpacity onPress={() => toggle(setBetClicked,index)}>
+                  <View style = {styles.betTextContainer}>
+                      <Text style = {styles.betText}>
+                          {bet.description}
+                      </Text>
+                  </View>
+                </TouchableOpacity>
                 <View style = {{flexDirection: "row"}}>
                   <View style = {{borderRightWidth: 1, borderRightColor: "#ddd"}}>
                     <TouchableOpacity style = {[styles.betButtonContainer, {marginTop: 10},
@@ -261,13 +321,9 @@ const ThreadScreen = ({navigation,route}:any) => {
                       (<View style = {{marginTop: 20}}>
                         <Text style = {styles.maxInputBox}>Max Bet: {(bet.max_amount == 0) ? "N/A" : bet.max_amount}</Text>
                         <Text style = {styles.maxInputBox}> Min Bet: {bet.min_amount}</Text>
-                      </View>)}
-                      
-                        
-                    </View>
-
+                      </View>)}                      
                     
-
+                    </View>                    
                     <View style = {{flexDirection: "row", alignItems: "center", marginLeft:30, marginTop:5}}>
                         <Text style = {{marginRight: 20}}>Ends at:</Text>
                         <View style = {styles.dateBox}>
@@ -281,35 +337,42 @@ const ThreadScreen = ({navigation,route}:any) => {
                   </View>
 
                 </View>
-                
+               </View>   
+                )}
               </Card>
 
-              <View style = {[styles.statusContainer,{backgroundColor: statusColors.at(bet.status)}]}>       
-                  <Text style = {styles.statusText}>{statusStrings.at(bet.status)}</Text>
-              </View>
+                {betClicked.at(index) ? (
+                  <View>
+                    <TouchableOpacity style = {[styles.statusContainer,{backgroundColor: "lightgreen"},prediction.at(index) === null? {opacity: 0.2} : {opacity: 1}]} disabled = {prediction.at(index) === null}>       
+                      <Text style = {styles.statusText}>Continue</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View>
+                    <View style = {[styles.statusContainer,{backgroundColor: statusColors.at(bet.status)}]}>       
+                      <Text style = {styles.statusText}>{statusStrings.at(bet.status)}</Text>
+                    </View>
+                  </View>
+                )}
+              
               <View style = {{marginTop:10}}>
 
               </View>
              </View>
-            ))}
+             
+            ))}     
             </ScrollView>
               
            )}
 
 
-           
-
-           
-
-
+          
 
          <View>
 
       </View>
      </View>
-
-        
-       
+    
     </View>
     </ScrollView>
    </SafeAreaView>
@@ -357,7 +420,8 @@ const styles = StyleSheet.create({
     minHeight: 100,
     width: 310,
     borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
+    borderTopWidth: 1,
+    borderColor: "#ccc",
     alignItems:"center",
     justifyContent:"center",
   },betText:{
@@ -465,16 +529,27 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },fab: {
-    
     position: "absolute",
-    left: -5,
-    top: -15,
     width: 40,
     height: 40,
     borderRadius: 30,
     alignItems: "center",
     justifyContent: "center",
     
+  },predictionContainer:{
+    borderColor: "black",
+    flex:0.5,
+    alignItems:"center",
+    justifyContent:"center",
+  },predictionRow:{ 
+    flexDirection: "row" , 
+    width:330 , 
+    height: 125,
+    backgroundColor: "#eee",
+    borderWidth: 2,
+    borderColor: "black",
+    alignSelf: "center",
+    borderRadius: 20,
   }
 
 });

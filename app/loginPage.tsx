@@ -5,8 +5,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
-import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {getProfile} from "./API";
+
 
 
 
@@ -17,7 +16,6 @@ const LoginScreen = ({navigation}:any) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const queryClient = useQueryClient();
 
 
 
@@ -56,9 +54,8 @@ const LoginScreen = ({navigation}:any) => {
       // Store token for future API calls
       //await AsyncStorage.setItem("authToken", token);
 
-      
-      
-      queryClient.invalidateQueries({ queryKey: ["user"] }); // Refetch data after mutation
+     
+        
       // Navigate to Home screen
       navigation.navigate("MainApp");
     } catch (error) {

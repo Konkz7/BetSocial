@@ -1,4 +1,4 @@
-export const IP_STRING = "http://192.168.0.104:8080" ; 
+export const IP_STRING = "http://192.168.0.103:8080" ; 
 
 export const errorHandler = (error) => {
     
