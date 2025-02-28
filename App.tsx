@@ -24,9 +24,10 @@ import OtpScreen from './app/otpPage';
 import HomeScreen from './app/homePage';
 import AddThreadScreen from './app/addThreadPage';
 import ThreadScreen from './app/threadPage';
-import { Home, Search, Bell, Mail, CirclePlus, LucideAArrowDown, BanIcon } from "lucide-react-native";
+import { Home, Search, Bell, Mail, CirclePlus, LucideAArrowDown, BanIcon} from "lucide-react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import WalletScreen from './app/walletPage';
 
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ function HomeStackNavigator() {
     <HomeStack.Navigator screenOptions={{ headerShown: false }}>
       <HomeStack.Screen name="Home_S" component={HomeScreen}  />
       <HomeStack.Screen name="Thread_S" component={ThreadScreen} />
+      <HomeStack.Screen name="Wallet_S" component={WalletScreen} />
     </HomeStack.Navigator>
   );
 };
@@ -89,6 +91,7 @@ function App(): React.JSX.Element {
 
   return (
 
+    
       <NavigationContainer>
        <QueryClientProvider client={queryClient}>
         <LoginStack.Navigator screenOptions={{ headerShown: false }}>
@@ -102,6 +105,7 @@ function App(): React.JSX.Element {
         </LoginStack.Navigator>  
        </QueryClientProvider>
       </NavigationContainer>
+      
 
   
   );

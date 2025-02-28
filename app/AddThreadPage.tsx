@@ -33,6 +33,7 @@ const AddThreadScreen = ({navigation}:any) => {
   }
   const [canAddBet, setCanAddBet] = useState(addBetOptions());
 
+  
 
   const categories = [
     "All",
@@ -58,9 +59,8 @@ const AddThreadScreen = ({navigation}:any) => {
   }
 
   
-
-  // Fetch data using React Query
-  const { data, isLoading, error } = useQuery({ queryKey: ["user"], queryFn: getProfile });
+  const queryClient = useQueryClient();
+  const data:any = queryClient.getQueryData(["user"]);
 
 
   const post = async() =>{
@@ -216,7 +216,7 @@ const AddThreadScreen = ({navigation}:any) => {
 
                 <View style = {{flexDirection: "row", alignItems: "center"}}>
                   <View style={styles.avatar} />
-                  <Text style={styles.userName}>{isLoading? "loading... ":data.user_name}</Text>
+                  <Text style={styles.userName}>{data == null? "404 >:( ":data.user_name}</Text>
                 </View>
 
                 <View style = {{ marginRight:0}}>

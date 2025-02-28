@@ -21,10 +21,14 @@ import {
   Mail,
   Menu,
   CirclePlus,
+  Wallet,
 } from "lucide-react-native";
+import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {getCircleSecret,getProfile,getWallet} from "./API";
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
+
 
 const categories = [
   "All",
@@ -40,6 +44,12 @@ const HomeScreen = ({navigation}:any) => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [threads, setActiveThreads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true); // Show loading indicator
+
+  // Fetch data using React Query
+  // ✅ Fetching profile, circle secret, and wallet using useQuery
+  const { data: profile, isLoading: profileLoading } = useQuery({ queryKey: ["user"], queryFn: getProfile });
+  const { data: circleSecret, isLoading: circleLoading } = useQuery({ queryKey: ["circle-secret"], queryFn: getCircleSecret });
+  const { data: wallet, isLoading: walletLoading } = useQuery({ queryKey: ["wallet"], queryFn: getWallet });
 
   const getAllthreads = async() =>{
     try {
@@ -63,14 +73,15 @@ const HomeScreen = ({navigation}:any) => {
       return userResponse.data;
     } catch (error) {
       Alert.alert("Error:", "User ${threadObject.uid} could not be fetched");
+      return null;
     }
   }
   
   useFocusEffect(
       useCallback(() => {
         console.log("Screen is focused! Perform refresh or action here.");  
-        getAllthreads();
         
+        getAllthreads();
         return () => {
           console.log("Screen is unfocused! Cleanup if needed.");
         console.log(threads)
@@ -84,11 +95,22 @@ const HomeScreen = ({navigation}:any) => {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <TouchableOpacity>
-            <Menu size={24} color="green" />
-          </TouchableOpacity>
+          
           <Text style={styles.title}>BetSocial</Text>
-          <View style={styles.profileIcon} />
+
+          <View style = {styles.rowContainer}>
+            <TouchableOpacity style= {[styles.rowContainer,{marginRight:25}]} onPress={() => navigation.navigate("Wallet_S")}>
+              <Wallet  color={"green"} size={20}></Wallet> 
+              <Text style = {styles.amount}>100</Text>
+              <Text style = {styles.USDC}>USDC</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style = {{marginRight:15}}>
+             <Menu size={24} color="green" />
+            </TouchableOpacity>
+
+            <View style={styles.profileIcon} />
+          </View>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
           {categories.map((category) => (
@@ -183,7 +205,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderBottomWidth: 1,
     borderBottomColor: "#ddd",
-    paddingTop: 40,
+    paddingTop: 30,
     paddingBottom: 10,
   },
   headerContent: {
@@ -194,7 +216,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   title: {
-    fontSize: 20,
+    fontSize: 30,
     fontWeight: "bold",
     color: "green",
   },
@@ -275,7 +297,17 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#ddd",
     paddingVertical: 10,
-  },
+  },rowContainer:{
+    flexDirection:"row",
+    alignItems:"center",
+  },USDC:{
+    fontSize:12,
+    marginLeft: 5,
+    fontWeight:"bold",
+  },amount:{
+    marginLeft: 5,
+    fontSize: 20,
+  }
 });
 
 export default HomeScreen;
