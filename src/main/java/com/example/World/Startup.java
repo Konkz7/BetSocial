@@ -60,6 +60,8 @@ public class Startup {
                 new Date().getTime(),          // Retain the creation timestamp
                 null,
                 role.toInt(),          // Retain the user role
+                null,              // default no wallet
+                0.0,      // Default the balance to 0.0
                 null            // Retain the version for optimistic locking
         );
 

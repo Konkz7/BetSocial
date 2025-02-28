@@ -35,6 +35,9 @@ public interface UserRepository extends ListCrudRepository<User_, Long> {
     @Query("UPDATE User_ SET is_verified = true , verification_token = NULL WHERE uid = :id AND deleted_at IS NULL")
     int verify(@Param("id") Long id);
 
-
+    @Modifying
+    @Transactional
+    @Query("UPDATE User_ SET wallet_address = :wallet_address WHERE uid = :id AND deleted_at IS NULL")
+    int setWalletAddress(@Param("id") Long id,@Param("wallet_address") String wallet_address);
 
 }

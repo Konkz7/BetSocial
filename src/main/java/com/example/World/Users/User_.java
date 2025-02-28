@@ -44,7 +44,14 @@ public record User_(
 
         Long deleted_at,
 
+        @NonNull
         Integer user_role, // Role of the user, 0 for normal user, 1 for superuser, 2 for admin
+
+        String wallet_address,
+
+        @NonNull
+        Double balance,
+
         @Version
         Integer u_version // Version number for optimistic locking
 ) {

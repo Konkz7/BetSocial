@@ -54,7 +54,6 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
         .csrf(AbstractHttpConfigurer::disable)
-
         .authorizeHttpRequests(registry -> {
             registry.requestMatchers("/req/***").permitAll();
             registry.requestMatchers("/superusers/***").hasAnyRole("SUPERUSER","ADMIN");
