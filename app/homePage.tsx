@@ -24,7 +24,7 @@ import {
   Wallet,
 } from "lucide-react-native";
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {getCircleSecret,getProfile,getWallet} from "./API";
+import {getBalance, getCircleSecret,getIpAddress,getProfile,getWallet} from "./API";
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
@@ -50,6 +50,9 @@ const HomeScreen = ({navigation}:any) => {
   const { data: profile, isLoading: profileLoading } = useQuery({ queryKey: ["user"], queryFn: getProfile });
   const { data: circleSecret, isLoading: circleLoading } = useQuery({ queryKey: ["circle-secret"], queryFn: getCircleSecret });
   const { data: wallet, isLoading: walletLoading } = useQuery({ queryKey: ["wallet"], queryFn: getWallet });
+  const { data: balance, isLoading: balanceLoading } = useQuery({ queryKey: ["balance"], queryFn: getBalance });
+  const { data: ipAddress, isLoading: ipLoading } = useQuery({ queryKey: ["ipAddress"], queryFn: getIpAddress});
+
 
   const getAllthreads = async() =>{
     try {
@@ -101,7 +104,7 @@ const HomeScreen = ({navigation}:any) => {
           <View style = {styles.rowContainer}>
             <TouchableOpacity style= {[styles.rowContainer,{marginRight:25}]} onPress={() => navigation.navigate("Wallet_S")}>
               <Wallet  color={"green"} size={20}></Wallet> 
-              <Text style = {styles.amount}>100</Text>
+              <Text style = {styles.amount}>{balance && balance.data.tokenBalances.length > 0? "temp" : "0.00"}</Text>
               <Text style = {styles.USDC}>USDC</Text>
             </TouchableOpacity>
 

@@ -28,3 +28,21 @@ export const getCircleSecret = async () =>{
       console.log("Error!", "Unable to find user wallet: "+ error.message);
     }
   }
+
+  export const getBalance = async () =>{
+    try {
+      const response = await axios.get(IP_STRING + "/circle/get-balance");
+      return response.data;
+    } catch (error) {
+      console.log("Error!", "Unable to find users' balance: "+ error.message);
+    }
+  }
+
+  export const getIpAddress = async () =>{
+    try {
+      const response = await axios.get('https://api.ipify.org?format=json');
+      return response.data;
+    } catch (error) {
+      console.log("Error!", "Unable to find users' balance: "+ error.message);
+    }
+  }
