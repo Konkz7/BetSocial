@@ -31,7 +31,7 @@ public record User_(
         String pass_word, // pass_word (should be hashed before saving)
 
         @NotEmpty
-        @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid phone number format")
+        @Pattern(regexp = "^\\+[1-9]\\d{1,14}$", message = "Invalid E.164 phone number format")
         String phone_number, // Phone number in international format, unique and validated
 
         String verification_token, // Token used for email verification
@@ -51,6 +51,8 @@ public record User_(
 
         @NonNull
         Double balance,
+
+        String card_id,
 
         @Version
         Integer u_version // Version number for optimistic locking

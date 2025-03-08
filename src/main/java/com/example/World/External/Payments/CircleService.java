@@ -1,6 +1,9 @@
 package com.example.World.External.Payments;
 
+import com.example.World.Users.User_;
+import com.google.api.Http;
 import com.google.api.client.util.Value;
+import jakarta.servlet.http.HttpSession;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
@@ -14,12 +17,13 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.security.KeyFactory;
-import java.security.PublicKey;
-import java.security.Security;
+import java.nio.charset.StandardCharsets;
+import java.security.*;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Map;
+import org.json.JSONObject;
+
 
 @Service
 public class CircleService {
@@ -34,17 +38,17 @@ public class CircleService {
     @Autowired
     private Environment env;
 
-    CircleService(Environment env){
+    CircleService(Environment env) {
         Security.addProvider(new BouncyCastleProvider());
     }
 
     public boolean generateEncryptedEntitySecret() throws Exception {
-    // Encrypt the entity secret
+        // Encrypt the entity secret
 
-        String encryptedBase64 = encryptWithRSA(CIRCLE_PUBLIC_KEY,env.getProperty("CIRCLE_SECRET"));
+        String encryptedBase64 = encryptWithRSA(CIRCLE_PUBLIC_KEY, env.getProperty("CIRCLE_SECRET"));
 
         // Verify the length of the Base64 ciphertext
-            if (encryptedBase64.length() == 684) {
+        if (encryptedBase64.length() == 684) {
             System.out.println("Encryption successful! Encrypted secret: \n" + encryptedBase64);
             ENCRYPTED_ENTITY_SECRET = encryptedBase64;
             return true;
@@ -104,28 +108,28 @@ public class CircleService {
         return response;
     }
 
-    public HttpResponse<String> createWalletSet(String idemKey,String setName) throws IOException, InterruptedException {
+    public HttpResponse<String> createWalletSet(String idemKey, String setName) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.circle.com/v1/w3s/developer/walletSets"))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + API_KEY)
-                .method("POST", HttpRequest.BodyPublishers.ofString("{\"idempotencyKey\":\""+idemKey+"\"," +
-                        "\"entitySecretCipherText\":\""+ENCRYPTED_ENTITY_SECRET+"\",\"name\":\""+setName+"\"}"))
+                .method("POST", HttpRequest.BodyPublishers.ofString("{\"idempotencyKey\":\"" + idemKey + "\"," +
+                        "\"entitySecretCipherText\":\"" + ENCRYPTED_ENTITY_SECRET + "\",\"name\":\"" + setName + "\"}"))
                 .build();
         HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println(response.body());
-        return  response;
+        return response;
     }
 
-    public HttpResponse<String> createWallets(String idemKey, String walletSetId, int count ) throws IOException, InterruptedException {
+    public HttpResponse<String> createWallets(String idemKey, String walletSetId, int count) throws IOException, InterruptedException {
         String blockChain = "SOL-DEVNET";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.circle.com/v1/w3s/developer/wallets"))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + API_KEY)
-                .method("POST", HttpRequest.BodyPublishers.ofString("{\"idempotencyKey\":\""+idemKey+"\"," +
-                        "\"entitySecretCipherText\":\""+ENCRYPTED_ENTITY_SECRET+"\",\"blockchains\":[\""+blockChain+"\"]," +
-                        "\"count\":"+count+",\"walletSetId\":\""+walletSetId+"\"}"))
+                .method("POST", HttpRequest.BodyPublishers.ofString("{\"idempotencyKey\":\"" + idemKey + "\"," +
+                        "\"entitySecretCipherText\":\"" + ENCRYPTED_ENTITY_SECRET + "\",\"blockchains\":[\"" + blockChain + "\"]," +
+                        "\"count\":" + count + ",\"walletSetId\":\"" + walletSetId + "\"}"))
                 .build();
         HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println(response.body());
@@ -134,7 +138,7 @@ public class CircleService {
 
     public HttpResponse<String> getWallet(String walletId) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.circle.com/v1/w3s/wallets/"+walletId))
+                .uri(URI.create("https://api.circle.com/v1/w3s/wallets/" + walletId))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + API_KEY)
                 .method("GET", HttpRequest.BodyPublishers.noBody())
@@ -146,7 +150,7 @@ public class CircleService {
 
     public HttpResponse<String> getBalance(String walletId) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.circle.com/v1/w3s/wallets/"+walletId+"/balances"))
+                .uri(URI.create("https://api.circle.com/v1/w3s/wallets/" + walletId + "/balances"))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + API_KEY)
                 .method("GET", HttpRequest.BodyPublishers.noBody())
@@ -156,19 +160,108 @@ public class CircleService {
         return response;
     }
 
-    public HttpResponse<String> initiateTransaction(String idemKey,String tokenId, Float amount,  String walletId) throws IOException, InterruptedException {
+    public HttpResponse<String> initiateTransaction(String idemKey, String tokenId, Float amount, String walletId) throws IOException, InterruptedException {
         String feeLevel = "MEDIUM";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.circle.com/v1/w3s/developer/transactions/transfer"))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + API_KEY)
-                .method("POST", HttpRequest.BodyPublishers.ofString("{\"idempotencyKey\":\""+idemKey+"\"" +
-                        ",\"entitySecretCipherText\":\""+ENCRYPTED_ENTITY_SECRET+"\",\"amounts\":[\""+amount+"\"]," +
-                        "\"feeLevel\":\""+feeLevel+"\",\"tokenId\":\""+tokenId+"\"," +
-                        "\"walletId\":\""+walletId+"\"}"))
+                .method("POST", HttpRequest.BodyPublishers.ofString("{\"idempotencyKey\":\"" + idemKey + "\"" +
+                        ",\"entitySecretCipherText\":\"" + ENCRYPTED_ENTITY_SECRET + "\",\"amounts\":[\"" + amount + "\"]," +
+                        "\"feeLevel\":\"" + feeLevel + "\",\"tokenId\":\"" + tokenId + "\"," +
+                        "\"walletId\":\"" + walletId + "\"}"))
                 .build();
         HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println(response.body());
         return response;
     }
+
+    public HttpResponse<String> addCard(String idemKey, User_ user, String sessionId, String ipAddress,
+                        BillingDTO billing, String encryptedData) throws IOException, InterruptedException {
+
+        JSONObject requestBody = new JSONObject();
+        requestBody.put("idempotencyKey", idemKey);
+        requestBody.put("encryptedData", encryptedData);
+
+        JSONObject billingDetails = new JSONObject();
+        billingDetails.put("name", billing.fullName());
+        billingDetails.put("city", billing.city());
+        billingDetails.put("country", billing.country());
+        billingDetails.put("line1", billing.line1());
+        billingDetails.put("line2", billing.line2());
+        billingDetails.put("postalCode", billing.postalCode());
+        requestBody.put("billingDetails", billingDetails);
+
+        requestBody.put("expMonth", billing.expMonth());  // Ensure it's a string if needed
+        requestBody.put("expYear", billing.expYear());
+
+        JSONObject metadata = new JSONObject();
+        metadata.put("email", user.email());
+        metadata.put("phoneNumber", user.phone_number());
+        metadata.put("sessionId", sessionId);
+        metadata.put("ipAddress", ipAddress);
+        requestBody.put("metadata", metadata);
+
+        // Convert to String
+        String requestBodyString = requestBody.toString();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api-sandbox.circle.com/v1/cards"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + CIRCLE_SAND_API_KEY)
+                .method("POST", HttpRequest.BodyPublishers.ofString(requestBodyString))
+                .build();
+        HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println(response.body());
+        return response;
+    }
+
+
+    public HttpResponse<String> makePayment(String idemKey, User_ user, String cardId, Float amount, String sessionId,
+                                            String ipAddress) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api-sandbox.circle.com/v1/payments"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + CIRCLE_SAND_API_KEY)
+                .method("POST", HttpRequest.BodyPublishers.ofString("{" +
+                        "\"idempotencyKey\":\"" + idemKey + "\"," +
+                        "\"metadata\":{\"email\":\"" + user.email() + "\",\"phoneNumber\":\"" + user.phone_number() + "\"," +
+                        "\"sessionId\":\"" + sessionId + "\",\"ipAddress\":\"" + ipAddress + "\"}," +
+                        "\"amount\":{\"amount\":\"" + amount + "\",\"currency\":\"USD\"},\"verification\":\"cvv\"," +
+                        "\"source\":{\"id\":\"" + cardId + "\",\"type\":\"card\"}}"))
+                .build();
+        HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println(response.body());
+        return response;
+    }
+
+    public HttpResponse<String> getCard(String cardId) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api-sandbox.circle.com/v1/cards/"+cardId))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + CIRCLE_SAND_API_KEY)
+                .method("GET", HttpRequest.BodyPublishers.noBody())
+                .build();
+        HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println(response.body());
+        return response;
+    }
+
+
+
+    public String hash(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                hexString.append(String.format("%02x", b));
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error hashing session ID", e);
+        }
+    }
+
+
 }

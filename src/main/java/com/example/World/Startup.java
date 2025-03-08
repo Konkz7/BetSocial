@@ -62,6 +62,7 @@ public class Startup {
                 role.toInt(),          // Retain the user role
                 null,              // default no wallet
                 0.0,      // Default the balance to 0.0
+                null, // default no card
                 null            // Retain the version for optimistic locking
         );
 

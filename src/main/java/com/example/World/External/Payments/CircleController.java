@@ -98,4 +98,41 @@ public class CircleController {
 
     }
 
+    @GetMapping("/get-balance")
+    ResponseEntity<String> getBalance(HttpSession session) throws IOException, InterruptedException {
+
+        Long uid = (Long) session.getAttribute("userId");
+        User_ user = userRepository.findById(uid).orElseThrow();
+
+        HttpResponse<String> response = circleService.getBalance(user.wallet_address());
+
+        if(response.statusCode() == 200 || response.statusCode() == 201) {
+            return ResponseEntity.ok(response.body());
+        } else {
+            return ResponseEntity.badRequest().body("Failed to get Balance!\n" + response.body());
+        }
+
+    }
+
+    @PostMapping("/create-card")
+    public ResponseEntity<String> createCard(HttpSession session,
+                                             @RequestParam String encryptedData,
+                                             @RequestParam String ipAddress,
+                                             @RequestBody BillingDTO billing) {
+
+        Long uid  = (Long) session.getAttribute("userId");
+
+        try {
+            String idempotencyKey = UUID.randomUUID().toString(); // Generate a unique key
+            User_ user = userRepository.findById(uid).orElseThrow(); // Fetch the authenticated user
+
+            HttpResponse<String> response = circleService.addCard(idempotencyKey, user, circleService.hash(session.getId()),
+                    ipAddress, billing, encryptedData);
+            return ResponseEntity.status(response.statusCode()).body(response.body());
+        } catch (IOException | InterruptedException e) {
+            return ResponseEntity.status(500).body("Error processing request: " + e.getMessage());
+        }
+    }
+
+
 }
