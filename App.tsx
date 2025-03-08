@@ -28,11 +28,15 @@ import { Home, Search, Bell, Mail, CirclePlus, LucideAArrowDown, BanIcon} from "
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WalletScreen from './app/walletPage';
+import AddCardScreen from './app/addCardPage';
 
 
 const queryClient = new QueryClient();
 
+
+
 const LoginStack = createNativeStackNavigator();
+const WalletStack = createNativeStackNavigator();
 const HomeStack = createNativeStackNavigator();
 
 const MainTab = createBottomTabNavigator();
@@ -44,8 +48,17 @@ function HomeStackNavigator() {
     <HomeStack.Navigator screenOptions={{ headerShown: false }}>
       <HomeStack.Screen name="Home_S" component={HomeScreen}  />
       <HomeStack.Screen name="Thread_S" component={ThreadScreen} />
-      <HomeStack.Screen name="Wallet_S" component={WalletScreen} />
+      <HomeStack.Screen name="Wallet_S" component={WalletStackNavigator} />
     </HomeStack.Navigator>
+  );
+};
+
+function WalletStackNavigator() {
+  return (
+    <WalletStack.Navigator screenOptions={{ headerShown: false }}>
+      <HomeStack.Screen name="Wallet" component={WalletScreen} />
+      <HomeStack.Screen name="Card_S" component={AddCardScreen} />
+    </WalletStack.Navigator>
   );
 };
 
