@@ -123,7 +123,9 @@ const styles = StyleSheet.create({
   headerBlock:{
     flex: .3,
     backgroundColor: "#32cd32",
-    justifyContent: "center"
+    justifyContent: "center",
+    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: 30,
   },
   header: {
     fontSize: 48,
@@ -131,6 +133,7 @@ const styles = StyleSheet.create({
     textAlign: "left",
     marginBottom: 20,
     paddingLeft: 10,
+    color: "white",
   },
   headerCaption: {
     fontSize: 20,
@@ -138,6 +141,7 @@ const styles = StyleSheet.create({
     textAlign: "left",
     marginBottom: 20,
     paddingLeft: 10,
+    color: "white",
   },
   bodyBlock: {
     flex: .7,

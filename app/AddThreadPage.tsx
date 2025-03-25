@@ -195,18 +195,11 @@ const AddThreadScreen = ({navigation}:any) => {
   return (
    <SafeAreaView style = {styles.container}>
     <ScrollView>
+    <TouchableOpacity style = {{}} onPress={post}>
       <View style = {styles.header}>
-        <View >
-          <TouchableOpacity style={{ flexDirection: "row", alignItems: "center" }} onPress={() => navigation.goBack()}>
-            <ArrowLeft size={36} color={"green"} />
-            <Text style = {styles.headerText}>Back</Text>
-          </TouchableOpacity>
-        </View>
-
-          <Button style = {styles.postbutton} onPress={post}>
-            <Text style = {{color: "white"}}>Post</Text>
-          </Button>
+            <Text style = {{color: "white",fontSize: 24,fontWeight: 'bold'}}>Post</Text>
       </View >
+    </TouchableOpacity>
       <View style = {styles.body}>
         <Text style = {styles.title}> Create Thread: </Text>
 
@@ -383,10 +376,12 @@ const styles = StyleSheet.create({
   },header: {
     flexDirection:"row",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "white",
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    justifyContent: "center",
+    backgroundColor: "green",
+    borderBottomWidth: 2,
+    borderBottomColor: "lightgreen",
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
     padding: 10,
   },headerText:{
     paddingLeft:10,
