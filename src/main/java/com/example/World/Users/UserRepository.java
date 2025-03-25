@@ -8,12 +8,16 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 
+import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends ListCrudRepository<User_, Long> {
 
     @Query("SELECT * FROM User_ WHERE user_name = :username AND deleted_at IS NULL")
     Optional<User_> findByUsername(String username);
+
+    @Query("SELECT * FROM User_ WHERE user_role = 0 AND deleted_at IS NULL")
+    List<User_> findAllActiveUsers();
 
     @Query("SELECT * FROM User_ WHERE email = :email AND deleted_at IS NULL")
     Optional<User_> findByEmail(String email);

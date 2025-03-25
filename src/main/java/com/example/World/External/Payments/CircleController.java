@@ -1,5 +1,7 @@
 package com.example.World.External.Payments;
 
+import com.example.World.Cards.CardRepository;
+import com.example.World.Cards.Card_;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.User_;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.net.http.HttpResponse;
+import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,12 +22,14 @@ public class CircleController {
 
     private final CircleService circleService;
     private final UserRepository userRepository;
+    private final CardRepository cardRepository;
     private final String USERS_WALLET_ID = "77397fcc-793e-553f-8b68-f93630488cb3";
 
 
-    public CircleController(CircleService circleService, UserRepository userRepository) {
+    public CircleController(CircleService circleService, UserRepository userRepository, CardRepository cardRepository) {
         this.circleService = circleService;
         this.userRepository = userRepository;
+        this.cardRepository = cardRepository;
     }
 
 
@@ -128,6 +133,10 @@ public class CircleController {
 
             HttpResponse<String> response = circleService.addCard(idempotencyKey, user, circleService.hash(session.getId()),
                     ipAddress, billing, encryptedData);
+
+
+            cardRepository.save(new Card_(circleService.extractId(response.body()), uid , new Date().getTime()));
+
             return ResponseEntity.status(response.statusCode()).body(response.body());
         } catch (IOException | InterruptedException e) {
             return ResponseEntity.status(500).body("Error processing request: " + e.getMessage());

@@ -1,6 +1,8 @@
 package com.example.World.External.Payments;
 
 import com.example.World.Users.User_;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.Http;
 import com.google.api.client.util.Value;
 import jakarta.servlet.http.HttpSession;
@@ -9,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import javax.crypto.Cipher;
@@ -260,6 +263,17 @@ public class CircleService {
             return hexString.toString();
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Error hashing session ID", e);
+        }
+    }
+
+    public String extractId(String responseBody) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(responseBody);
+            return rootNode.path("data").path("id").asText();  // Extract "id"
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
     }
 

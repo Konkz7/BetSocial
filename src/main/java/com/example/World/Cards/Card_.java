@@ -7,7 +7,7 @@ public record Card_(
         @Id
         String card_id,
         @NonNull
-        Long user_id,
+        Long uid,
         @NonNull
         Long created_at
 ) {
