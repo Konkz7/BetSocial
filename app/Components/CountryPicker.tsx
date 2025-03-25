@@ -15,8 +15,8 @@ const countries = [
   { label: "South Africa", value: "ZA" },
 ];
 
-const CountryDropdown = () => {
-  const [selectedCountry, setSelectedCountry] = useState(null);
+const CountryDropdown = ({selectedCountry, setSelectedCountry}:any) => {
+  
 
   return (
     <View style={{marginTop: 10}}>
@@ -27,6 +27,7 @@ const CountryDropdown = () => {
           items={countries}
           placeholder={{ label: "Select a country...", value: null }}
           style={pickerSelectStyles}
+          value={selectedCountry}
         />
       </View>
 

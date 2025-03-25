@@ -11,6 +11,15 @@ export const getProfile = async() =>{
     }
   }
 
+export const getUsers = async() =>{
+    try {
+        const users = await axios.get(IP_STRING + "/api/users/all");
+        return users.data;
+    } catch (error) {
+      Alert.alert("Error!", "Users couldnt be obtained.")
+    }
+  }
+
 export const getCircleSecret = async () =>{
     try {
       const response = await axios.get(IP_STRING + "/circle/get-secret");
@@ -43,6 +52,8 @@ export const getCircleSecret = async () =>{
       const response = await axios.get('https://api.ipify.org?format=json');
       return response.data;
     } catch (error) {
-      console.log("Error!", "Unable to find users' balance: "+ error.message);
+      console.log("Error!", "Unable to find users' IP: "+ error.message);
     }
   }
+
+  

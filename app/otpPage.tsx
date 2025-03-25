@@ -121,6 +121,7 @@ const styles = StyleSheet.create({
     textAlign: "left",
     marginBottom: 20,
     paddingLeft: 10,
+    color: "white",
   },
   headerCaption: {
     fontSize: 20,
@@ -128,6 +129,7 @@ const styles = StyleSheet.create({
     textAlign: "left",
     marginBottom: 20,
     paddingLeft: 10,
+    color: "white",
   },
   bodyBlock: {
     flex: .7,

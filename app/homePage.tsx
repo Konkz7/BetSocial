@@ -22,6 +22,7 @@ import {
   Menu,
   CirclePlus,
   Wallet,
+  Frown,
 } from "lucide-react-native";
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {getBalance, getCircleSecret,getIpAddress,getProfile,getWallet} from "./API";
@@ -102,7 +103,8 @@ const HomeScreen = ({navigation}:any) => {
           <Text style={styles.title}>BetSocial</Text>
 
           <View style = {styles.rowContainer}>
-            <TouchableOpacity style= {[styles.rowContainer,{marginRight:25}]} onPress={() => navigation.navigate("Wallet_S")}>
+            <TouchableOpacity style= {[styles.rowContainer,{marginRight:25}]} onPress={() => wallet == undefined
+              ? null :navigation.navigate("Wallet_S")}>
               <Wallet  color={"green"} size={20}></Wallet> 
               <Text style = {styles.amount}>{balance && balance.data.tokenBalances.length > 0? "temp" : "0.00"}</Text>
               <Text style = {styles.USDC}>USDC</Text>
@@ -145,7 +147,10 @@ const HomeScreen = ({navigation}:any) => {
       ) : (
       <FlatList
         data={threads}
-        ListEmptyComponent={<Text>No data available</Text>}
+        ListEmptyComponent={<View style = {styles.notFound}>
+          <Frown size={50} color="gray" />
+          <Text>No threads available</Text>
+          </View>}
         keyExtractor={(item) => item.tid.toString()}
         removeClippedSubviews={false}
         onRefresh={getAllthreads} // Enable pull-to-refresh
@@ -292,14 +297,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginRight: 10,
-  },
-  bottomNav: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "white",
-    borderTopWidth: 1,
-    borderTopColor: "#ddd",
-    paddingVertical: 10,
   },rowContainer:{
     flexDirection:"row",
     alignItems:"center",
@@ -310,6 +307,10 @@ const styles = StyleSheet.create({
   },amount:{
     marginLeft: 5,
     fontSize: 20,
+  },notFound:{
+    marginTop: 50,
+    justifyContent:"center",
+    alignItems:"center",
   }
 });
 

@@ -29,6 +29,8 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WalletScreen from './app/walletPage';
 import AddCardScreen from './app/addCardPage';
+import MessageScreen from './app/messagePage';
+import SearchScreen from './app/searchPage';
 
 
 const queryClient = new QueryClient();
@@ -82,10 +84,10 @@ function TabNavigator(){
           })}
         >
           <MainTab.Screen name="Home" component={HomeStackNavigator} />
-          <MainTab.Screen name="Search" component={HomeScreen} />
+          <MainTab.Screen name="Search" component={SearchScreen} />
           <MainTab.Screen name="Add" component={AddThreadScreen} />
           <MainTab.Screen name="Notifications" component={HomeScreen} />
-          <MainTab.Screen name="Messages" component={HomeScreen} />
+          <MainTab.Screen name="Messages" component={MessageScreen} />
         </MainTab.Navigator>
     );
 }

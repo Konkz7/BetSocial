@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import 'text-encoding-polyfill';
+import { Buffer } from 'buffer'; // Import Buffer polyfill
 import { View, Text, TextInput, Button, StyleSheet, ScrollView,TouchableOpacity,Alert } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import OpenPGP from "react-native-fast-openpgp";
@@ -25,25 +27,29 @@ const AddCardScreen = ({navigation}:any) => {
   const [expYear, setExpYear] = useState('');
 
   const queryClient = useQueryClient();
-  const ipAddress:any = queryClient.invalidateQueries({queryKey: ["ipAddress"]});
+  queryClient.invalidateQueries({queryKey: ["ipAddress"]});
+  const ipAddress:any = queryClient.getQueryData(["ipAddress"]);
 
 
-  const encryptCardData = async({cardNumber, cvv}: any) => {
+  const encryptCardData = async ({ cardNumber, cvv }: any) => {
     try {
-        const cardData = cardNumber +"|"+ cvv;
-        // Encrypt the data
-        const encrypted = await OpenPGP.encrypt(
-          cardData, 
-          pgpPublicKey
-        );
-
-        // Convert encrypted PGP message to Base64
-        const base64Encrypted = Buffer.from(encrypted).toString('base64');
-
-        return base64Encrypted;
+      const cardData = `${cardNumber}|${cvv}`;
+  
+      // Ensure you have a valid PGP public key
+      if (!pgpPublicKey) {
+        throw new Error("PGP public key is missing.");
+      }
+  
+      // Encrypt using react-native-fast-openpgp
+      const encrypted = await OpenPGP.encrypt(cardData,pgpPublicKey);
+  
+      // Convert encrypted PGP message to Base64
+      const base64Encrypted = Buffer.from(encrypted, 'utf-8').toString('base64');
+  
+      return base64Encrypted;
     } catch (error) {
-        console.error('Encryption failed:', error);
-        throw error;
+      console.error("Encryption failed:", error);
+      throw error;
     }
   };
 
@@ -66,13 +72,26 @@ const AddCardScreen = ({navigation}:any) => {
 
     console.log('Billing Details:', billingDetails);
     console.log('Card Details:', cardDetails);
+    console.log("Ipaddress: ", ipAddress);
+
+   
 
     // Here you would trigger any encryption/tokenization before sending to your backend
     const secret =await encryptCardData({cardNumber, cvv});
-
+    console.log("secret: ", secret);
+    
     // and then call your API endpoint that creates the card.
     try {
-      const response = await axios.post(IP_STRING + "/circle/add-card?encryptedData="+secret+"&ipAddress="+ipAddress,billingDetails)
+      const response = await axios.post(
+        IP_STRING + "/circle/create-card", 
+        billingDetails, // Send billing details in the request body
+        {
+          params: { 
+            encryptedData: secret, 
+            ipAddress: ipAddress.ip 
+          }
+        }
+      );
       console.log(response.data);
       navigation.pop(null);
     } catch (error) {
@@ -112,9 +131,10 @@ const AddCardScreen = ({navigation}:any) => {
         onChangeText={setCity}
       />
 
-      <CountryDropdown>
-
-      </CountryDropdown>
+      <CountryDropdown
+        selectedCountry = {country}
+        setSelectedCountry = {setCountry}
+      />
 
       <Text style={styles.label}>Address Line 1</Text>
       <TextInput
@@ -157,7 +177,7 @@ const AddCardScreen = ({navigation}:any) => {
 
       <Text style={styles.label}>CVV</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input]}
         placeholder="CVV"
         placeholderTextColor={"#ccc"}
         keyboardType="numeric"
@@ -229,6 +249,7 @@ const styles = StyleSheet.create({
     marginVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 5,
+    color: "black",
   },
 });
 
