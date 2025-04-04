@@ -219,20 +219,21 @@ const ThreadScreen = ({navigation,route}:any) => {
                 {betClicked.at(index) ? (
                  
                 <View>
-                  <View style = {[styles.predictionRow,{borderBottomLeftRadius:0,borderBottomRightRadius:0,marginTop:10}]}>
-                    <TouchableOpacity style = {[styles.predictionContainer,{borderRightWidth: 1,borderTopLeftRadius:18}, 
-                    prediction.at(index) === false? {backgroundColor: "red"} : {backgroundColor: "#eee"} ]} 
+                  <View style = {[styles.predictionRow,{marginTop:10}]}>
+                    <TouchableOpacity style = {[styles.predictionContainer,{}, prediction.at(index) === false? {backgroundColor: "red"} : {backgroundColor: "#eee"},
+                      prediction.at(index) === true? {opacity: 0.2} : {opacity: 1}
+                     ]} 
                     onPress={() => togglePrediction(index,false)}>
                       <X size = {100} color={prediction.at(index) === false? "white" : "red"}></X>
                     </TouchableOpacity>
-                    <TouchableOpacity style = {[styles.predictionContainer , {borderTopRightRadius:18},
-                      prediction.at(index)? {backgroundColor: "green"}: {backgroundColor: "#eee"} 
+                    <TouchableOpacity style = {[styles.predictionContainer , {},prediction.at(index)? {backgroundColor: "green"}: {backgroundColor: "#eee"},
+                      prediction.at(index) === false? {opacity: 0.2} : {opacity: 1} 
                     ]} onPress={() => togglePrediction(index,true)}>
                       <Check size = {100} color={prediction.at(index)? "white" : "green"}></Check>
                     </TouchableOpacity>
                   </View>
 
-                  <View style = {[styles.predictionRow, {borderTopLeftRadius:0,borderTopRightRadius:0,marginTop:-2}]}>
+                  <View style = {[styles.predictionRow, {}]}>
                     <View style = {[styles.predictionContainer,prediction.at(index) === null? {opacity: 0.2} : {opacity: 1}]}>
                       <Text style = {{fontSize:20,fontWeight:"bold",alignSelf:"flex-start",marginLeft:16,marginBottom:5}}>Wager:</Text>
                       <TextInput style = {{borderRadius: 5, backgroundColor:"white",width:130, height:35}}
@@ -251,7 +252,7 @@ const ThreadScreen = ({navigation,route}:any) => {
                     
                   </View>
 
-                  <TouchableOpacity style = {[styles.fab,{top: -45 , left: -20,padding: 10,backgroundColor:"red"}]}
+                  <TouchableOpacity style = {[styles.fab,{top: -45 , left: -25,padding: 10,backgroundColor:"lightgreen"}]}
                   onPress={() => toggle(setBetClicked,index)}>
                     <Undo2 size = {36} color={"white"}></Undo2>
                   </TouchableOpacity>
@@ -537,19 +538,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     
   },predictionContainer:{
-    borderColor: "black",
     flex:0.5,
     alignItems:"center",
     justifyContent:"center",
+    borderRadius:10,
   },predictionRow:{ 
     flexDirection: "row" , 
     width:330 , 
     height: 125,
-    backgroundColor: "#eee",
-    borderWidth: 2,
-    borderColor: "black",
+    backgroundColor: "#eee",  
     alignSelf: "center",
-    borderRadius: 20,
   }
 
 });
