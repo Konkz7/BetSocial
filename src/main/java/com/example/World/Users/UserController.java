@@ -7,6 +7,7 @@ import com.example.World.Users.UserRepository;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,8 +24,9 @@ public class UserController {
     }
 
     @GetMapping("/all")
-    List<User_> findAll(){
-        return userRepository.findAllActiveUsers();
+    List<User_> findAll(HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        return userRepository.findAllActiveUsers(uid);
     }
 
     @GetMapping("/{uid}")
@@ -34,6 +36,35 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
         return user.get();
+    }
+
+    @PutMapping("/change-bio")
+    ResponseEntity<String> changeBio(@RequestParam String bio, HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        if(bio.length() > 380){
+            return ResponseEntity.badRequest().body("This bio has too many characters");
+        }
+
+        userRepository.changeBio(uid,bio);
+
+        return ResponseEntity.ok().body("Bio successfully changed!");
+    }
+
+    @PutMapping("change-user-name")
+    ResponseEntity<String> changeUserName(@RequestParam String newName, HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        if(newName.length() > 50){
+            return ResponseEntity.badRequest().body("This name has too many characters");
+        }
+
+        for(User_ user : userRepository.findAll()){
+            if(newName.equals(user.user_name())){
+                return ResponseEntity.badRequest().body("This name already exists");
+            }
+        }
+        userRepository.changeUserName(uid,newName);
+
+        return ResponseEntity.ok().body("Name successfully changed!");
     }
 
 

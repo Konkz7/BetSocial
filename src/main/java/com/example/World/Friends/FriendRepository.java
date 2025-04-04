@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 
 public interface FriendRepository extends ListCrudRepository<Friendship_, Long> {
@@ -25,6 +26,10 @@ public interface FriendRepository extends ListCrudRepository<Friendship_, Long> 
     // Check if a friendship exists between two users
     @Query(value = "SELECT EXISTS (SELECT 1 FROM Friendship_ WHERE request_id = :requestId AND receive_id = :receiveId)")
     boolean existsByRequestIdAndReceiveId(@Param("requestId") Long requestId, @Param("receiveId") Long receiveId);
+
+    @Query(value = "SELECT * FROM Friendship_ WHERE (request_id = :requestId AND receive_id = :receiveId) OR " +
+            "(request_id = :receiveId AND receive_id = :requestId) ")
+    Optional<Friendship_> findByRequestIdAndReceiveId(@Param("requestId") Long requestId, @Param("receiveId") Long receiveId);
 
     @Modifying
     @Transactional

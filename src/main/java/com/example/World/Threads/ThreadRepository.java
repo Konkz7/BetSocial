@@ -1,6 +1,7 @@
 package com.example.World.Threads;
 
 
+import com.example.World.Users.User_;
 import org.springframework.data.jdbc.repository.query.Modifying;
 import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.ListCrudRepository;
@@ -21,7 +22,11 @@ public interface ThreadRepository extends ListCrudRepository<Thread_, Long> {
             @Param("id") Long id,
             @Param("deleted_at") Long deleted_at);
 
+    @Query("SELECT * FROM Thread_ WHERE uid = :uid AND deleted_at IS NULL")
+    List<Thread_> findAllUserThreads(@Param("uid") Long uid);
 
+    @Query("SELECT * FROM Thread_ WHERE deleted_at IS NULL")
+    List<Thread_> findAllActiveThreads();
 /*
     List<Thread> findAll();
 

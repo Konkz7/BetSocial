@@ -18,6 +18,10 @@ public record UserDTO(
         @Size(max = 50)
         String user_name, // Unique username, max length of 50
 
+
+        @Size(max = 380)
+        String bio,
+
         @NotEmpty
         @Email
         @Size(max = 100)

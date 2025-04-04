@@ -39,6 +39,10 @@ public record User_(
         @NonNull
         Boolean is_verified, // Boolean to check if the email is verified
 
+        String bio,
+
+        String profile_picture,
+
         @NonNull
         Long created_at, // Timestamp of account creation (defaulted in the database)
 
@@ -51,8 +55,6 @@ public record User_(
 
         @NonNull
         Double balance,
-
-        String card_id,
 
         @Version
         Integer u_version // Version number for optimistic locking

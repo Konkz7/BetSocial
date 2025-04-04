@@ -111,12 +111,13 @@ public class AccountController {
                 user.phone_number(),        // Retain the phone number
                 token,                       // Retain the verification token
                 false,                      // Email is not verified
+                "Hi, Im new here!",
+                null,
                 new Date().getTime(),          // Retain the creation timestamp
                 null,
                 USER.toInt(),          // Retain the user role
                 null,              // wallet address
                 0.0,     // balance
-                null,            // card id
                 null            // Retain the version for optimistic locking
         );
 
@@ -126,7 +127,7 @@ public class AccountController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<UserDTO> getProfile(HttpSession session) {
+    public ResponseEntity<User_> getProfile(HttpSession session) {
         Long userId = (Long) session.getAttribute("userId");
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not logged in");
@@ -135,7 +136,7 @@ public class AccountController {
         User_ user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        return ResponseEntity.ok(new UserDTO(userId, user.user_name(), user.email() , user.phone_number(), user.created_at()));
+        return ResponseEntity.ok(user);
     }
 
 

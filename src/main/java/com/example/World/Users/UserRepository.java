@@ -16,8 +16,8 @@ public interface UserRepository extends ListCrudRepository<User_, Long> {
     @Query("SELECT * FROM User_ WHERE user_name = :username AND deleted_at IS NULL")
     Optional<User_> findByUsername(String username);
 
-    @Query("SELECT * FROM User_ WHERE user_role = 0 AND deleted_at IS NULL")
-    List<User_> findAllActiveUsers();
+    @Query("SELECT * FROM User_ WHERE user_role = 0 AND uid != :uid AND deleted_at IS NULL")
+    List<User_> findAllActiveUsers(@Param("uid") Long uid);
 
     @Query("SELECT * FROM User_ WHERE email = :email AND deleted_at IS NULL")
     Optional<User_> findByEmail(String email);
@@ -43,5 +43,15 @@ public interface UserRepository extends ListCrudRepository<User_, Long> {
     @Transactional
     @Query("UPDATE User_ SET wallet_address = :wallet_address WHERE uid = :id AND deleted_at IS NULL")
     int setWalletAddress(@Param("id") Long id,@Param("wallet_address") String wallet_address);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE User_ SET bio = :bio WHERE uid = :id AND deleted_at IS NULL")
+    int changeBio(@Param("id") Long id,@Param("bio") String bio);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE User_ SET user_name = :user_name WHERE uid = :id AND deleted_at IS NULL")
+    int changeUserName(@Param("id") Long id,@Param("user_name") String user_name);
 
 }

@@ -33,7 +33,15 @@ public class ThreadController {
         return threadRepository.findAll();
     }
 
+    @GetMapping("/active")
+    List<Thread_>findAllActive(){
+        return threadRepository.findAllActiveThreads();
+    }
 
+    @GetMapping("/user/{uid}")
+    List<Thread_> findAllByUID(@PathVariable Long uid){
+        return threadRepository.findAllUserThreads(uid);
+    }
 
     @GetMapping("/{tid}")
     Thread_ findById(@PathVariable Long tid){

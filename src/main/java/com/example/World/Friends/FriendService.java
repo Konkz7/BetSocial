@@ -1,10 +1,11 @@
 package com.example.World.Friends;
 
 import com.example.World.Users.UserRepository;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class FriendService {
@@ -16,9 +17,9 @@ public class FriendService {
         this.friendRepository = friendRepository;
         this.userRepository = userRepository;
     }
-    public String sendFriendRequest(Long requesterId, Long receiverId) {
+    public ResponseEntity<String> sendFriendRequest(Long requesterId, Long receiverId) {
         if (friendRepository.existsByRequestIdAndReceiveId(requesterId, receiverId)) {
-            return "Friend request already sent!";
+            return ResponseEntity.badRequest().body("Friend request already sent!");
         }
         Long request_id = userRepository.findById(requesterId).orElseThrow().uid();
         Long recieve_id = userRepository.findById(receiverId).orElseThrow().uid();
@@ -26,24 +27,46 @@ public class FriendService {
         Friendship_ friend = new Friendship_(null,request_id,recieve_id,null,status);
 
         friendRepository.save(friend);
-        return "Friend request sent!";
+        return ResponseEntity.ok().body("Friend request sent!");
+    }
+
+    public ResponseEntity<String>  Unfriend(Long requesterId, Long receiverId) {
+        try {
+            Friendship_ friend = friendRepository.findByRequestIdAndReceiveId(requesterId,receiverId).orElseThrow();
+            friendRepository.delete(friend);
+        }catch ( Exception e){
+            return ResponseEntity.badRequest().body("Friend request doesn't exist!");
+        }
+        return ResponseEntity.ok().body("Friendship terminated!");
     }
 
 
-    public String acceptFriendRequest(Long friendshipId) {
-        Friendship_ friendship = friendRepository.findById(friendshipId).orElseThrow();
+    public ResponseEntity<String>  acceptFriendRequest(Long friendshipId) {
+        try {
+            Friendship_ friendship = friendRepository.findById(friendshipId).orElseThrow();
+        }catch ( Exception e){
+            return ResponseEntity.badRequest().body("Friend request already sent!");
+        }
         friendRepository.updateFriendship(friendshipId,Stage.ACCEPTED.toInt());
-        return "Friend request accepted!";
+        return ResponseEntity.ok().body("Friend request accepted!");
     }
 
-    public String rejectFriendRequest(Long friendshipId) {
-        Friendship_ friendship = friendRepository.findById(friendshipId).orElseThrow();
-        friendRepository.updateFriendship(friendshipId,Stage.REJECTED.toInt());
-        return "Friend request accepted!";
+    public ResponseEntity<String>  rejectFriendRequest(Long friendshipId) {
+        try {
+            Friendship_ friendship = friendRepository.findById(friendshipId).orElseThrow();
+            friendRepository.delete(friendship);
+        }catch ( Exception e){
+            return ResponseEntity.badRequest().body("Friend request doesn't exist!");
+        }
+        return ResponseEntity.ok().body("Friend request rejected!");
     }
 
     public List<Friendship_> getFriends(Long userId) {
         return friendRepository.findByIdAndStage(userId, Stage.ACCEPTED.toInt());
+    }
+
+    public Optional<Friendship_> getFriendship(Long requestId , Long receiveId) {
+        return friendRepository.findByRequestIdAndReceiveId(requestId,receiveId);
     }
 
     public List<Friendship_> getReceivedFriendRequests(Long userId) {

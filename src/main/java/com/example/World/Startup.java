@@ -57,12 +57,13 @@ public class Startup {
                 phoneNumber,        // Retain the phone number
                 null, // Token used for email verification
                 true, // Boolean to check if the email is verified
+                "",
+                null,
                 new Date().getTime(),          // Retain the creation timestamp
                 null,
                 role.toInt(),          // Retain the user role
                 null,              // default no wallet
                 0.0,      // Default the balance to 0.0
-                null, // default no card
                 null            // Retain the version for optimistic locking
         );
 
