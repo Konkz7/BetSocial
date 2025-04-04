@@ -31,6 +31,10 @@ import WalletScreen from './app/walletPage';
 import AddCardScreen from './app/addCardPage';
 import MessageScreen from './app/messagePage';
 import SearchScreen from './app/searchPage';
+import ProfileScreen from './app/profilePage';
+import ActivityScreen from './app/activityPage';
+import SelfProfileScreen from './app/selfProfilePage';
+import SettingsScreen from './app/settingsPage';
 
 
 const queryClient = new QueryClient();
@@ -39,27 +43,62 @@ const queryClient = new QueryClient();
 
 const LoginStack = createNativeStackNavigator();
 const WalletStack = createNativeStackNavigator();
+const SelfProfileStack = createNativeStackNavigator();
 const HomeStack = createNativeStackNavigator();
+const SearchStack = createNativeStackNavigator();
+const ActivityStack = createNativeStackNavigator();
+
 
 const MainTab = createBottomTabNavigator();
+
 
 
 
 function HomeStackNavigator() {
   return (
     <HomeStack.Navigator screenOptions={{ headerShown: false }}>
-      <HomeStack.Screen name="Home_S" component={HomeScreen}  />
-      <HomeStack.Screen name="Thread_S" component={ThreadScreen} />
-      <HomeStack.Screen name="Wallet_S" component={WalletStackNavigator} />
+      <HomeStack.Screen name="Home_H" component={HomeScreen}  />
+      <HomeStack.Screen name="Thread_H" component={ThreadScreen} />
+      <HomeStack.Screen name="Wallet_H" component={WalletStackNavigator} />
+      <HomeStack.Screen name="SelfProfile_H" component={SelfProfileStackNavigator} />
     </HomeStack.Navigator>
   );
 };
 
+function SearchStackNavigator() {
+  return (
+    <SearchStack.Navigator screenOptions={{ headerShown: false }}>
+      <SearchStack.Screen name="Search_S" component={SearchScreen}  />
+      <SearchStack.Screen name="Profile_S" component={ProfileScreen} />
+      <SearchStack.Screen name="Thread_S" component={ThreadScreen} />
+    </SearchStack.Navigator>
+  );
+};
+
+function SelfProfileStackNavigator() {
+  return (
+    <SelfProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <SelfProfileStack.Screen name="SelfProfile_SP" component={SelfProfileScreen}  />
+      <SelfProfileStack.Screen name="Thread_SP" component={ThreadScreen} />
+      <SelfProfileStack.Screen name="Settings_SP" component={SettingsScreen} />
+    </SelfProfileStack.Navigator>
+  );
+};
+
+function ActivityStackNavigator() {
+  return (
+    <ActivityStack.Navigator screenOptions={{ headerShown: false }}>
+      <ActivityStack.Screen name="Activity_A" component={ActivityScreen}  />
+    </ActivityStack.Navigator>
+  );
+};
+
+
 function WalletStackNavigator() {
   return (
     <WalletStack.Navigator screenOptions={{ headerShown: false }}>
-      <HomeStack.Screen name="Wallet" component={WalletScreen} />
-      <HomeStack.Screen name="Card_S" component={AddCardScreen} />
+      <WalletStack.Screen name="Wallet" component={WalletScreen} />
+      <WalletStack.Screen name="Card_W" component={AddCardScreen} />
     </WalletStack.Navigator>
   );
 };
@@ -73,7 +112,7 @@ function TabNavigator(){
               if (route.name === "Home") return < Home size={size} color={focused ? "green" : "gray"} />;
               else if (route.name === "Search") return < Search size={size} color={focused ? "green" : "gray"} />;
               else if (route.name === "Add") return < CirclePlus size={size} color={focused ? "green" : "gray"} /> ;
-              else if (route.name === "Notifications") return < Bell size={size} color={focused ? "green" : "gray"} />;
+              else if (route.name === "Activity") return < Bell size={size} color={focused ? "green" : "gray"} />;
               else if (route.name === "Messages") return < Mail size={size} color={focused ? "green" : "gray"} />;
 
               return < BanIcon size={size} color={focused ? "green" : "gray"} />;
@@ -84,9 +123,9 @@ function TabNavigator(){
           })}
         >
           <MainTab.Screen name="Home" component={HomeStackNavigator} />
-          <MainTab.Screen name="Search" component={SearchScreen} />
+          <MainTab.Screen name="Search" component={SearchStackNavigator} />
           <MainTab.Screen name="Add" component={AddThreadScreen} />
-          <MainTab.Screen name="Notifications" component={HomeScreen} />
+          <MainTab.Screen name="Activity" component={ActivityStackNavigator} />
           <MainTab.Screen name="Messages" component={MessageScreen} />
         </MainTab.Navigator>
     );

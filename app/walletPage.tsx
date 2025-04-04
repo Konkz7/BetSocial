@@ -85,7 +85,7 @@ const WalletScreen = ({navigation}:any) => {
                 ))}
               </Picker>
             </View>
-            <TouchableOpacity style = {styles.addCardButton} onPress={() => navigation.navigate("Card_S")}>
+            <TouchableOpacity style = {styles.addCardButton} onPress={() => navigation.navigate("Card_W")}>
               <PlusCircle size = {24} ></PlusCircle>
               <Text style = {[styles.addWalletInfo, {marginTop: 0 , marginLeft: 3}]}>Add a card</Text>
             </TouchableOpacity>

@@ -25,7 +25,7 @@ import {
   Frown,
 } from "lucide-react-native";
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {getBalance, getCircleSecret,getIpAddress,getProfile,getWallet} from "./API";
+import {getBalance, getCircleSecret,getFriends,getIpAddress,getProfile,getWallet} from "./API";
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
@@ -49,21 +49,25 @@ const HomeScreen = ({navigation}:any) => {
   // Fetch data using React Query
   // ✅ Fetching profile, circle secret, and wallet using useQuery
   const { data: profile, isLoading: profileLoading } = useQuery({ queryKey: ["user"], queryFn: getProfile });
+  const { data: friends, isLoading: friendsLoading } = useQuery({ queryKey: ["friends"], queryFn: getFriends});
+
+  /*
   const { data: circleSecret, isLoading: circleLoading } = useQuery({ queryKey: ["circle-secret"], queryFn: getCircleSecret });
   const { data: wallet, isLoading: walletLoading } = useQuery({ queryKey: ["wallet"], queryFn: getWallet });
   const { data: balance, isLoading: balanceLoading } = useQuery({ queryKey: ["balance"], queryFn: getBalance });
   const { data: ipAddress, isLoading: ipLoading } = useQuery({ queryKey: ["ipAddress"], queryFn: getIpAddress});
+  */
 
 
   const getAllthreads = async() =>{
     try {
-      const threadResponse = await axios.get(IP_STRING + "/api/threads/all");
+      const threadResponse = await axios.get(IP_STRING + "/api/threads/active");
       const updatedThreads = await Promise.all(threadResponse.data.map(async (thread: any) => ({
         ...thread,
         user: await getUserFromThread(thread), // Await user data resolution
       })));
     
-      setActiveThreads(updatedThreads);
+      setActiveThreads(updatedThreads); 
     } catch (error) {
       Alert.alert("Error:", "Failed to fetch threads");
     }finally {
@@ -103,10 +107,10 @@ const HomeScreen = ({navigation}:any) => {
           <Text style={styles.title}>BetSocial</Text>
 
           <View style = {styles.rowContainer}>
-            <TouchableOpacity style= {[styles.rowContainer,{marginRight:25}]} onPress={() => wallet == undefined
-              ? null :navigation.navigate("Wallet_S")}>
+            <TouchableOpacity style= {[styles.rowContainer,{marginRight:25}]} onPress={() => null /*wallet == undefined
+              ? null :navigation.navigate("Wallet_H")*/}>
               <Wallet  color={"green"} size={20}></Wallet> 
-              <Text style = {styles.amount}>{balance && balance.data.tokenBalances.length > 0? "temp" : "0.00"}</Text>
+              {/*<Text style = {styles.amount}>{balance && balance.data.tokenBalances.length > 0? "temp" : "0.00"}</Text>*/}
               <Text style = {styles.USDC}>USDC</Text>
             </TouchableOpacity>
 
@@ -114,7 +118,9 @@ const HomeScreen = ({navigation}:any) => {
              <Menu size={24} color="green" />
             </TouchableOpacity>
 
-            <View style={styles.profileIcon} />
+            <TouchableOpacity onPress={() => navigation.navigate("SelfProfile_H")}>
+              <View style={styles.profileIcon} />
+            </TouchableOpacity>
           </View>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
@@ -142,9 +148,11 @@ const HomeScreen = ({navigation}:any) => {
 
 
       {/* Main Content */}
-    {loading ? (
+     {loading ? (
         <ActivityIndicator size="large" color="blue" /> // Show loading spinner
       ) : (
+
+      <View style = {{flex: 1}}>
       <FlatList
         data={threads}
         ListEmptyComponent={<View style = {styles.notFound}>
@@ -155,20 +163,20 @@ const HomeScreen = ({navigation}:any) => {
         removeClippedSubviews={false}
         onRefresh={getAllthreads} // Enable pull-to-refresh
         refreshing={loading} // Show loading state during refresh
-        renderItem={( item ) => (
+        renderItem={({ item }) => (
 
           <View style={styles.post}>
-            <TouchableOpacity onPress={() => navigation.navigate("Thread_S",threads.at(item.index))}>
+            <TouchableOpacity onPress={() => navigation.navigate("Thread_H",item)}>
 
-            <View style={styles.postHeader}>
-              <View style={styles.avatar} />
+            <View style={styles.postHeader}>           
+                <View style={styles.avatar} />
               <View>
-                <Text style={styles.userName}>{ threads.at(item.index).user.user_name }</Text>
+                <Text style={styles.userName}>{ item.user.user_name }</Text>
                 <Text style={styles.timestamp}>2h ago</Text>
               </View>
             </View>
               <Text style={styles.postText}>
-                  {threads.at(item.index).title}
+                  {item.title}
               </Text>
             <View style={styles.postFooter}>
               <View style={styles.actionsLeft}>
@@ -196,6 +204,7 @@ const HomeScreen = ({navigation}:any) => {
           </View>
         )}
       />
+      </View>
     )}
 
       
@@ -206,7 +215,7 @@ const HomeScreen = ({navigation}:any) => {
 // Styles
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 1.0,
     backgroundColor: "#fcfcf7",
   },
   header: {

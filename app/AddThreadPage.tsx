@@ -226,16 +226,23 @@ const AddThreadScreen = ({navigation}:any) => {
                 multiline
                 maxLength={maxCharacters}
                 placeholder="What are we writing about?" 
+                activeUnderlineColor="transparent"
+                underlineColor="transparent"
               />  
             </View>
             <View style = {styles.categoryContainer}>
-              <TextInput style = {styles.inputBox}
-                value = {category}
-                onChangeText={setCategory}
-                multiline
-                maxLength={maxCharacters}
-                placeholder= "Category:" 
-              />  
+            <TextInput
+              style={[styles.inputBox, { textAlign: "center" }]}
+              value={category}
+              onChangeText={setCategory}
+              multiline
+              textColor="green"
+              underlineColor="transparent"
+              activeUnderlineColor="transparent"
+              maxLength={maxCharacters}
+              placeholder="Tap to enter category..."
+              placeholderTextColor="gray" // Make it clear it's not actual input text
+            /> 
             </View>
             <View style = {styles.scrollContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
@@ -397,10 +404,11 @@ const styles = StyleSheet.create({
     height:220,
     width:380,
     backgroundColor: "white",
-    borderBottomWidth: 1,
+    borderBottomWidth:2,
     borderBottomColor: "#ddd",
+
   },categoryContainer:{
-    height:60,
+    height:40,
     width:380,
     backgroundColor: "white",
   },betButtonContainer:{

@@ -7,11 +7,11 @@ import {getUsers} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
 
 
-const SearchScreen = ({ navigation , route } : any) => {
+const SearchScreen = ({ navigation} : any) => {
     const [search,setSearch] = useState('');
     const [currentTab,setCurrentTab] = useState('People');
-    const [filteredData, setFilteredData] = useState<any>([]);
-    const [list, setList] = useState<any>([]);
+    const [filteredData, setFilteredData] = useState<any[]>([]);
+
 
     const { data: users, isLoading: usersLoading } = useQuery({ queryKey: ["Users"], queryFn: getUsers });
 
@@ -19,9 +19,10 @@ const SearchScreen = ({ navigation , route } : any) => {
     useFocusEffect(
           useCallback(() => {
             console.log("Screen is focused! Perform refresh or action here.");  
-            setSearch('');
+            
             return () => {
               console.log("Screen is unfocused! Cleanup if needed."); 
+              
             };
           }, [])
       );
@@ -31,7 +32,7 @@ const SearchScreen = ({ navigation , route } : any) => {
     setSearch(text);
     
     if (text.trim() === '') {
-      setFilteredData(null);
+      setFilteredData([]);
     } else {
       setFilteredData(
         users.filter((item: any) => 
@@ -42,13 +43,13 @@ const SearchScreen = ({ navigation , route } : any) => {
   };
 
 
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Searchbar     
           value = {search}
           onChangeText={handleSearch}
+          autoCapitalize='none'
           style = {styles.searchBar}
           icon={() => <Search size={20}  />}
           clearIcon={() => <X></X>}
@@ -98,19 +99,24 @@ const SearchScreen = ({ navigation , route } : any) => {
 
       </View>
 
+
+
+    {usersLoading ? (<Text style={styles.loadingText}>Loading...</Text>) :
       <FlatList
         data={filteredData}
-        keyExtractor={(item) => item.uid.toString()}
-        renderItem={({ item }) => (
+        removeClippedSubviews={false}
+        keyExtractor={(item) => item.uid.toString() }
+        renderItem={( {item }) => (
 
-          <TouchableOpacity style={styles.item}>
+          <TouchableOpacity style={styles.item} onPress={() => navigation.navigate("Profile_S",item)}>
             <Text style={styles.itemText}>{item.user_name}</Text>
           </TouchableOpacity>
         )}
         ListEmptyComponent={<Text style={styles.noResults}>No results found</Text>}
       />
+      }
      
-    </SafeAreaView>
+    </SafeAreaView> 
   );
 }
 
@@ -161,6 +167,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },item: {
     padding: 15,
+    /*
     backgroundColor: '#fff',
     marginBottom: 8,
     borderRadius: 5,
@@ -168,6 +175,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 2,
+    */
+   borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  loadingText: {
+      textAlign: 'center',
+      fontSize: 18,
+      color: 'gray',
+      marginTop: 50,
   },
   
 });
