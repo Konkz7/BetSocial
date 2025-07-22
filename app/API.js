@@ -29,6 +29,7 @@ export const getUsers = async() =>{
     }
   }
 
+
   export const getUser = async(uid) =>{
     try {
         const user = await axios.get(IP_STRING + "/api/users/"+uid);
@@ -92,6 +93,7 @@ export const getFriendship = async(ouid) =>{
   }
 }
 
+
 export const acceptFriendshipRequest = async(fid) =>{
   try {
       const accept = await axios.put(IP_STRING + "/api/friends/accept/"+fid);
@@ -137,6 +139,16 @@ export const removeThread = async(tid) =>{
     Alert.alert("Error!", "Thread couldnt be removed.")
   }
 }
+
+export const getChatMessages = async(gid) =>{
+  try {
+      const messages = await axios.get(IP_STRING + "/api/messages/group/"+gid);
+      return messages.data;
+  } catch (error) {
+    Alert.alert("Error!", "Chat messgaes coulnt be found.")
+  }
+}
+
 
 export const getCircleSecret = async () =>{
     try {

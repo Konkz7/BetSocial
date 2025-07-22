@@ -35,6 +35,7 @@ import ProfileScreen from './app/profilePage';
 import ActivityScreen from './app/activityPage';
 import SelfProfileScreen from './app/selfProfilePage';
 import SettingsScreen from './app/settingsPage';
+import DMScreen from './app/dmPage';
 
 
 const queryClient = new QueryClient();
@@ -71,6 +72,7 @@ function SearchStackNavigator() {
       <SearchStack.Screen name="Search_S" component={SearchScreen}  />
       <SearchStack.Screen name="Profile_S" component={ProfileScreen} />
       <SearchStack.Screen name="Thread_S" component={ThreadScreen} />
+      <SearchStack.Screen name = "DMScreen_S" component ={DMScreen} />
     </SearchStack.Navigator>
   );
 };

@@ -27,6 +27,7 @@ const ProfileScreen = ({navigation , route}: any) => {
     const [currentTab,setCurrentTab] = useState('Threads');
     const [threads, setThreads] = useState<any[]>([]);
     const [friendState, setFriendState] = useState(0); // 0: not friends, 1: friend request sent, 2: friends
+    const [gid, setGid] = useState<number>(-1);
    
     const queryClient = useQueryClient();
     const profile = queryClient.getQueryData(["user"]) as any;
@@ -39,7 +40,7 @@ const ProfileScreen = ({navigation , route}: any) => {
         queryFn: () => getUserThreads(user.uid),
     });
 
-    const { data: friendshipData, refetch: refetchFrienship, isLoading: friendshipLoading } = useQuery({ 
+    const { data: friendshipData, refetch: refetchFriendship, isLoading: friendshipLoading } = useQuery({ 
         queryKey: ["friendship"], 
         queryFn: () => getFriendship(user.uid),
     });
@@ -64,7 +65,7 @@ const ProfileScreen = ({navigation , route}: any) => {
             console.log("Screen is focused! Refetching threads and friendship...");
             
             refetchThreads();
-            refetchFrienship(); // Ensure this refetches correctly
+            refetchFriendship(); // Ensure this refetches correctly
             console.log("Friendship data:", friendshipData);
 
             return async () => {
@@ -85,8 +86,10 @@ const ProfileScreen = ({navigation , route}: any) => {
             console.log("Friendship data:", friendshipData);
             if(friendshipData.stage === 0){
                 setFriendState(1);
-            }else{
+            }else if(friendshipData.stage === 1){
                 setFriendState(2);
+            }else{
+                setFriendState(0);
             }
         }else{
             setFriendState(0);
@@ -99,6 +102,17 @@ const ProfileScreen = ({navigation , route}: any) => {
             ...thread,
             user: user, // Attach user data to each thread
         }));
+    }
+
+    async function goToDMScreen(){
+
+
+        const recipient : any = {};
+        recipient["user"] = user;
+
+        // create group functions in API then use it here tto check if group exists. 
+
+        navigation.navigate("DMScreen_S",recipient);
     }
     
     async function handleFriendRequest() {
@@ -161,7 +175,7 @@ const ProfileScreen = ({navigation , route}: any) => {
                     </TouchableOpacity>
                     }
 
-                    <TouchableOpacity style = {styles.button} >
+                    <TouchableOpacity style = {styles.button} onPress={() => goToDMScreen()}>
                         <Send color={"green"}></Send>
                     </TouchableOpacity>
 
@@ -234,10 +248,10 @@ const ProfileScreen = ({navigation , route}: any) => {
                     onRefresh={() => refetchThreads} // Enable pull-to-refresh
                     refreshing={threadsLoading} // Show loading state during refresh
                     nestedScrollEnabled={true}
-                    renderItem={( item ) => (
+                    renderItem={({ item }) => (
 
                     <View style={styles.post}>
-                        <TouchableOpacity onPress={() => navigation.navigate("Thread_S",threads.at(item.index))}>
+                        <TouchableOpacity onPress={() => navigation.navigate("Thread_S",item)}>
 
                         <View style={styles.postHeader}>
                         <View style={styles.avatar} />
@@ -247,7 +261,7 @@ const ProfileScreen = ({navigation , route}: any) => {
                             </View>
                         </View>
                         <Text style={styles.postText}>
-                            {threads.at(item.index).title}
+                            {item.title}
                         </Text>
                         <View style={styles.postFooter}>
                         <View style={styles.actionsLeft}>
