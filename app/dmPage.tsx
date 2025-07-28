@@ -35,7 +35,7 @@ const DMScreen = ({ navigation ,route }:any) => {
 
   const recipient = route.params;
   const user = recipient.user;
-  const group = recipient.friendship;
+  const chatGid = recipient.gid;
 
   const queryClient = useQueryClient();
   const self = queryClient.getQueryData(["user"]) as any;
@@ -47,8 +47,8 @@ const DMScreen = ({ navigation ,route }:any) => {
   }
 
   const { data: chatData, refetch: refetchChat, isLoading: chatLoading } = useQuery({ 
-      queryKey: ["chat"+group.gid], 
-      queryFn: () =>getChatMessages(group.gid),
+      queryKey: ["chat"+chatGid], 
+      queryFn: () =>getChatMessages(chatGid),
       enabled: false,
   });
 
@@ -58,7 +58,7 @@ const DMScreen = ({ navigation ,route }:any) => {
   useFocusEffect(
     useCallback(() => {
       // 1) Connect the socket
-      webSocketService.connect(self.uid, group.gid, (message: any) => {
+      webSocketService.connect(self.uid, chatGid, (message: any) => {
         const newMessageObj: Message = {
           id: getMIndex(),
           text: message.description,
@@ -96,7 +96,7 @@ const DMScreen = ({ navigation ,route }:any) => {
       return () => {
         webSocketService.disconnect();
       };
-    }, [self.uid, group.gid, refetchChat])
+    }, [self.uid, chatGid, refetchChat])
   );
   
 
@@ -104,7 +104,7 @@ const DMScreen = ({ navigation ,route }:any) => {
 
       
       const messageObj = {
-        gid: group.gid,
+        gid: chatGid,
         recipient_id: user.uid,
         description: newMessage,
       };

@@ -39,6 +39,33 @@ export const getUsers = async() =>{
     }
   }
 
+  export const getUserGroups = async(uid) =>{
+    try {
+        const groups = await axios.get(IP_STRING + "/api/groups/user-groups");
+        return groups.data;
+    } catch (error) {
+      Alert.alert("Error!", "Groups couldnt be found.")
+    }
+  }
+
+  export const DMCheck = async(uid) =>{
+    try {
+        const check = await axios.get(IP_STRING + "/api/groups/dm-check/"+uid);
+        return check.data;
+    } catch (error) {
+      Alert.alert("Error!", "Check couldnt be done.")
+    }
+  }
+
+  export const makePrivateGroup = async(other_uid) =>{
+    try {
+        const group = await axios.post(IP_STRING + "/api/groups/make/"+other_uid);
+        return group.data;
+    } catch (error) {
+      Alert.alert("Error!", "Group couldnt be made.")
+    }
+  }
+
   export const changeBio = async(text) =>{
     try {
         const changedBio = await axios.put(IP_STRING + "/api/users/change-bio?bio="+text);
@@ -122,7 +149,7 @@ export const sendFriendRequest = async(ouid) =>{
     }
 }
 
-export const Unfriend = async(ouid) =>{
+export const unfriend = async(ouid) =>{
   try {
       const unfriend = await axios.delete(IP_STRING + "/api/friends/unfriend/"+ouid);
       return (unfriend.data);

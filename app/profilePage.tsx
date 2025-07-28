@@ -16,7 +16,7 @@ import {
   } 
     from "lucide-react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getFriendship, getUserThreads, sendFriendRequest, Unfriend } from "./API";
+import { getFriendship, getUserThreads, sendFriendRequest, unfriend , DMCheck , makePrivateGroup} from "./API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 
 
@@ -27,11 +27,10 @@ const ProfileScreen = ({navigation , route}: any) => {
     const [currentTab,setCurrentTab] = useState('Threads');
     const [threads, setThreads] = useState<any[]>([]);
     const [friendState, setFriendState] = useState(0); // 0: not friends, 1: friend request sent, 2: friends
-    const [gid, setGid] = useState<number>(-1);
    
     const queryClient = useQueryClient();
     const profile = queryClient.getQueryData(["user"]) as any;
-
+    const groups = queryClient.getQueryData(["groups"]) as any;
 
     var user = route.params;
    
@@ -53,7 +52,7 @@ const ProfileScreen = ({navigation , route}: any) => {
     
     const { data: unfriendData, refetch: refetchUnfriend, isLoading: unfriendLoading } = useQuery({ 
         queryKey: ["unfriend"], 
-        queryFn: () => Unfriend(user.uid),
+        queryFn: () => unfriend(user.uid),
         enabled: false, // Prevents automatic execution
     });
 
@@ -109,8 +108,16 @@ const ProfileScreen = ({navigation , route}: any) => {
 
         const recipient : any = {};
         recipient["user"] = user;
+        const gid = await DMCheck(user.uid);
+        console.log("Gid:" + gid);
 
-        // create group functions in API then use it here tto check if group exists. 
+        if( gid === undefined || gid === null || gid === ""){
+            const newGroup = await makePrivateGroup(user.uid);
+            recipient["gid"] = newGroup.gid;
+            console.log("New group" + newGroup)
+        }else{
+            recipient["gid"] = gid
+        }
 
         navigation.navigate("DMScreen_S",recipient);
     }
