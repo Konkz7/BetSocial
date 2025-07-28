@@ -22,17 +22,6 @@ public class MessageService {
 
     public Message_ sendMessage(Long gid, Long senderId, Long recipientId , String content) {
 
-        //if message isnt sent to a group and the message is sent to a new person, create new group users.
-        /*
-        if(recipientId != null) {
-            if (groupUserRepository.findByGidandUid(gid, senderId).isEmpty()) {
-                Group_ tempGroup = groupService.createGroup(senderId + ""+ recipientId, 0, senderId);
-                gid = tempGroup.gid();
-                groupUserRepository.save(new Groupuser_(null, gid, recipientId, false));
-            }
-        }
-
-         */
 
         Message_ message = new Message_(
            null,
@@ -57,6 +46,18 @@ public class MessageService {
     }
 
     public List<Message_> getChatMessages(Long gid) {
-        return messageRepository.findMessagesByGidDesc(gid);
+        return messageRepository.findMessagesByGidAsc(gid);
+    }
+
+
+    public void updatePrevReadReceipts(Long uid, Long gid){
+
+        List<Message_> messages = messageRepository.findMessagesByGidAscAndRead(gid);
+
+        for(Message_ m : messages){
+            if(!m.uid().equals(uid)) {
+                messageRepository.updateReadReceipt(m.mid());
+            }
+        }
     }
 }

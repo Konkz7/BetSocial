@@ -12,6 +12,10 @@ public record Groupuser_(
     @NonNull
     Long uid,
     @NonNull
+    Long created_at,
+    @NonNull
+    Long last_read_timestamp,
+    @NonNull
     Boolean administrator
 
 

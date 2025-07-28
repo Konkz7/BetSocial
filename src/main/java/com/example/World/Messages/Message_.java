@@ -25,7 +25,6 @@ public record Message_(
       @Version
       Integer m_version // Version number for optimistic locking
 
-
 ){
       @Override
       @NonNull

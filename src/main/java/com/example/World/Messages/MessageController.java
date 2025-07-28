@@ -80,6 +80,18 @@ public class MessageController {
         return messageService.getChatMessages(gid);
     }
 
+
+    @PutMapping("/update-reads/{gid}")
+    void updatePrevReadReceipts(@PathVariable Long gid, HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        messageService.updatePrevReadReceipts(uid,gid);
+    }
+
+    @PutMapping("/update-read/{mid}")
+    void updateReadReceipt(@PathVariable Long mid){
+        messageRepository.updateReadReceipt(mid);
+    }
+
     //unnecessary****************
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/create")

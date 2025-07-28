@@ -17,13 +17,14 @@ public class GroupService {
     }
 
     public Group_ createGroup(String name ,Long creatorId, List<Long> users) {
+        Long time = new Date().getTime();
         Group_ group = new Group_(
             null,
             name,
             1,
             null,
             null,
-            new Date().getTime(),
+            time,
    null,
     null
         );
@@ -35,6 +36,8 @@ public class GroupService {
                 null,
                 group.gid(),
                 creatorId,
+                time,
+                time,
                 true
         );
 
@@ -46,6 +49,8 @@ public class GroupService {
                     null,
                     group.gid(),
                     user,
+                    time,
+                    time,
                     false
             );
 
@@ -57,13 +62,15 @@ public class GroupService {
     }
 
     public Group_ createDMGroup(String name ,Long uid , Long other_uid) {
+        Long time = new Date().getTime();
+
         Group_ group = new Group_(
                 null,
                 name,
                 0,
                 null,
                 null,
-                new Date().getTime(),
+                time,
                 null,
                 null
         );
@@ -75,6 +82,8 @@ public class GroupService {
                 null,
                 group.gid(),
                 uid,
+                time,
+                time,
                 false
         );
 
@@ -82,6 +91,8 @@ public class GroupService {
                 null,
                 group.gid(),
                 other_uid,
+                time,
+                time,
                 false
         );
 
