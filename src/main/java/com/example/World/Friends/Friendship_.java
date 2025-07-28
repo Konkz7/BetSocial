@@ -11,8 +11,6 @@ public record Friendship_(
         Long request_id,
         @NonNull
         Long receive_id,
-
-        Integer gid,
         @NonNull
         Integer stage
 ) {

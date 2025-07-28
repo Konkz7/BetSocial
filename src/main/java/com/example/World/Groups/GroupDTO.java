@@ -4,8 +4,10 @@ import jakarta.validation.constraints.NotEmpty;
 import org.springframework.lang.NonNull;
 
 public record GroupDTO(
-       @NotEmpty
-       String group_name,
+
        @NonNull
-       Integer sort) {
+       Long uid,
+       @NonNull
+       Long other_uid
+) {
 }

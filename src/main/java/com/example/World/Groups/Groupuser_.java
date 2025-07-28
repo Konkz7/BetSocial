@@ -3,7 +3,7 @@ package com.example.World.Groups;
 import org.springframework.data.annotation.Id;
 import org.springframework.lang.NonNull;
 
-public record GroupUser_(
+public record Groupuser_(
 
     @Id
     Long guid,

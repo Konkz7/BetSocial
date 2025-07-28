@@ -24,7 +24,7 @@ public class FriendService {
         Long request_id = userRepository.findById(requesterId).orElseThrow().uid();
         Long recieve_id = userRepository.findById(receiverId).orElseThrow().uid();
         Integer status = Stage.PENDING.toInt();
-        Friendship_ friend = new Friendship_(null,request_id,recieve_id,null,status);
+        Friendship_ friend = new Friendship_(null,request_id,recieve_id,status);
 
         friendRepository.save(friend);
         return ResponseEntity.ok().body("Friend request sent!");
@@ -76,4 +76,5 @@ public class FriendService {
     public List<Friendship_> getSentFriendRequests(Long userId) {
         return friendRepository.findByRequestIdAndStage(userId, Stage.PENDING.toInt());
     }
+
 }

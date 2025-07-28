@@ -2,21 +2,21 @@ package com.example.World.Groups;
 
 
 
-import com.example.World.Users.User_;
 import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.ListCrudRepository;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 
-public interface GroupUserRepository extends ListCrudRepository<GroupUser_,Long> {
+public interface GroupUserRepository extends ListCrudRepository<Groupuser_,Long> {
 
 
-    @Query("SELECT * FROM GroupUser_ WHERE uid= :uid")
-    List<GroupUser_> findByUid(@Param("uid") Long uid);
+    @Query("SELECT * FROM Groupuser_ WHERE uid= :uid")
+    List<Groupuser_> findByUid(@Param("uid") Long uid);
 
+    @Query("SELECT * FROM Groupuser_ WHERE gid= :gid AND uid= :uid")
+    Optional<Groupuser_> findByGidandUid(@Param("gid") Long gid, @Param("uid") Long uid);
 
 }

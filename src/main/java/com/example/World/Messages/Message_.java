@@ -24,6 +24,8 @@ public record Message_(
       Boolean is_read,           // Whether the message has been is_read
       @Version
       Integer m_version // Version number for optimistic locking
+
+
 ){
       @Override
       @NonNull

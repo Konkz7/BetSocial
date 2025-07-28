@@ -14,6 +14,8 @@ public record Group_(
         String group_name,
         @NonNull
         Integer sort,  //  representing the sort of conversation (direct or group)
+        String last_message,
+        Long last_time,
         @NonNull
         Long created_at, // Timestamp of conversation creation
         Long deleted_at,

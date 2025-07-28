@@ -1,17 +1,13 @@
 package com.example.World.Groups;
 
 
-import com.example.World.Bets.BetDTO;
-import com.example.World.Bets.Bet_;
-import com.example.World.Groups.Group_;
-import com.example.World.Groups.GroupRepository;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,9 +15,13 @@ import java.util.Optional;
 @RestController
 public class GroupController {
     private final GroupRepository groupRepository;
+    private final GroupService groupService;
+    private final GroupUserRepository groupUserRepository;
 
-    public GroupController(GroupRepository groupRepository) {
+    public GroupController(GroupRepository groupRepository, GroupService groupService, GroupUserRepository groupUserRepository) {
         this.groupRepository = groupRepository;
+        this.groupService = groupService;
+        this.groupUserRepository = groupUserRepository;
     }
 
     @GetMapping("/all")
@@ -38,6 +38,46 @@ public class GroupController {
         return group.get();
     }
 
+    @GetMapping("/group-users")
+    List<Groupuser_> findAllGroupUsers(HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        List<Groupuser_> members = groupUserRepository.findByUid(uid);
+        if(members.isEmpty()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No groups found");
+        }
+        return members;
+    }
+
+    @GetMapping("/user-groups")
+    List<Group_> findAllUsersGroups(HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        List<Group_> groups = groupService.getUserGroups(uid);
+        if(groups.isEmpty()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No groups found");
+        }
+        return groups;
+    }
+
+    @GetMapping("/dm-check/{otherUid}")
+    Long DMCheck(@PathVariable Long otherUid,HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+
+        Long check = groupService.sameGroupCheck(uid,otherUid);
+
+        /*
+        if(check == null){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No groups found");
+        }
+
+         */
+
+        return check;
+    }
+
+
+
+
+
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/create")
     void create(@Valid @RequestBody Group_ group){
@@ -45,11 +85,10 @@ public class GroupController {
     }
 
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping("/make")
-    void makeBet(@Valid @RequestBody GroupDTO group) {
-
-        groupRepository.save(new Group_(null,group.group_name(),group.sort(),new Date().getTime(),null,null));
-
+    @PostMapping("/make/{otherUid}")
+    Group_ makeDMGroup(@PathVariable Long otherUid, HttpSession session) {
+        Long uid = (Long) session.getAttribute("userId");
+        return groupService.createDMGroup(uid + "" + otherUid,uid,otherUid);
     }
 /*
     @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface MessageRepository extends ListCrudRepository<Message_,Long> {
 
-    @Query("SELECT * FROM Message_ WHERE gid = :gid ORDER BY created_at DESC")
+    @Query("SELECT * FROM Message_ WHERE gid = :gid ORDER BY created_at ASC")
     List<Message_> findMessagesByGidDesc(@Param("gid") Long gid);
 
 }

@@ -9,8 +9,11 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,10 +26,13 @@ import java.util.Optional;
 public class MessageController {
     private final MessageRepository messageRepository;
     private final MessageService messageService;
+    private final SimpMessagingTemplate simpMessagingTemplate;
 
-    public MessageController(MessageRepository messageRepository, MessageService messageService) {
+    public MessageController(MessageRepository messageRepository, MessageService messageService,
+                             SimpMessagingTemplate simpMessagingTemplate) {
         this.messageRepository = messageRepository;
         this.messageService = messageService;
+        this.simpMessagingTemplate = simpMessagingTemplate;
     }
 
     @GetMapping("/all")
@@ -43,11 +49,35 @@ public class MessageController {
         return message.get();
     }
 
-    @MessageMapping("/send/{gid}")
+    @MessageMapping("/send")
+    public Message_ sendMessage(@Payload MessageDTO message, SimpMessageHeaderAccessor headerAccessor) {
+
+        Object uidObj = headerAccessor.getSessionAttributes().get("userId");
+        if (uidObj == null) {
+            throw new IllegalStateException("User ID not found in session");
+        }
+
+        Long uid = (Long) uidObj;
+        Long gid = message.gid();
+        System.out.println("MESSAGE: " + message.description());
+        Message_ result = messageService.sendMessage(gid, uid, message.recipient_id(), message.description());
+
+        simpMessagingTemplate.convertAndSend("/topic/chat/" + gid, result);
+
+        return result;
+    }
+
+    @MessageMapping("/add-user/{gid}")
     @SendTo("/topic/chat/{gid}")
-    public Message_ sendMessage(@PathVariable Long gid, @Valid @RequestBody MessageDTO message, HttpSession session) {
+    public GroupStatus addUser(SimpMessageHeaderAccessor headerAccessor,HttpSession session) {
         Long uid = (Long) session.getAttribute("userId");
-        return messageService.sendMessage(gid, uid, message.recipient_id(), message.description());
+        headerAccessor.getSessionAttributes().put("userId",uid);
+        return new GroupStatus(uid,true); 
+    }
+
+    @GetMapping("/group/{gid}")
+    List<Message_> getGroupMessages(@PathVariable Long gid){
+        return messageService.getChatMessages(gid);
     }
 
     //unnecessary****************
