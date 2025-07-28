@@ -16,7 +16,7 @@ import {
   } 
     from "lucide-react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getFriendship, getUserThreads, sendFriendRequest, unfriend , DMCheck , makePrivateGroup} from "./API";
+import { getFriendship, getUserThreads, sendFriendRequest, unfriend , DMCheck , makePrivateGroup, fillReadMarkers} from "./API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 
 
@@ -114,10 +114,12 @@ const ProfileScreen = ({navigation , route}: any) => {
         if( gid === undefined || gid === null || gid === ""){
             const newGroup = await makePrivateGroup(user.uid);
             recipient["gid"] = newGroup.gid;
-            console.log("New group" + newGroup)
-        }else{
-            recipient["gid"] = gid
+            console.log("New group" + newGroup);
+        }else{ 
+            recipient["gid"] = gid;
         }
+
+        fillReadMarkers(recipient["gid"]);
 
         navigation.navigate("DMScreen_S",recipient);
     }

@@ -23,8 +23,8 @@ type Message = {
   sent: boolean; 
   time: string;
   seen: boolean;
+  //Seen will be fully implemented with the live feature once another device can be used to test.
 };
-
 
 
 const DMScreen = ({ navigation ,route }:any) => {

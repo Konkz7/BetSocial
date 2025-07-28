@@ -176,6 +176,24 @@ export const getChatMessages = async(gid) =>{
   }
 }
 
+export const fillReadMarkers = async(gid) =>{
+  try {
+      const fill = await axios.put(IP_STRING + "/api/messages/update-reads/"+gid);
+      return fill.data;
+  } catch (error) {
+    Alert.alert("Error!", "Chat messages couldnt be read.")
+  }
+}
+
+export const fillReadMarker = async(mid) =>{
+  try {
+      const fill = await axios.put(IP_STRING + "/api/messages/update-read/"+mid);
+      return fill.data;
+  } catch (error) {
+    Alert.alert("Error!", "Chat message couldnt be read.")
+  }
+}
+
 
 export const getCircleSecret = async () =>{
     try {
