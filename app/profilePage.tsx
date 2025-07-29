@@ -30,7 +30,7 @@ const ProfileScreen = ({navigation , route}: any) => {
    
     const queryClient = useQueryClient();
     const profile = queryClient.getQueryData(["user"]) as any;
-    const groups = queryClient.getQueryData(["groups"]) as any;
+    const groupProfiles = queryClient.getQueryData(["groupProfiles"]) as any;
 
     var user = route.params;
    
@@ -68,9 +68,10 @@ const ProfileScreen = ({navigation , route}: any) => {
             console.log("Friendship data:", friendshipData);
 
             return async () => {
+
                 console.log("Screen is unfocused! Cleanup if needed.");       
             };
-        }, []) // Depend on profile ID to refetch when user changes
+        }, []) 
     );
     
     
@@ -105,7 +106,7 @@ const ProfileScreen = ({navigation , route}: any) => {
 
     async function goToDMScreen(){
 
-
+        // could be optimized by caching group data and checking against that
         const recipient : any = {};
         recipient["user"] = user;
         const gid = await DMCheck(user.uid);

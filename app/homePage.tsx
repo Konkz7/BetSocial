@@ -25,7 +25,7 @@ import {
   Frown,
 } from "lucide-react-native";
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {getBalance, getCircleSecret,getFriends,getIpAddress,getProfile,getWallet,getUserGroups} from "./API";
+import {getBalance, getCircleSecret,getFriends,getIpAddress,getProfile,getWallet,getGroupProfiles} from "./API";
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
@@ -52,7 +52,7 @@ const HomeScreen = ({navigation}:any) => {
   // consider this in backend
   const { data: profile, isLoading: profileLoading } = useQuery({ queryKey: ["user"], queryFn: getProfile });
   const { data: friends, isLoading: friendsLoading } = useQuery({ queryKey: ["friends"], queryFn: getFriends});
-  const { data: groups, isLoading: groupsLoading } = useQuery({ queryKey: ["groups"], queryFn: getUserGroups });
+  const { data: groupProfiles, isLoading: groupProfilesLoading } = useQuery({ queryKey: ["groupProfiles"], queryFn: getGroupProfiles});
 
 
   /*

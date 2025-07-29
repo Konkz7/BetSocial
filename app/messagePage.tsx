@@ -1,47 +1,51 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet,SafeAreaView } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
+import {DMCheck, fillReadMarkers, getConversations, getUser, makePrivateGroup} from "./API";
+import { useFocusEffect } from '@react-navigation/native';
+import { timeAgo } from './Constants';
 
-const conversations = [
-  {
-    id: 1,
-    name: 'John Smith',
-    lastMessage: "I'll take that bet! Let me know when...",
-    time: '2m ago',
-    unread: true,
-    online: true,
-    avatar: 'https://ui-avatars.com/api/?name=John+Smith&background=E5E7EB&color=4B5563',
-  },
-  {
-    id: 2,
-    name: 'Sarah Wilson',
-    lastMessage: "The odds are looking good for tonight's game",
-    time: '1h ago',
-    unread: false,
-    online: true,
-    avatar: 'https://ui-avatars.com/api/?name=Sarah+Wilson&background=E5E7EB&color=4B5563',
-  },
-  {
-    id: 3,
-    name: 'Mike Johnson',
-    lastMessage: 'Deal! 🤝',
-    time: '3h ago',
-    unread: false,
-    online: false,
-    avatar: 'https://ui-avatars.com/api/?name=Mike+Johnson&background=E5E7EB&color=4B5563',
-  },
-  {
-    id: 4,
-    name: 'Emma Davis',
-    lastMessage: "What's your prediction for the match?",
-    time: '1d ago',
-    unread: false,
-    online: false,
-    avatar: 'https://ui-avatars.com/api/?name=Emma+Davis&background=E5E7EB&color=4B5563',
-  },
-];
+  
 
 const MessageScreen = ({ navigation , route } : any) => {
+
+  const [conversations, setConversations] = useState<any[]>([]);
+
+  const fetchConversations = async () => {
+    try {
+      const data = await getConversations();
+      setConversations(data.map((entry:any) => ({
+        ...entry,
+        time: timeAgo(entry.time) 
+      })));
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+    }
+  };
+
+  async function goToDMScreen(uid:number, gid:number){
+
+    
+    const recipient : any = {};
+    recipient["user"] = await getUser(uid);
+    recipient["gid"] = gid;
+
+    fillReadMarkers(recipient["gid"]);
+
+    navigation.navigate("DMScreen_M",recipient);
+    
+  }
+
+  useFocusEffect(
+      useCallback(() => {
+
+        fetchConversations();
+        
+        return () => {
+          
+        };
+      }, [])
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -50,9 +54,10 @@ const MessageScreen = ({ navigation , route } : any) => {
       </View>
       <FlatList
         data={conversations}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.conversationItem}>
+        keyExtractor={(item) => item.index}
+        renderItem={({ item }) => (   
+          <View>
+            <TouchableOpacity style={styles.conversationItem} onPress={() => goToDMScreen(item.uid, item.gid)}>
             <View style={styles.avatarContainer}>
               <Image source={{ uri: item.avatar }} style={styles.avatar} />
               {item.online && <View style={styles.onlineIndicator} />}
@@ -60,12 +65,13 @@ const MessageScreen = ({ navigation , route } : any) => {
             <View style={styles.messageInfo}>
               <View style={styles.messageHeader}>
                 <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.time}>{item.time}</Text>
+                <Text style={styles.time}>{item.time} ago</Text>
               </View>
               <Text style={[styles.lastMessage, item.unread && styles.unread]}>
                 {item.lastMessage}
               </Text>
             </View>
+            </TouchableOpacity>
           </View>
         )}
       />

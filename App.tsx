@@ -48,6 +48,7 @@ const SelfProfileStack = createNativeStackNavigator();
 const HomeStack = createNativeStackNavigator();
 const SearchStack = createNativeStackNavigator();
 const ActivityStack = createNativeStackNavigator();
+const MessageStack = createNativeStackNavigator();
 
 
 const MainTab = createBottomTabNavigator();
@@ -95,6 +96,16 @@ function ActivityStackNavigator() {
   );
 };
 
+function MessageStackNavigator() {
+  return (
+    <MessageStack.Navigator screenOptions={{ headerShown: false }}>
+      <MessageStack.Screen name = "Messagescreen_M" component ={MessageScreen} />
+      <MessageStack.Screen name = "DMScreen_M" component ={DMScreen} />
+
+    </MessageStack.Navigator>
+  );
+};
+
 
 function WalletStackNavigator() {
   return (
@@ -128,7 +139,7 @@ function TabNavigator(){
           <MainTab.Screen name="Search" component={SearchStackNavigator} />
           <MainTab.Screen name="Add" component={AddThreadScreen} />
           <MainTab.Screen name="Activity" component={ActivityStackNavigator} />
-          <MainTab.Screen name="Messages" component={MessageScreen} />
+          <MainTab.Screen name="Messages" component={MessageStackNavigator} />
         </MainTab.Navigator>
     );
 }

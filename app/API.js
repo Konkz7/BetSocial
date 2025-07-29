@@ -39,10 +39,10 @@ export const getUsers = async() =>{
     }
   }
 
-  export const getUserGroups = async(uid) =>{
+  export const getGroupProfiles = async(uid) =>{
     try {
-        const groups = await axios.get(IP_STRING + "/api/groups/user-groups");
-        return groups.data;
+        const groupUsers = await axios.get(IP_STRING + "/api/groups/groups-users");
+        return groupUsers.data;
     } catch (error) {
       Alert.alert("Error!", "Groups couldnt be found.")
     }
@@ -172,7 +172,16 @@ export const getChatMessages = async(gid) =>{
       const messages = await axios.get(IP_STRING + "/api/messages/group/"+gid);
       return messages.data;
   } catch (error) {
-    Alert.alert("Error!", "Chat messgaes coulnt be found.")
+    Alert.alert("Error!", "Chat messgaes couldnt be found.")
+  }
+}
+
+export const getConversations = async() =>{
+  try {
+      const conversations = await axios.get(IP_STRING + "/api/messages/conversations");
+      return conversations.data;
+  } catch (error) {
+    Alert.alert("Error!", "Conversations couldnt be found.")
   }
 }
 
@@ -182,6 +191,15 @@ export const fillReadMarkers = async(gid) =>{
       return fill.data;
   } catch (error) {
     Alert.alert("Error!", "Chat messages couldnt be read.")
+  }
+}
+
+export const updateLastTimestamp = async(gid) =>{
+  try {
+      const stamp = await axios.put(IP_STRING + "/api/groups/update-timestamp/"+gid);
+      return stamp.data;
+  } catch (error) {
+    Alert.alert("Error!", "Timestamp couldnt be updated.")
   }
 }
 

@@ -13,7 +13,7 @@ import { ArrowLeft, Send, Check } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import webSocketService from './Components/WebSocketService';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getChatMessages } from './API';
+import { getChatMessages,updateLastTimestamp } from './API';
 import { formatMessageTime, timeAgo } from './Constants';
 
 
@@ -23,7 +23,7 @@ type Message = {
   sent: boolean; 
   time: string;
   seen: boolean;
-  //Seen will be fully implemented with the live feature once another device can be used to test.
+  //TODO Seen will be fully implemented with the live feature , can be tested via postman.
 };
 
 
@@ -94,6 +94,7 @@ const DMScreen = ({ navigation ,route }:any) => {
   
       // 4) Cleanup on unmount
       return () => {
+        updateLastTimestamp(chatGid);
         webSocketService.disconnect();
       };
     }, [self.uid, chatGid, refetchChat])
