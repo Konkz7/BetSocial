@@ -80,6 +80,13 @@ public class MessageController {
         return messageService.getChatMessages(gid);
     }
 
+    @GetMapping("/conversations")
+    List<ConversationDTO> getGroupMessages(HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+
+        return messageService.getConversations(uid);
+    }
+
 
     @PutMapping("/update-reads/{gid}")
     void updatePrevReadReceipts(@PathVariable Long gid, HttpSession session){

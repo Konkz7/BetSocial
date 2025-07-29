@@ -11,6 +11,7 @@ public record Groupuser_(
     Long gid,
     @NonNull
     Long uid,
+    Long other_uid,
     @NonNull
     Long created_at,
     @NonNull

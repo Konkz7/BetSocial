@@ -1,9 +1,13 @@
 package com.example.World.Messages;
 
 import com.example.World.Groups.*;
+import com.example.World.Users.UserRepository;
+import com.example.World.Users.User_;
 import org.springframework.stereotype.Service;
 
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -12,12 +16,12 @@ public class MessageService {
 
     private final MessageRepository messageRepository;
     private final GroupService groupService;
-    private final GroupUserRepository groupUserRepository;
+    private final UserRepository userRepository;
 
-    public MessageService(MessageRepository messageRepository, GroupService groupService, GroupUserRepository groupUserRepository) {
+    public MessageService(MessageRepository messageRepository, GroupService groupService, GroupUserRepository groupUserRepository, UserRepository userRepository) {
         this.messageRepository = messageRepository;
         this.groupService = groupService;
-        this.groupUserRepository = groupUserRepository;
+        this.userRepository = userRepository;
     }
 
     public Message_ sendMessage(Long gid, Long senderId, Long recipientId , String content) {
@@ -60,4 +64,45 @@ public class MessageService {
             }
         }
     }
+
+    public List<ConversationDTO> getConversations( Long uid ){
+        List<ConversationDTO> convoList = new ArrayList<>();
+        List<Groupuser_> gu =  groupService.getGroupProfiles(uid)
+                .stream()
+                .sorted(Comparator.comparingLong(Groupuser_::gid)) 
+                .toList();
+        List<Group_> groups =  groupService.getUserGroups(uid)
+                .stream()
+                .sorted(Comparator.comparingLong(Group_::gid)) 
+                .toList();
+
+        for (int i = 0; i < gu.size(); i++) {
+            Group_ group = groups.get(i);
+            Groupuser_ gUser = gu.get(i);
+            User_ other = userRepository.findById(gUser.other_uid()).orElseThrow();
+            boolean unread = true;
+
+            if(group.last_time() < gUser.last_read_timestamp()){
+                unread = false;
+            }
+
+            if(group.sort() == 0) {
+                ConversationDTO temp = new ConversationDTO(other.user_name(), other.uid(),
+                        group.last_message(),group.last_time(),unread,other.user_name(), group.gid()); // TODO replace with avatar
+
+                convoList.add(temp);
+            }else{
+                ConversationDTO temp = new ConversationDTO(group.group_name(), other.uid(),
+                        group.last_message(),group.last_time(),unread,other.user_name(),group.gid()); // TODO replace with avatar
+
+                convoList.add(temp);
+            }
+        }
+
+
+
+        return convoList.stream().sorted(Comparator.comparingLong(ConversationDTO::time)).toList().reversed();
+    }
+
+
 }

@@ -90,6 +90,13 @@ public class GroupController {
         Long uid = (Long) session.getAttribute("userId");
         return groupService.createDMGroup(uid + "" + otherUid,uid,otherUid);
     }
+
+
+    @PutMapping("/update-timestamp/{gid}")
+    void updateTimestamp(@PathVariable Long gid, HttpSession session) {
+        Long uid = (Long) session.getAttribute("userId");
+        groupService.updateLastReadTimestamp(gid,uid);
+    }
 /*
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping("/update/{gid}")

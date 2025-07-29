@@ -36,6 +36,7 @@ public class GroupService {
                 null,
                 group.gid(),
                 creatorId,
+                null,
                 time,
                 time,
                 true
@@ -49,6 +50,7 @@ public class GroupService {
                     null,
                     group.gid(),
                     user,
+                    null,
                     time,
                     time,
                     false
@@ -82,6 +84,7 @@ public class GroupService {
                 null,
                 group.gid(),
                 uid,
+                other_uid,
                 time,
                 time,
                 false
@@ -91,6 +94,7 @@ public class GroupService {
                 null,
                 group.gid(),
                 other_uid,
+                uid,
                 time,
                 time,
                 false
@@ -107,9 +111,18 @@ public class GroupService {
         return groupRepository.updateGroupRecentData(gid, message, message_time);
     }
 
+    public int updateLastReadTimestamp(Long gid , Long uid){
+        Groupuser_ gu = groupUserRepository.findByGidandUid(gid,uid).orElseThrow();
+        return groupUserRepository.updateReadTimestamp(gu.guid(), new Date().getTime());
+    }
+
     public List<Group_> getUserGroups(Long uid) {
         List<Groupuser_> groupUsers = groupUserRepository.findByUid(uid);
         return groupRepository.findAllById(groupUsers.stream().map(Groupuser_::gid).toList());
+    }
+
+    public List<Groupuser_> getGroupProfiles(Long uid) {
+        return groupUserRepository.findByUid(uid);
     }
 
 
