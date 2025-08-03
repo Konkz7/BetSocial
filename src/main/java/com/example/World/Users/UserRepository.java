@@ -54,4 +54,9 @@ public interface UserRepository extends ListCrudRepository<User_, Long> {
     @Query("UPDATE User_ SET user_name = :user_name WHERE uid = :id AND deleted_at IS NULL")
     int changeUserName(@Param("id") Long id,@Param("user_name") String user_name);
 
+    @Modifying
+    @Transactional
+    @Query("UPDATE User_ SET profile_picture = :profile_picture WHERE uid = :id AND deleted_at IS NULL")
+    int changeProfilePicture(@Param("id") Long id,@Param("profile_picture") String profile_picture);
+
 }

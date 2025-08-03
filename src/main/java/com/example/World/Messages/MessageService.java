@@ -24,7 +24,7 @@ public class MessageService {
         this.userRepository = userRepository;
     }
 
-    public Message_ sendMessage(Long gid, Long senderId, Long recipientId , String content) {
+    public Message_ sendMessage(Long gid, Long senderId, Long recipientId , String content, Integer mediaType) {
 
 
         Message_ message = new Message_(
@@ -32,6 +32,7 @@ public class MessageService {
                 senderId,
                 recipientId,
                 content,
+                mediaType,
                 new Date().getTime(),
                 null,
                 gid,
@@ -88,12 +89,12 @@ public class MessageService {
 
             if(group.sort() == 0) {
                 ConversationDTO temp = new ConversationDTO(other.user_name(), other.uid(),
-                        group.last_message(),group.last_time(),unread,other.user_name(), group.gid()); // TODO replace with avatar
+                        group.last_message(),group.last_time(),unread,other.profile_picture(), group.gid()); // TODO replace with avatar
 
                 convoList.add(temp);
             }else{
                 ConversationDTO temp = new ConversationDTO(group.group_name(), other.uid(),
-                        group.last_message(),group.last_time(),unread,other.user_name(),group.gid()); // TODO replace with avatar
+                        group.last_message(),group.last_time(),unread,other.profile_picture(),group.gid()); // TODO replace with avatar
 
                 convoList.add(temp);
             }

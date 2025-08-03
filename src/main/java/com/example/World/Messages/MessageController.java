@@ -60,7 +60,7 @@ public class MessageController {
         Long uid = (Long) uidObj;
         Long gid = message.gid();
         System.out.println("MESSAGE: " + message.description());
-        Message_ result = messageService.sendMessage(gid, uid, message.recipient_id(), message.description());
+        Message_ result = messageService.sendMessage(gid, uid, message.recipient_id(), message.description(), message.media_type());
 
         simpMessagingTemplate.convertAndSend("/topic/chat/" + gid, result);
 

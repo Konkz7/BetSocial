@@ -57,10 +57,10 @@ public class SecurityConfig {
         .authorizeHttpRequests(registry -> {
             registry.requestMatchers("/req/**").permitAll();
             registry.requestMatchers("/ws/**").permitAll();
-            registry.requestMatchers("/superusers/**").hasAnyRole("SUPERUSER","ADMIN");
+            registry.requestMatchers("/superusers/**").hasAnyRole("IMAGE","ADMIN");
             registry.requestMatchers("/admin/**").hasRole("ADMIN");
-            registry.requestMatchers("/api/bets/**").hasRole("USER");
-            registry.requestMatchers("/api/predictions/**").hasRole("USER");
+            registry.requestMatchers("/api/bets/**").hasRole("TEXT");
+            registry.requestMatchers("/api/predictions/**").hasRole("TEXT");
 
             registry.anyRequest().authenticated();
         })

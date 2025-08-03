@@ -22,4 +22,7 @@ public interface MessageRepository extends ListCrudRepository<Message_,Long> {
     @Query("UPDATE Message_ SET is_read = true WHERE mid = :mid")
     int updateReadReceipt(@Param("mid") Long mid);
 
+
+
+
 }

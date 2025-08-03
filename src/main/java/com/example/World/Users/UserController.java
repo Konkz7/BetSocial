@@ -50,6 +50,18 @@ public class UserController {
         return ResponseEntity.ok().body("Bio successfully changed!");
     }
 
+    @PutMapping("/change-pfp")
+    ResponseEntity<String> changeProfilePicture(@RequestParam String pfp, HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+
+        System.out.println(pfp);
+        userRepository.changeProfilePicture(uid,pfp);
+
+
+        return ResponseEntity.ok().body("Profile picture changed!");
+
+    }
+
     @PutMapping("change-user-name")
     ResponseEntity<String> changeUserName(@RequestParam String newName, HttpSession session){
         Long uid = (Long) session.getAttribute("userId");

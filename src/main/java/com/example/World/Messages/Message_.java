@@ -1,6 +1,7 @@
 package com.example.World.Messages;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Version;
 import org.springframework.lang.NonNull;
@@ -14,7 +15,9 @@ public record Message_(
       Long uid,        // Foreign key to Users table
       Long recipient_id,     // Foreign key to Users table, can be null for group messages
       @NotEmpty
-      String description,          // The actual message description
+      String description,// The actual message description
+      @NotNull
+      Integer media_type,
       @NonNull
       Long created_at, // Timestamp of message creation
       Long deleted_at,
