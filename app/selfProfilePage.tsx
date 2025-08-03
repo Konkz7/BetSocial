@@ -1,5 +1,5 @@
 import React, { useState, useCallback,useEffect } from "react";
-import { View, StyleSheet,Alert, TouchableOpacity,ScrollView , ActivityIndicator, FlatList} from "react-native";
+import { View, StyleSheet,Alert, TouchableOpacity,ScrollView , ActivityIndicator, FlatList,Image} from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
@@ -8,8 +8,11 @@ import { IP_STRING } from "./Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Settings2, DollarSign, Frown, Heart, MessageCircle, Users, Trash2, Pencil } from "lucide-react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { changeBio, getFriendship, getUserThreads, removeThread, sendFriendRequest, Unfriend } from "./API";
+import { changeBio, getFriendship, getUserThreads, removeThread, sendFriendRequest, unfriend, changePfp } from "./API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
+import Video from 'react-native-video';
+import { selectImage} from "./Components/FBImageService";
+
 
 
 
@@ -20,9 +23,16 @@ const SelfProfileScreen = ({navigation , route}: any) => {
     const [threads, setThreads] = useState<any[]>([]);
     const [bioMode,setBioMode] = useState(false);
     const [bioText, setBioText] = useState("");
+
+
+   
+    const [uploading, setUploading] = useState(false);
    
     const queryClient = useQueryClient();
     const user = queryClient.getQueryData(["user"]) as any;
+    const [pfp , setPfp] = useState(user.profile_picture);
+
+
 
    
     const { data: threadData, refetch: refetchThreads, isLoading: threadsLoading } = useQuery({
@@ -33,6 +43,10 @@ const SelfProfileScreen = ({navigation , route}: any) => {
     useFocusEffect(
         useCallback(() => {
             console.log("Screen is focused! Refetching threads and friendship...");
+
+            console.log(user.profile_picture);
+
+            setPfp(user.profile_picture);
             
             console.log(user);
 
@@ -44,9 +58,11 @@ const SelfProfileScreen = ({navigation , route}: any) => {
                 queryClient.invalidateQueries({queryKey: ["user"]});
                 console.log("Screen is unfocused! Cleanup if needed.");       
             };
-        }, []) // Depend on profile ID to refetch when user changes
+        }, []) 
     );
-    
+
+
+
     const test = (text : string) => {
         setBioText(text);
         console.log(text);
@@ -60,7 +76,6 @@ const SelfProfileScreen = ({navigation , route}: any) => {
     
     useEffect(() => {
         if (threadData) {
-
           setThreads(addUserInfo(threadData));
         }
     }, [threadData]);
@@ -90,6 +105,23 @@ const SelfProfileScreen = ({navigation , route}: any) => {
         ]);
     }
 
+   
+
+    const changeProfilePicture = async () => {
+        try {
+            setUploading(true);
+            const url = await selectImage(user.uid); 
+            await changePfp(encodeURIComponent(url));
+            setPfp(url);          
+        } catch (error) {
+            console.error("Media selection/upload failed:", error);
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    
+
     return (
 
         <SafeAreaView style = {styles.container}>
@@ -102,7 +134,7 @@ const SelfProfileScreen = ({navigation , route}: any) => {
                     </TouchableOpacity>
 
                     <View style = {styles.nameContainer}>
-                        <Text style = {styles.name}> {user.user_name} </Text>
+                        <Text style = {styles.name}> {user.user_name} </Text> 
                     </View>
                     <TouchableOpacity style = {styles.button} onPress={() => navigation.navigate("Settings_SP")}>
                         <Settings2 size={32} color={"#10B981"} />
@@ -110,9 +142,14 @@ const SelfProfileScreen = ({navigation , route}: any) => {
 
                 </View>
                 <View style = {{flexDirection: "row"}}>
-                    <View style = {styles.profilePicture}>
 
-                    </View>
+                    <TouchableOpacity style = {styles.profilePicture} onPress={()=> changeProfilePicture()}>
+                        <Image
+                            source={{ uri: pfp }}
+                            style={{ width: '100%', height: '100%', borderTopRightRadius: 20 , borderBottomRightRadius: 20 }}
+                        />
+                    </TouchableOpacity>
+                    
                     <View style = {styles.statBlock}>
                         <Text style = {styles.stat}>Followers</Text>
                         <Text style = {styles.number}>5</Text>
@@ -261,7 +298,7 @@ const styles = StyleSheet.create({
 
         height: 240,
         width: 220,
-        backgroundColor: "black",
+        
         borderBottomRightRadius: 20,
         borderTopRightRadius: 20,
         shadowColor: '#000',
@@ -296,7 +333,7 @@ const styles = StyleSheet.create({
     },bio:{
         fontSize: 15,
         textAlign: 'center',
-        fontWeight: 'bold',
+        fontWeight: 'bold', 
     },tabContainer:{
         flexDirection: 'row',
         justifyContent:'space-evenly',

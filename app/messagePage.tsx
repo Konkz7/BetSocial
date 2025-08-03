@@ -9,6 +9,8 @@ import { timeAgo } from './Constants';
 
 const MessageScreen = ({ navigation , route } : any) => {
 
+  //fix seen issues
+
   const [conversations, setConversations] = useState<any[]>([]);
 
   const fetchConversations = async () => {
@@ -17,6 +19,7 @@ const MessageScreen = ({ navigation , route } : any) => {
       setConversations(data.map((entry:any) => ({
         ...entry,
         time: timeAgo(entry.time) 
+        
       })));
     } catch (error) {
       console.error("Error fetching conversations:", error);
@@ -40,6 +43,7 @@ const MessageScreen = ({ navigation , route } : any) => {
       useCallback(() => {
 
         fetchConversations();
+
         
         return () => {
           
@@ -54,12 +58,13 @@ const MessageScreen = ({ navigation , route } : any) => {
       </View>
       <FlatList
         data={conversations}
-        keyExtractor={(item) => item.index}
+        keyExtractor={(item) => item.gid.toString()}
+        removeClippedSubviews={false}
         renderItem={({ item }) => (   
-          <View>
-            <TouchableOpacity style={styles.conversationItem} onPress={() => goToDMScreen(item.uid, item.gid)}>
+          
+            <TouchableOpacity style={styles.conversationItem} onPress={() => goToDMScreen(item.uid, item.gid)}> 
             <View style={styles.avatarContainer}>
-              <Image source={{ uri: item.avatar }} style={styles.avatar} />
+              <Image source={{ uri: item.avatar}} style={styles.avatar} />
               {item.online && <View style={styles.onlineIndicator} />}
             </View>
             <View style={styles.messageInfo}>
@@ -72,7 +77,7 @@ const MessageScreen = ({ navigation , route } : any) => {
               </Text>
             </View>
             </TouchableOpacity>
-          </View>
+          
         )}
       />
     </SafeAreaView>

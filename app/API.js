@@ -84,6 +84,15 @@ export const getUsers = async() =>{
     }
   }
 
+  export const changePfp = async(pfp) =>{
+    try {
+        const newPfp = await axios.put(IP_STRING + "/api/users/change-pfp?pfp="+ pfp);
+        return (newPfp.data);
+    } catch (error) {
+      Alert.alert("Error!", "Profile picture couldnt be changed.")
+    }
+  }
+
 export const getActiveNotifications = async() =>{
   try {
       const notifications = await axios.get(IP_STRING + "/api/notifications/active-notifications");

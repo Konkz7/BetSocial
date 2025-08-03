@@ -27,6 +27,8 @@ const ProfileScreen = ({navigation , route}: any) => {
     const [currentTab,setCurrentTab] = useState('Threads');
     const [threads, setThreads] = useState<any[]>([]);
     const [friendState, setFriendState] = useState(0); // 0: not friends, 1: friend request sent, 2: friends
+
+    
    
     const queryClient = useQueryClient();
     const profile = queryClient.getQueryData(["user"]) as any;
@@ -195,9 +197,14 @@ const ProfileScreen = ({navigation , route}: any) => {
 
                 </View>
                 <View style = {{flexDirection: "row"}}>
-                    <View style = {styles.profilePicture}>
+                
+                    
+                    <TouchableOpacity >
+                        <View style = {styles.profilePicture}>
 
-                    </View>
+                        </View>
+                    </TouchableOpacity>
+
                     <View style = {styles.statBlock}>
                         <Text style = {styles.stat}>Followers</Text>
                         <Text style = {styles.number}>5</Text>

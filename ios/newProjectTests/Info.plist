@@ -20,5 +20,13 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+
+	<key>NSCameraUsageDescription</key>
+	<string>We need access to your camera</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photos</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>We need access to save photos</string>
+	
 </dict>
 </plist>

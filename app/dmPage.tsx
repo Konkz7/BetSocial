@@ -9,12 +9,13 @@ import {
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
-import { ArrowLeft, Send, Check } from 'lucide-react-native';
+import { ArrowLeft, Send, Check,ImageUp } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import webSocketService from './Components/WebSocketService';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getChatMessages,updateLastTimestamp } from './API';
 import { formatMessageTime, timeAgo } from './Constants';
+import { selectMedia } from './Components/FBImageService';
 
 
 type Message = {
@@ -23,6 +24,7 @@ type Message = {
   sent: boolean; 
   time: string;
   seen: boolean;
+  type: number; // 0 for text, 1 for image, 2 for video
   //TODO Seen will be fully implemented with the live feature , can be tested via postman.
 };
 
@@ -65,6 +67,7 @@ const DMScreen = ({ navigation ,route }:any) => {
           sent: true,
           time: formatMessageTime(Date.now()),
           seen: false,
+          type: message.media_type,
         };
         setMessages(prevMessages => [...prevMessages, newMessageObj ]);
       });
@@ -83,6 +86,7 @@ const DMScreen = ({ navigation ,route }:any) => {
               sent: item.uid === self.uid,
               time: formatMessageTime(item.created_at),
               seen:  item.is_read,
+              type: item.media_type,
             }));
   
             setMessages(initialMessages);
@@ -108,6 +112,7 @@ const DMScreen = ({ navigation ,route }:any) => {
         gid: chatGid,
         recipient_id: user.uid,
         description: newMessage,
+        media_type: 0, 
       };
       webSocketService.sendMessage(messageObj);
 
@@ -127,7 +132,7 @@ const DMScreen = ({ navigation ,route }:any) => {
           <View style={styles.profileImageContainer}>
             <Image
               source={{
-                uri: 'https://ui-avatars.com/api/?name=John+Smith&background=E5E7EB&color=4B5563',
+                uri: user.profile_picture,
               }}
               style={styles.profileImage}
             />
@@ -191,6 +196,10 @@ const DMScreen = ({ navigation ,route }:any) => {
         />
         <TouchableOpacity style={styles.sendButton} onPress={() => sendMessage()}>
           <Send size={20} color="#fff" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.sendButton} onPress={()=>{}}>
+          <ImageUp size={20} color="#fff" />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
