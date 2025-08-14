@@ -16,6 +16,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getChatMessages,updateLastTimestamp } from './API';
 import { formatMessageTime, timeAgo } from './Constants';
 import { selectMedia } from './Components/FBImageService';
+import Video from 'react-native-video';
 
 
 type Message = {
@@ -121,6 +122,24 @@ const DMScreen = ({ navigation ,route }:any) => {
 
     };
 
+    const sendMedia = async () => {
+  
+      const { mediaUri, media_type } = await selectMedia();
+      const type = media_type === 'image' ? 1 : 2;
+
+      const messageObj = {
+        gid: chatGid,
+        recipient_id: user.uid,
+        description: mediaUri,
+        media_type: type,
+      };
+      webSocketService.sendMessage(messageObj);
+
+      setNewMessage('');
+
+
+    };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -161,9 +180,33 @@ const DMScreen = ({ navigation ,route }:any) => {
                 message.sent ? styles.bubbleSent : styles.bubbleReceived,
               ]}
             >
+             {message.type === 0 && (
               <Text style={message.sent ? styles.textSent : styles.textReceived}>
                 {message.text}
               </Text>
+             )} 
+
+             {message.type === 1 && (
+              <View style={message.sent ? styles.imageSent : styles.imageReceived}>
+                <Image
+                  source={{ uri: message.text }}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </View>
+            )}
+
+            {message.type === 2 && (
+              <View style={message.sent ? styles.imageSent : styles.imageReceived}>
+                <Video
+                  source={{ uri: message.text }}
+                  style={{ width: '100%', height: '100%' }}
+                  controls={true}
+                  paused={true}
+                  resizeMode="cover"
+                />
+              </View>
+            )}
+
             </View>
             <View style={styles.messageMeta}>
               <Text style={styles.timeText}>{message.time}</Text>
@@ -198,7 +241,7 @@ const DMScreen = ({ navigation ,route }:any) => {
           <Send size={20} color="#fff" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.sendButton} onPress={()=>{}}>
+        <TouchableOpacity style={styles.sendButton} onPress={()=>sendMedia()}>
           <ImageUp size={20} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -328,10 +371,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#10B981',
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
+  },
+  imageSent: {
+    width: 200,
+    height: 200,
+    borderRadius:20,
+    overflow: 'hidden', // so rounded corners work
+    backgroundColor: '#10B981', // match bubble color if needed
+  },
+    imageReceived: {
+    width: 200,
+    height: 200,
+    borderRadius:10,
+    overflow: 'hidden',
+    backgroundColor: '#eee',
   },
 });
 

@@ -71,7 +71,7 @@ export const selectMedia = () => {
         uploadVideo(mediaUri)
           .then(url => {
             console.log("Video uploaded successfully:", url);
-            resolve(url);
+            resolve({ mediaUri: url, media_type: mediaType });
           })
           .catch(err => {
             console.error("Error uploading video:", err);
@@ -81,13 +81,36 @@ export const selectMedia = () => {
         uploadImage(mediaUri)
           .then(url => {
             console.log("Image uploaded successfully:", url);
-            resolve(url);
+            resolve({ mediaUri: url, media_type: mediaType });
           })
           .catch(err => {
             console.error("Error uploading image:", err);
             reject(err);
           });
       }
+    });
+  });
+};
+
+export const selectLocalMedia = () => {
+  return new Promise((resolve, reject) => {
+    launchImageLibrary({ mediaType: 'mixed' }, response => {
+      if (response.didCancel || response.errorCode) {
+        console.warn('User cancelled or error:', response.errorMessage);
+        reject('User cancelled or error');
+        return;
+      }
+
+      const asset = response.assets?.[0];
+      if (!asset) {
+        reject('No media selected');
+        return;
+      }
+
+      const mediaUri = asset.uri;
+      const mediaType = asset.type?.startsWith('video') ? 'video' : 'image';
+
+      resolve({ mediaUri: mediaUri, media_type: mediaType });     
     });
   });
 };

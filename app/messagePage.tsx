@@ -42,6 +42,7 @@ const MessageScreen = ({ navigation , route } : any) => {
   useFocusEffect(
       useCallback(() => {
 
+        // will cache conversations and automatically update when dm screen is focused
         fetchConversations();
 
         

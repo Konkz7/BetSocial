@@ -1,17 +1,19 @@
 import React, { useState, useCallback,useEffect } from "react";
-import { View, StyleSheet,Alert, TouchableOpacity,ScrollView } from "react-native";
+import { View, StyleSheet,Alert, TouchableOpacity,ScrollView, Image } from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { errorHandler, IP_STRING } from "./Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { SquarePlus, ArrowLeft,HandCoins, ShieldCheck, CircleX } from "lucide-react-native";
+import { SquarePlus, ArrowLeft,HandCoins, ShieldCheck, CircleX, ImageUp, X } from "lucide-react-native";
 import Card from "./Components/Card"; 
 import ToggleSwitch from "./Components/ToggleSwitch"; 
 import DatePickerButton from "./Components/DatePicker"; 
+import { selectMedia , selectLocalMedia} from './Components/FBImageService';
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {getProfile} from "./API";
+import Video from "react-native-video";
 
 
 
@@ -22,6 +24,10 @@ const AddThreadScreen = ({navigation}:any) => {
   const [username, setUsername] = useState("Loading...");
   const [is_private, setPrivacy] = useState(false);
   const [bets, setBets]= useState <any>([]);
+  const [threadMediaType, setThreadMediaType] = useState<"image" | "video" | "none">("none");
+  const [threadMedia, setThreadMedia] = useState<string>("none");
+
+ 
   const maxCharacters = 280;
   const maxBetCharacters = 125;
   const maxBets = 4;
@@ -46,9 +52,15 @@ const AddThreadScreen = ({navigation}:any) => {
 
   const thread = {
     "title": threadText,
-    "description": "",
+    "media": threadMedia,
+    "media_type": threadMediaType,
     "category": category,
     "is_private": is_private,
+  }
+
+  const resetMedia = () => {
+    setThreadMedia("none");
+    setThreadMediaType("none");
   }
 
   const reset = () =>{
@@ -56,12 +68,19 @@ const AddThreadScreen = ({navigation}:any) => {
     setCategory("");
     setPrivacy(false);
     setBets(([]));
+    setThreadMediaType("none");
+    setThreadMedia("none");
   }
 
   
   const queryClient = useQueryClient();
   const data:any = queryClient.getQueryData(["user"]);
-
+  
+  const fetchThreadMedia = async () => {
+    const { mediaUri, media_type } = await selectLocalMedia();
+    setThreadMedia(mediaUri);
+    setThreadMediaType(media_type);
+  }
 
   const post = async() =>{
 
@@ -229,6 +248,32 @@ const AddThreadScreen = ({navigation}:any) => {
                 activeUnderlineColor="transparent"
                 underlineColor="transparent"
               />  
+            </View>
+            <View style = {styles.mediaContainer}>
+              
+                {threadMediaType === "image" ? (
+                  <View>
+                    <View style = {styles.cancelMediaButton}>
+                      <TouchableOpacity onPress={() => resetMedia()} style ={{justifyContent: "center"}}>
+                        <X size={20} color="white" />
+                      </TouchableOpacity>
+                    </View>
+                  <Image source={{ uri: threadMedia }} style={styles.media} resizeMode="contain" />
+                  </View>
+                ) : threadMediaType === "video" ? (
+                  <View>
+                    <View style = {styles.cancelMediaButton}>
+                      <TouchableOpacity onPress={() => resetMedia()} style ={{justifyContent: "center"}}>
+                        <X size={20} color="white" />
+                      </TouchableOpacity>
+                    </View>
+                  <Video source={{ uri: threadMedia }} style={styles.media} resizeMode="contain" controls = {true}/>
+                  </View>
+                ) : (
+                  <TouchableOpacity onPress={fetchThreadMedia}>
+                    <ImageUp size={30} color="green" style = {{margin: 10}}></ImageUp>
+                  </TouchableOpacity>
+                )}
             </View>
             <View style = {styles.categoryContainer}>
             <TextInput
@@ -404,14 +449,36 @@ const styles = StyleSheet.create({
     height:220,
     width:380,
     backgroundColor: "white",
-    borderBottomWidth:2,
-    borderBottomColor: "#ddd",
+   
 
   },categoryContainer:{
     height:40,
     width:380,
     backgroundColor: "white",
-  },betButtonContainer:{
+  },mediaContainer:{
+    width:380,
+    backgroundColor: "white",
+    borderBottomColor: "#ddd",
+    borderBottomWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    padding:10,
+  },media:{
+    height: 272,
+    width:368,
+    borderWidth:2,
+    borderColor: "green",
+  },cancelMediaButton:{
+    flexDirection: "row", 
+    alignSelf: "flex-end" ,
+    backgroundColor: "red" , 
+    height:25, 
+    width:50,
+    justifyContent: "center", 
+    borderTopLeftRadius:10, 
+    borderTopRightRadius:10,
+  }
+  ,betButtonContainer:{
     height:50,
     width:50,
     borderRadius: 15,
