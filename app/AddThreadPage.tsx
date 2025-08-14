@@ -10,7 +10,7 @@ import { SquarePlus, ArrowLeft,HandCoins, ShieldCheck, CircleX, ImageUp, X } fro
 import Card from "./Components/Card"; 
 import ToggleSwitch from "./Components/ToggleSwitch"; 
 import DatePickerButton from "./Components/DatePicker"; 
-import { selectMedia , selectLocalMedia} from './Components/FBImageService';
+import { uploadImage, uploadVideo, selectLocalMedia} from './Components/FBImageService';
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {getProfile} from "./API";
 import Video from "react-native-video";
@@ -52,8 +52,8 @@ const AddThreadScreen = ({navigation}:any) => {
 
   const thread = {
     "title": threadText,
-    "media": threadMedia,
-    "media_type": threadMediaType,
+    "media": "",
+    "media_type": 0,
     "category": category,
     "is_private": is_private,
   }
@@ -112,6 +112,26 @@ const AddThreadScreen = ({navigation}:any) => {
     
 
     try {
+
+      if(threadMediaType ==="image"){
+        try{
+        thread.media = await uploadImage(threadMedia);
+        } catch(error){
+          Alert.alert("Error:", "Apologies! Image couldnt be Uploaded");
+          return;
+        }
+        thread.media_type = 1;
+      }else if(threadMediaType ==="video"){
+        try{
+        thread.media = await uploadVideo(threadMedia);
+        } catch(error){
+          Alert.alert("Error:", "Apologies! Video couldnt be Uploaded");
+          return;
+        }
+        thread.media_type = 2;
+      }
+
+
       const threadResponse = await axios.post(IP_STRING + "/api/threads/make", thread); 
       Alert.alert("Well done!", "Thread successfully made!");
 
