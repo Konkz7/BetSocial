@@ -16,7 +16,8 @@ public record Thread_(
         Long uid,
         @NotEmpty
         String title ,
-        String description ,
+        String media ,
+        Integer media_type, // 1 is image, 2 is video
         @NotEmpty
         String category,
         @NonNull

@@ -22,10 +22,12 @@ public class ThreadController {
 
     private final ThreadRepository threadRepository;
     private final BetRepository betRepository;
+    private final ThreadService threadService;
 
-    public ThreadController(ThreadRepository threadRepository, BetRepository betRepository) {
+    public ThreadController(ThreadRepository threadRepository, BetRepository betRepository, ThreadService threadService) {
         this.threadRepository = threadRepository;
         this.betRepository = betRepository;
+        this.threadService = threadService;
     }
 
     @GetMapping("/all")
@@ -66,7 +68,7 @@ public class ThreadController {
             return ResponseEntity.badRequest().body("Error: Please make sure fields are filled out properly");
         }
         Long uid = (Long) session.getAttribute("userId");
-        Long tid = threadRepository.save(new Thread_(null,uid,thread.title(), thread.description(), thread.category(),
+        Long tid = threadRepository.save(new Thread_(null,uid,thread.title(), thread.media(), thread.media_type(), thread.category(),
                 new Date().getTime(),null,thread.is_private(),null)).tid();
 
         return ResponseEntity.ok(String.valueOf(tid));
@@ -77,25 +79,7 @@ public class ThreadController {
     void removeThread(@PathVariable Long tid,HttpSession session){
 
         Long userId = (Long) session.getAttribute("userId");
-        Optional<Thread_> optionalThread = threadRepository.findById(tid);
-        Thread_ thread;
-        if(optionalThread.isEmpty()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Thread not found");
-        }else{
-            thread = optionalThread.get();
-        }
-
-        if(!thread.uid().equals(userId)){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not the owner of this thread");
-        }
-
-
-        threadRepository.remove(tid, new Date().getTime());
-
-        betRepository.findByThread(tid).forEach(bet -> {
-            betRepository.updateStatus(bet.bid(), Status.CANCELLED.toInt());
-            betRepository.remove(bet.bid(), new Date().getTime());
-        });
+        threadService.removeThread(tid,userId);
 
     }
 

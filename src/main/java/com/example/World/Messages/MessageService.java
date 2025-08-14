@@ -43,7 +43,13 @@ public class MessageService {
 
 
         messageRepository.save(message);
-        groupService.updateRecentData(gid,content, message.created_at());
+        if(message.media_type() == 1){
+            groupService.updateRecentData(gid,"Photo was sent", message.created_at());
+        }else if(message.media_type() == 2){
+            groupService.updateRecentData(gid,"Video was sent", message.created_at());
+        }else{
+            groupService.updateRecentData(gid,content, message.created_at());
+        }
 
 
 

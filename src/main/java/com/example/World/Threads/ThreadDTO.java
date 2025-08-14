@@ -6,7 +6,8 @@ import org.springframework.lang.NonNull;
 public record ThreadDTO(
         @NotEmpty
         String title ,
-        String description ,
+        String media ,
+        Integer media_type,
         @NonNull
         Boolean is_private,
         @NotEmpty
