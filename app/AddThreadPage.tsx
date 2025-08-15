@@ -247,7 +247,10 @@ const AddThreadScreen = ({navigation}:any) => {
             <View style = {styles.postHeader}>
 
                 <View style = {{flexDirection: "row", alignItems: "center"}}>
-                  <View style={styles.avatar} />
+                  <Image
+                    source = {{ uri : data.profile_picture}}
+                    style = {styles.avatar}
+                  />
                   <Text style={styles.userName}>{data == null? "404 >:( ":data.user_name}</Text>
                 </View>
 
@@ -527,8 +530,7 @@ const styles = StyleSheet.create({
   },avatar: {
     width: 40,
     height: 40,
-    backgroundColor: "lightgreen",
-    borderRadius: 20,
+    borderRadius: 15,
   },
   userName: {
     fontWeight: "bold",

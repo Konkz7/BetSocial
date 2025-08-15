@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   Alert,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import {
   MessageCircle,
@@ -29,6 +30,7 @@ import {getBalance, getCircleSecret,getFriends,getIpAddress,getProfile,getWallet
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
+import Video from "react-native-video";
 
 
 const categories = [
@@ -123,7 +125,10 @@ const HomeScreen = ({navigation}:any) => {
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => navigation.navigate("SelfProfile_H")}>
-              <View style={styles.profileIcon} />
+              <Image
+                source = {{ uri : profile.profile_picture}}
+                style = {styles.avatar}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -172,16 +177,46 @@ const HomeScreen = ({navigation}:any) => {
           <View style={styles.post}>
             <TouchableOpacity onPress={() => navigation.navigate("Thread_H",item)}>
 
-            <View style={styles.postHeader}>           
-                <View style={styles.avatar} />
+            <View style = {{flexDirection:"row", alignItems:"center",justifyContent:"space-between", marginBottom:10}}>
               <View>
-                <Text style={styles.userName}>{ item.user.user_name }</Text>
-                <Text style={styles.timestamp}>2h ago</Text>
+                <View style={styles.postHeader}>           
+                  
+                  <Image
+                  source = {{ uri : item.user.profile_picture}}
+                  style = {styles.avatar}
+                  />
+                
+                  <View>
+                    <Text style={styles.userName}>{ item.user.user_name }</Text>
+                    <Text style={styles.timestamp}>2h ago</Text>
+                  </View>
+
+                </View>
+              
+                <Text style={styles.postText}>
+                    {item.title}
+                </Text>
               </View>
+
+              <View style = {{ marginRight:17 , borderRadius:10, overflow:"hidden" , borderWidth:1, borderColor:"#10B981"}}>
+                {item.media_type === 1 ? (
+                  <Image
+                    source = {{ uri : item.media}}
+                    style = {{ width: 80, height: 80}}
+                  />
+                ) : item.media_type === 2 ? (
+                  <Video
+                      source = {{ uri : item.media}}
+                      style = {{ width: 80, height: 80}}
+                      repeat = {true}
+                      muted = {true}
+                    />
+                ) : null}
+              </View>  
+
+              
             </View>
-              <Text style={styles.postText}>
-                  {item.title}
-              </Text>
+
             <View style={styles.postFooter}>
               <View style={styles.actionsLeft}>
                 <TouchableOpacity style={styles.actionButton}>
@@ -279,10 +314,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    backgroundColor: "lightgreen",
-    borderRadius: 20,
+    width:40,
+    height:40,
+    borderRadius: 15,
   },
   userName: {
     fontWeight: "bold",

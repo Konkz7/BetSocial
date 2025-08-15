@@ -1,5 +1,5 @@
 import React, { useState, useCallback,useEffect } from "react";
-import { View, StyleSheet,Alert, TouchableOpacity,ScrollView , ActivityIndicator} from "react-native";
+import { View, StyleSheet,Alert, TouchableOpacity,ScrollView , ActivityIndicator, Image} from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
@@ -26,6 +26,7 @@ import {
 import Card from "./Components/Card"; 
 import { getProfile } from "./API";
 import { opacity } from "react-native-reanimated/lib/typescript/Colors";
+import Video from "react-native-video";
 
 
 
@@ -176,7 +177,10 @@ const ThreadScreen = ({navigation,route}:any) => {
             <View style = {styles.postHeader}>
 
                 <View style = {{flexDirection: "row", alignItems: "center"}}>
-                  <View style={styles.avatar} />
+                  <Image
+                    source = {{ uri : threadObject.user.profile_picture}}
+                    style = {styles.avatar}
+                  />
                   <Text style={styles.userName}>{threadObject.user.user_name}</Text>
                 </View>
 
@@ -192,7 +196,24 @@ const ThreadScreen = ({navigation,route}:any) => {
             <View style = {styles.inputContainer}>
               <Text style = {styles.inputBox}>
                 {threadObject.title}
-              </Text>  
+              </Text> 
+
+              <View style ={{alignItems:"center"}}>
+                {threadObject.media_type === 1 ? (
+                    <Image
+                      source = {{ uri : threadObject.media}}
+                      style = {{ width: "100%", height: 200 , marginTop: 15}}
+                      resizeMode="contain"
+                    />
+                  ) : threadObject.media_type === 2 ? (
+                    <Video
+                        source = {{ uri : threadObject.media}}
+                        style = {{ width: "100%", height: 200, marginTop: 15}}
+                        resizeMode="contain"
+                        controls={true}
+                      />
+                ) : null} 
+              </View>
             </View>
             <View style = {styles.categoryContainer}>
               
@@ -406,7 +427,8 @@ const styles = StyleSheet.create({
     maxWidth: 380,
     padding: 20,
     backgroundColor: "white",
-    
+    borderBottomWidth:1,
+    borderColor: "#ddd",
   },categoryContainer:{
     padding:20,
     maxWidth:380,
@@ -460,8 +482,8 @@ const styles = StyleSheet.create({
   },avatar: {
     width: 40,
     height: 40,
-    backgroundColor: "lightgreen",
-    borderRadius: 20,
+    
+    borderRadius: 15,
   },
   userName: {
     fontWeight: "bold",
