@@ -38,8 +38,9 @@ public class MessageService {
                 gid,
                 false,
                 null
-
         );
+
+
 
 
         messageRepository.save(message);

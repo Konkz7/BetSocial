@@ -116,6 +116,7 @@ public class AccountController {
                 new Date().getTime(),          // Retain the creation timestamp
                 null,
                 USER.toInt(),          // Retain the user role
+                null,
                 null,              // wallet address
                 0.0,     // balance
                 null            // Retain the version for optimistic locking

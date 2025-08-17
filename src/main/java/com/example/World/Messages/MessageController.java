@@ -2,8 +2,10 @@ package com.example.World.Messages;
 
 
 
+import com.example.World.Notifications.NotificationService;
 import com.example.World.Threads.ThreadDTO;
 import com.example.World.Threads.Thread_;
+import com.example.World.Users.UserRepository;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -27,12 +29,14 @@ public class MessageController {
     private final MessageRepository messageRepository;
     private final MessageService messageService;
     private final SimpMessagingTemplate simpMessagingTemplate;
+    private final NotificationService notificationService;
 
     public MessageController(MessageRepository messageRepository, MessageService messageService,
-                             SimpMessagingTemplate simpMessagingTemplate) {
+                             SimpMessagingTemplate simpMessagingTemplate, NotificationService notificationService) {
         this.messageRepository = messageRepository;
         this.messageService = messageService;
         this.simpMessagingTemplate = simpMessagingTemplate;
+        this.notificationService = notificationService;
     }
 
     @GetMapping("/all")

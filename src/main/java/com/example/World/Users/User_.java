@@ -51,6 +51,8 @@ public record User_(
         @NonNull
         Integer user_role, // Role of the user, 0 for normal user, 1 for superuser, 2 for admin
 
+        String fb_notification_token,
+
         String wallet_address,
 
         @NonNull

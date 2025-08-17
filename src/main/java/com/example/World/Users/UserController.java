@@ -18,9 +18,11 @@ import java.util.Optional;
 @RestController
 public class UserController {
     private final UserRepository userRepository;
+    private final UserService userService;
 
-    public UserController(UserRepository userRepository) {
+    public UserController(UserRepository userRepository, UserService userService) {
         this.userRepository = userRepository;
+        this.userService = userService;
     }
 
     @GetMapping("/all")
@@ -77,6 +79,16 @@ public class UserController {
         userRepository.changeUserName(uid,newName);
 
         return ResponseEntity.ok().body("Name successfully changed!");
+    }
+
+
+    @PutMapping("/save-FBNtoken")
+    ResponseEntity<String> refreshFBN(@RequestParam String FBNtoken, HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+
+        return userService.saveFBNToken(uid,FBNtoken) ? ResponseEntity.ok().body("FBN changed!") :
+                ResponseEntity.badRequest().body("FBN couldnt be saved");
+
     }
 
 

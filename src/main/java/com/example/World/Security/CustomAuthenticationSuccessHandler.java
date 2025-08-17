@@ -30,6 +30,8 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
 
 
+
+
         session.setAttribute("userId",user.getUserId());
         System.out.println("User " + authentication.getName() + " has logged in.");
 
