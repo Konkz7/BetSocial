@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { changeBio, getFriendship, getUserThreads, removeThread, sendFriendRequest, unfriend, changePfp } from "./API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import Video from 'react-native-video';
-import { selectImage} from "./Components/FBImageService";
+import { selectImage} from "./Components/FBStorageService";
 
 
 

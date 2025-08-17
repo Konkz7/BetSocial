@@ -10,7 +10,7 @@ import { SquarePlus, ArrowLeft,HandCoins, ShieldCheck, CircleX, ImageUp, X } fro
 import Card from "./Components/Card"; 
 import ToggleSwitch from "./Components/ToggleSwitch"; 
 import DatePickerButton from "./Components/DatePicker"; 
-import { uploadImage, uploadVideo, selectLocalMedia} from './Components/FBImageService';
+import { uploadImage, uploadVideo, selectLocalMedia} from './Components/FBStorageService';
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {getProfile} from "./API";
 import Video from "react-native-video";

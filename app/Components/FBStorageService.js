@@ -2,22 +2,9 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { initializeApp } from "firebase/app";
 import uuid from 'react-native-uuid';
 import { launchImageLibrary } from 'react-native-image-picker';
+import {firebaseApp} from "../Constants";
 
 
-
-// Your Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyDMmuBlfgJIiHfzCIMrZGOBmEHnM49lvao",
-  authDomain: "betsocial-e7e93.firebaseapp.com",
-  databaseURL: "https://betsocial-e7e93-default-rtdb.europe-west1.firebasedatabase.app/",
-  projectId: "betsocial-e7e93",
-  storageBucket: "betsocial-e7e93.firebasestorage.app",
-  messagingSenderId: "707197061101",
-  appId: "1:707197061101:android:10b58cafbedf35856e09e4",
-};
-
-
-const firebaseApp = initializeApp(firebaseConfig);
 const storage = getStorage(firebaseApp);
 
 export async function uploadImage(uri) {

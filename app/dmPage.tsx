@@ -15,7 +15,7 @@ import webSocketService from './Components/WebSocketService';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getChatMessages,updateLastTimestamp } from './API';
 import { formatMessageTime, timeAgo } from './Constants';
-import { selectMedia } from './Components/FBImageService';
+import { selectMedia } from './Components/FBStorageService';
 import Video from 'react-native-video';
 
 

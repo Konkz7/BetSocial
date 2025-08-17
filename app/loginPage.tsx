@@ -5,20 +5,13 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
-
-
-
-
+import { requestFBNPermission } from "./Components/FBCloudMessagingService";
 
 
 
 const LoginScreen = ({navigation}:any) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-
-
-
 
   const logout = async () => {
     try{
@@ -49,6 +42,7 @@ const LoginScreen = ({navigation}:any) => {
   const handleLogin = async () => {
     try {
       const response = await axios.post(IP_STRING + "/login?username="+email+"&password="+password);
+      await requestFBNPermission();
       console.log("Login request sent!", response.status);
 
       // Store token for future API calls

@@ -31,7 +31,7 @@ import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
 import Video from "react-native-video";
-
+import {useNotificationListener } from "./Components/FBCloudMessagingService";
 
 const categories = [
   "All",
@@ -64,6 +64,7 @@ const HomeScreen = ({navigation}:any) => {
   const { data: ipAddress, isLoading: ipLoading } = useQuery({ queryKey: ["ipAddress"], queryFn: getIpAddress});
   */
 
+  useNotificationListener();
 
   const getAllthreads = async() =>{
     try {
@@ -125,10 +126,7 @@ const HomeScreen = ({navigation}:any) => {
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => navigation.navigate("SelfProfile_H")}>
-              <Image
-                source = {{ uri : profile.profile_picture}}
-                style = {styles.avatar}
-              />
+              
             </TouchableOpacity>
           </View>
         </View>

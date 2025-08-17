@@ -75,6 +75,15 @@ export const getUsers = async() =>{
     }
   }
 
+  export const saveFBN = async(token) =>{
+    try {
+        const tokenSave = await axios.put(IP_STRING + "/api/users/save-FBNtoken?FBNtoken="+token);
+        return (tokenSave.data);
+    } catch (error) {
+      Alert.alert("Error!", "FBN couldnt be saved.")
+    }
+  }
+
   export const changeUsername = async(name) =>{
     try {
         const newUserName = await axios.put(IP_STRING + "/api/users/change-user-name?newName="+ name);
