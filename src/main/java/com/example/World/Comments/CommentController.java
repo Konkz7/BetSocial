@@ -20,9 +20,11 @@ import java.util.Optional;
 @RestController
 public class CommentController {
     private final CommentRepository commentRepository;
+    private final CommentService commentService;
 
-    public CommentController(CommentRepository commentRepository) {
+    public CommentController(CommentRepository commentRepository, CommentService commentService) {
         this.commentRepository = commentRepository;
+        this.commentService = commentService;
     }
 
     @GetMapping("/all")
@@ -50,6 +52,12 @@ public class CommentController {
     void makeComment(@Valid @RequestBody CommentDTO comment, HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
         commentRepository.save(new Comment_(null, comment.tid(), uid, comment.parent_cid(), comment.description(),new Date().getTime(),null,null));
+    }
+
+
+    @GetMapping("/get-by-thread/{tid}")
+    List<CommentProfile> getComments(@PathVariable Long tid){
+        return commentService.getComments(tid);
     }
 
 /*
