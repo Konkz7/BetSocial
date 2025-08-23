@@ -1,12 +1,11 @@
 import React, { useState, useCallback,useEffect } from "react";
-import { View, StyleSheet,Alert, TouchableOpacity,ScrollView , ActivityIndicator, Image} from "react-native";
-import { TextInput, Button, Text } from "react-native-paper";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { TextInput,View, StyleSheet,Alert, TouchableOpacity,ScrollView , ActivityIndicator, Image} from "react-native";
+import {  Text } from "react-native-paper";
 import { useFocusEffect } from "@react-navigation/native";
-import axios, { Axios, AxiosError } from "axios";
-import { errorHandler, IP_STRING } from "./Constants";
+import axios, {  } from "axios";
+import { IP_STRING } from "./Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Bookmark,
   BookmarkCheck, 
@@ -21,13 +20,14 @@ import {
   X,
   Check,
   Undo2,
+  MessageSquareMore,
+  Reply,
 } 
   from "lucide-react-native";
 import Card from "./Components/Card"; 
-import { getProfile } from "./API";
-import { opacity } from "react-native-reanimated/lib/typescript/Colors";
+import { getProfile, createComment, getComments } from "./API";
 import Video from "react-native-video";
-
+import { CommentList } from "./Components/CommentTemplate";
 
 
 
@@ -45,9 +45,14 @@ const ThreadScreen = ({navigation,route}:any) => {
   const [expected, setExpected] = useState<number[]>([]);
 
   const [loading, setLoading] = useState(true); // Show loading indicator
+
+  const [comment, setComment] = useState<string>("");
+  const [loadedComments, setLoadedComments] = useState<any[]>([]);
+  const [replyNum, setReplyNum] = useState<number>(-1);
   
 
   const threadObject = route.params;
+
 
   const statusStrings = [
     "Active" ,
@@ -95,7 +100,7 @@ const ThreadScreen = ({navigation,route}:any) => {
         const betResponse = await axios.get(IP_STRING + "/api/bets/find-by-thread/"+threadObject.tid);
         setBets(betResponse.data);
     } catch (error) {
-        Alert.alert("Error:", "Unable to generate bets.")
+        //Alert.alert("Error:", "Unable to generate bets.")
     }finally {
         setLoading(false); // Hide loading indicator
     }
@@ -128,12 +133,37 @@ const ThreadScreen = ({navigation,route}:any) => {
     }
   }
 
+  const makeComment = async () => {
+
+    const PCID = replyNum === -1 ? null : replyNum;
+
+    const commentData = {
+      "tid": threadObject.tid,
+      "parent_cid": PCID,
+      "description": comment,
+    }
+
+    await createComment(commentData);
+    setComment("");
+    setReplyNum(-1);
+
+  }
+
+  
+
     
 
   useFocusEffect(
       useCallback(() => {
         console.log("ThreadScreen is focused! Perform refresh or action here.");  
         getBets();
+        getComments(threadObject.tid).then(res => {
+          setLoadedComments(res);
+        });
+
+        //console.log("comments:",loadedComments);
+
+
         return () => {
           console.log("ThreadScreen is unfocused! Cleanup if needed.");
         };
@@ -198,7 +228,7 @@ const ThreadScreen = ({navigation,route}:any) => {
                 {threadObject.title}
               </Text> 
 
-              <View style ={{alignItems:"center"}}>
+              <View style ={{alignItems:"center"}}> 
                 {threadObject.media_type === 1 ? (
                     <Image
                       source = {{ uri : threadObject.media}}
@@ -229,7 +259,7 @@ const ThreadScreen = ({navigation,route}:any) => {
             </View>
           </View>
                 
-        {loading ? (
+          {loading ? (
                 <ActivityIndicator size="large" color="blue" /> // Show loading spinner
               ) : (
         
@@ -262,7 +292,7 @@ const ThreadScreen = ({navigation,route}:any) => {
                       placeholder="Bet..."
                       value={wager.at(index)?.toString()}
                       onChangeText={(text) => changeWager(index,text)}
-                      disabled={prediction.at(index) === null}
+                      editable={prediction.at(index) === null}
                       />
                     </View>
 
@@ -385,18 +415,35 @@ const ThreadScreen = ({navigation,route}:any) => {
             ))}     
             </ScrollView>
               
-           )}
+          )}
 
 
-          
 
-         <View>
+          {loadedComments.length > 0 && (
+            <CommentList loadedComments={loadedComments} setReplyNum = {setReplyNum} replyNum={replyNum} />
+          )}
+
+        </View>
 
       </View>
-     </View>
-    
-    </View>
+
+      
+
+      
     </ScrollView>
+
+    <View style={styles.commentInputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder={replyNum === -1 ?"Comment here..." : "Reply here..."}
+          placeholderTextColor="#6B7280"
+          value={comment}
+          onChangeText={setComment}
+        />
+        <TouchableOpacity style={styles.sendButton} onPress={() => makeComment()}>
+          {replyNum === -1 ? <MessageSquareMore size={20} color="#fff" /> : <Reply size={20} color="#fff" /> }
+        </TouchableOpacity>
+    </View>
    </SafeAreaView>
   );
 };
@@ -423,12 +470,7 @@ const styles = StyleSheet.create({
   ,body:{
     justifyContent: "center",
     alignItems: "center",
-  },inputContainer:{
-    maxWidth: 380,
-    padding: 20,
-    backgroundColor: "white",
-    borderBottomWidth:1,
-    borderColor: "#ddd",
+    paddingBottom: 80
   },categoryContainer:{
     padding:20,
     maxWidth:380,
@@ -570,6 +612,40 @@ const styles = StyleSheet.create({
     height: 125,
     backgroundColor: "#eee",  
     alignSelf: "center",
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderTopColor: '#E5E7EB',
+    borderTopWidth: 1,
+    backgroundColor: '#fff',
+  },
+  commentInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderTopColor: '#E5E7EB',
+    borderTopWidth: 1,
+    backgroundColor: '#fff',
+  },
+  input: {
+    flex: 1, 
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  sendButton: {
+    backgroundColor: '#10b981ff',
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   }
 
 });

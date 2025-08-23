@@ -126,7 +126,7 @@ const HomeScreen = ({navigation}:any) => {
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => navigation.navigate("SelfProfile_H")}>
-              
+              <View style = {styles.avatar}></View>
             </TouchableOpacity>
           </View>
         </View>

@@ -120,6 +120,27 @@ export const removeNotification = async(nid) =>{
   }
 }
 
+
+export const createComment = async(comment) =>{
+  try {
+      const result = await axios.post(IP_STRING + "/api/comments/make",comment);
+      return (result.data);
+  } catch (error) {
+    Alert.alert("Error!", "Comment couldnt be sent.")
+  }
+}
+
+export const getComments = async(tid) =>{
+  try {
+      const comments = await axios.get(IP_STRING + "/api/comments/get-by-thread/"+tid);
+      return comments.data;
+  } catch (error) {
+    Alert.alert("Error!", "Comments couldnt be found.");
+  }
+}
+
+
+
 export const getFriends = async() =>{
   try {
       const friends = await axios.get(IP_STRING + "/api/friends/list");
