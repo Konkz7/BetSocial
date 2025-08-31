@@ -26,12 +26,13 @@ import {
   Frown,
 } from "lucide-react-native";
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {getBalance, getCircleSecret,getFriends,getIpAddress,getProfile,getWallet,getGroupProfiles} from "./API";
+import {getBalance, getCircleSecret,getFriends,getIpAddress,getProfile,getWallet,getGroupProfiles, getThreadLikeExists, registerThreadLike, getThreads} from "./API";
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
 import Video from "react-native-video";
 import {useNotificationListener } from "./Components/FBCloudMessagingService";
+import threadList from "./Components/ThreadList";
 
 const categories = [
   "All",
@@ -54,6 +55,14 @@ const HomeScreen = ({navigation}:any) => {
   // consider this in backend
   const { data: profile, isLoading: profileLoading } = useQuery({ queryKey: ["user"], queryFn: getProfile });
   const { data: friends, isLoading: friendsLoading } = useQuery({ queryKey: ["friends"], queryFn: getFriends});
+  const { data: threadData, isLoading, refetch: refetchThreads } = useQuery({
+    queryKey: ["threads"],
+    queryFn: getThreads,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
   //const { data: groupProfiles, isLoading: groupProfilesLoading } = useQuery({ queryKey: ["groupProfiles"], queryFn: getGroupProfiles});
 
 
@@ -66,40 +75,39 @@ const HomeScreen = ({navigation}:any) => {
 
   useNotificationListener();
 
-  const getAllthreads = async() =>{
+  const getAllthreads = async () => {
     try {
-      const threadResponse = await axios.get(IP_STRING + "/api/threads/active");
-      const updatedThreads = await Promise.all(threadResponse.data.map(async (thread: any) => ({
-        ...thread,
-        user: await getUserFromThread(thread), // Await user data resolution
-      })));
-    
-      setActiveThreads(updatedThreads); 
+      const threadResponse = await refetchThreads(); // use react-query’s refetch
+      if (!threadResponse.data) return;
+
+        const updatedThreads = await Promise.all(
+          threadResponse.data.map(async (thread: any) => ({
+            ...thread,
+            like: await getThreadLikeExists(thread.tid),
+          }))
+        );
+        setActiveThreads(updatedThreads);
+
     } catch (error) {
       Alert.alert("Error:", "Failed to fetch threads");
-    }finally {
-      setLoading(false); // Hide loading indicator
+    } finally {
+      setLoading(false);
     }
-  }
+  };
+     
 
-  const getUserFromThread = async(threadObject:any) => {
-    try {
-      const userResponse = await axios.get(IP_STRING + "/api/users/"+threadObject.uid);
-      return userResponse.data;
-    } catch (error) {
-      Alert.alert("Error:", "User ${threadObject.uid} could not be fetched");
-      return null;
-    }
-  }
+  useEffect(() => {
+    getAllthreads();
+  }, []);
+
   
   useFocusEffect(
       useCallback(() => {
         console.log("Screen is focused! Perform refresh or action here.");  
         
-        getAllthreads();
         return () => {
           console.log("Screen is unfocused! Cleanup if needed.");
-        console.log(threads)
+          //console.log(threads)
 
         };
       }, [])
@@ -154,97 +162,10 @@ const HomeScreen = ({navigation}:any) => {
       </View>
 
 
-      {/* Main Content */}
-     {loading ? (
-        <ActivityIndicator size="large" color="blue" /> // Show loading spinner
-      ) : (
-
-      <View style = {{flex: 1}}>
-      <FlatList
-        data={threads}
-        ListEmptyComponent={<View style = {styles.notFound}>
-          <Frown size={50} color="gray" />
-          <Text>No threads available</Text>
-          </View>}
-        keyExtractor={(item) => item.tid.toString()}
-        removeClippedSubviews={false}
-        onRefresh={getAllthreads} // Enable pull-to-refresh
-        refreshing={loading} // Show loading state during refresh
-        renderItem={({ item }) => (
-
-          <View style={styles.post}>
-            <TouchableOpacity onPress={() => navigation.navigate("Thread_H",item)}>
-
-            <View style = {{flexDirection:"row", alignItems:"center",justifyContent:"space-between", marginBottom:10}}>
-              <View>
-                <View style={styles.postHeader}>           
-                  
-                  <Image
-                  source = {{ uri : item.user.profile_picture}}
-                  style = {styles.avatar}
-                  />
-                
-                  <View>
-                    <Text style={styles.userName}>{ item.user.user_name }</Text>
-                    <Text style={styles.timestamp}>2h ago</Text>
-                  </View>
-
-                </View>
-              
-                <Text style={styles.postText}>
-                    {item.title}
-                </Text>
-              </View>
-
-              <View style = {{ marginRight:17 , borderRadius:10, overflow:"hidden" , borderWidth:1, borderColor:"#10B981"}}>
-                {item.media_type === 1 ? (
-                  <Image
-                    source = {{ uri : item.media}}
-                    style = {{ width: 80, height: 80}}
-                  />
-                ) : item.media_type === 2 ? (
-                  <Video
-                      source = {{ uri : item.media}}
-                      style = {{ width: 80, height: 80}}
-                      repeat = {true}
-                      muted = {true}
-                    />
-                ) : null}
-              </View>  
-
-              
-            </View>
-
-            <View style={styles.postFooter}>
-              <View style={styles.actionsLeft}>
-                <TouchableOpacity style={styles.actionButton}>
-                  <Heart size={18} color="gray" />
-                  <Text>24</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton}>
-                  <MessageCircle size={18} color="gray" />
-                  <Text>12</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.actionsRight}>
-                <View style={styles.actionButton}>
-                  <DollarSign size={18} color="green" />
-                  <Text>$2.5K</Text>
-                </View>
-                <View style={styles.actionButton}>
-                  <Users size={18} color="green" />
-                  <Text>18</Text>
-                </View>
-              </View>
-            </View>
-            </TouchableOpacity>
-          </View>
-        )}
-      />
-      </View>
-    )}
-
+      {/* Main Content */}  
+      {threadList(threads, getAllthreads, loading, navigation, "Thread_H", setActiveThreads,false)}
       
+     
     </SafeAreaView>
   );
 }

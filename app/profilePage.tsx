@@ -16,8 +16,9 @@ import {
   } 
     from "lucide-react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getFriendship, getUserThreads, sendFriendRequest, unfriend , DMCheck , makePrivateGroup, fillReadMarkers} from "./API";
+import { getFriendship, getUserThreads, sendFriendRequest, unfriend , DMCheck , makePrivateGroup, fillReadMarkers, getThreadLikeExists, registerThreadLike} from "./API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
+import threadList from "./Components/ThreadList";
 
 
 
@@ -26,6 +27,7 @@ const ProfileScreen = ({navigation , route}: any) => {
 
     const [currentTab,setCurrentTab] = useState('Threads');
     const [threads, setThreads] = useState<any[]>([]);
+    const [threadsLoading, setThreadsLoading] = useState(true); // Show loading indicator
     const [friendState, setFriendState] = useState(0); // 0: not friends, 1: friend request sent, 2: friends
 
     
@@ -36,11 +38,14 @@ const ProfileScreen = ({navigation , route}: any) => {
 
     var user = route.params;
    
-    const { data: threadData, refetch: refetchThreads, isLoading: threadsLoading } = useQuery({
-        queryKey: ["userThreads"],
+    const { data: threadData, isLoading: threadDataLoading, refetch: refetchThreads } = useQuery({
+        queryKey: ["userThreads" + user.uid],
         queryFn: () => getUserThreads(user.uid),
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
     });
-
+       
     const { data: friendshipData, refetch: refetchFriendship, isLoading: friendshipLoading } = useQuery({ 
         queryKey: ["friendship"], 
         queryFn: () => getFriendship(user.uid),
@@ -59,6 +64,25 @@ const ProfileScreen = ({navigation , route}: any) => {
     });
 
 
+    const getAllthreads = async () => {
+        try {
+            const threadResponse = await refetchThreads(); // use react-query’s refetch
+            if (!threadResponse.data) return;
+
+            const updatedThreads = await Promise.all(
+                threadResponse.data.map(async (thread: any) => ({
+                ...thread,
+                like: await getThreadLikeExists(thread.tid),
+                }))
+            );
+            setThreads(updatedThreads);
+
+        } catch (error) {
+            Alert.alert("Error:", "Failed to fetch threads");
+        } finally {
+            setThreadsLoading(false);
+        }
+    };
     
      
     useFocusEffect(
@@ -67,6 +91,7 @@ const ProfileScreen = ({navigation , route}: any) => {
             
             refetchThreads();
             refetchFriendship(); // Ensure this refetches correctly
+            addLikes(threadData);
             console.log("Friendship data:", friendshipData);
 
             return async () => {
@@ -78,10 +103,8 @@ const ProfileScreen = ({navigation , route}: any) => {
     
     
     useEffect(() => {
-        if (threadData) {
-          setThreads(addUserInfo(threadData));
-        }
-    }, [threadData]);
+            getAllthreads();
+    }, []);
 
     useEffect(() => {
         if (friendshipData) {
@@ -99,11 +122,13 @@ const ProfileScreen = ({navigation , route}: any) => {
     }, [friendshipData]);
 
       
-    function addUserInfo(threads: any) {
-        return threads.map((thread: any) => ({
+    const addLikes = async (threads: any) => {
+        const updatedThreads = await Promise.all(threads.map(async (thread: any) => ({
             ...thread,
-            user: user, // Attach user data to each thread
-        }));
+            like: await getThreadLikeExists(thread.tid), 
+        })));
+
+        setThreads(updatedThreads);
     }
 
     async function goToDMScreen(){
@@ -159,6 +184,22 @@ const ProfileScreen = ({navigation , route}: any) => {
         queryClient.invalidateQueries({queryKey: ["friendship"]});
         
     }
+
+    const threadLikeAction = async (tid:number, liked: boolean) => {
+        await registerThreadLike(tid, !liked);
+    
+        const updatedThreads = threads.map(thread =>
+          thread.tid === tid
+            ? { 
+                ...thread, 
+                like: !liked, 
+                likes: liked ? thread.likes - 1 : thread.likes + 1 
+              }
+            : thread
+        );
+    
+        setThreads(updatedThreads);
+      };
 
     
 
@@ -249,66 +290,10 @@ const ProfileScreen = ({navigation , route}: any) => {
                 </View>
             
             </View>
-            
-                {threadsLoading ? (
-                    <ActivityIndicator size="large" color="blue" /> // Show loading spinner
-                ) : (
-                    <View style = {{height: 700}}>
-                <FlatList
-                    data={threads}
-                    ListEmptyComponent={<View style = {styles.notFound}>
-                    <Frown size={50} color="gray" />
-                    <Text>No threads available</Text>
-                    </View>}
-                    keyExtractor={(item) => item.tid.toString()}
-                    removeClippedSubviews={false}
-                    onRefresh={() => refetchThreads} // Enable pull-to-refresh
-                    refreshing={threadsLoading} // Show loading state during refresh
-                    nestedScrollEnabled={true}
-                    renderItem={({ item }) => (
 
-                    <View style={styles.post}>
-                        <TouchableOpacity onPress={() => navigation.navigate("Thread_S",item)}>
+            {threadList(threads, refetchThreads, threadsLoading, navigation, "Thread_S", setThreads,false)}
 
-                        <View style={styles.postHeader}>
-                        <View style={styles.avatar} />
-                            <View>
-                                <Text style={styles.userName}>{ user.user_name }</Text>
-                                <Text style={styles.timestamp}>2h ago</Text>
-                            </View>
-                        </View>
-                        <Text style={styles.postText}>
-                            {item.title}
-                        </Text>
-                        <View style={styles.postFooter}>
-                        <View style={styles.actionsLeft}>
-                            <TouchableOpacity style={styles.actionButton}>
-                            <Heart size={18} color="gray" />
-                            <Text>24</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.actionButton}>
-                            <MessageCircle size={18} color="gray" />
-                            <Text>12</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.actionsRight}>
-                            <View style={styles.actionButton}>
-                            <DollarSign size={18} color="green" />
-                            <Text>$2.5K</Text>
-                            </View>
-                            <View style={styles.actionButton}>
-                            <Users size={18} color="green" />
-                            <Text>18</Text>
-                            </View>
-                        </View>
-                        </View>
-                        </TouchableOpacity>
-                    </View>
-                    )}
-                />
-                </View>
-                )}
-                    </ScrollView>
+            </ScrollView>
         </SafeAreaView>
     );
 }

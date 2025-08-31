@@ -25,7 +25,7 @@ import {
 } 
   from "lucide-react-native";
 import Card from "./Components/Card"; 
-import { getProfile, createComment, getComments } from "./API";
+import { getProfile, createComment, getComments, registerThreadLike } from "./API";
 import Video from "react-native-video";
 import { CommentList } from "./Components/CommentTemplate";
 
@@ -33,6 +33,9 @@ import { CommentList } from "./Components/CommentTemplate";
 
 
 const ThreadScreen = ({navigation,route}:any) => {
+
+
+  const [threadLike , setThreadLike] = useState(false);
 
   const [bets, setBets] = useState<any>([]);
   const [betStats, setBetStats] = useState<boolean[]>([]);
@@ -52,7 +55,7 @@ const ThreadScreen = ({navigation,route}:any) => {
   
 
   const threadObject = route.params;
-
+  const threadLikeOffset = threadObject.like ? 0 : 1;
 
   const statusStrings = [
     "Active" ,
@@ -133,6 +136,13 @@ const ThreadScreen = ({navigation,route}:any) => {
     }
   }
 
+  const threadLikeAction = async (tid:number, liked: boolean) => {
+
+    await registerThreadLike(tid, !liked);
+
+    setThreadLike(!threadLike);
+  }
+
   const makeComment = async () => {
 
     const PCID = replyNum === -1 ? null : replyNum;
@@ -155,14 +165,17 @@ const ThreadScreen = ({navigation,route}:any) => {
 
   useFocusEffect(
       useCallback(() => {
-        console.log("ThreadScreen is focused! Perform refresh or action here.");  
+        console.log("ThreadScreen is focused! Perform refresh or action here."); 
+
         getBets();
         getComments(threadObject.tid).then(res => {
           setLoadedComments(res);
         });
 
-        //console.log("comments:",loadedComments);
+        setThreadLike(threadObject.like);
 
+        //console.log("comments:",loadedComments);
+        console.log("thread:",threadObject);
 
         return () => {
           console.log("ThreadScreen is unfocused! Cleanup if needed.");
@@ -224,11 +237,12 @@ const ThreadScreen = ({navigation,route}:any) => {
     
             </View>
             <View style = {styles.inputContainer}>
-              <Text style = {styles.inputBox}>
-                {threadObject.title}
-              </Text> 
+              <View style ={{alignItems:"center", width:"100%"}}> 
+                <Text style = {styles.inputBox}>
+                  {threadObject.title}
+                </Text> 
 
-              <View style ={{alignItems:"center"}}> 
+              
                 {threadObject.media_type === 1 ? (
                     <Image
                       source = {{ uri : threadObject.media}}
@@ -251,9 +265,9 @@ const ThreadScreen = ({navigation,route}:any) => {
                     {threadObject.category}
                 </Text> 
 
-                <TouchableOpacity style={styles.actionButton}>
-                  <Heart size={18} color="gray" />
-                  <Text style = {{fontSize: 15,marginLeft:5}}>24</Text>
+                <TouchableOpacity style={styles.actionButton} onPress={() => threadLikeAction(threadObject.tid, threadLike)}>
+                  <Heart size={18} color={threadLike ? "red":"gray"} fill={threadLike ? "red" : "transparent"} />
+                  <Text style = {{fontSize: 15,marginLeft:5}}>{threadLike ? threadObject.likes + threadLikeOffset : threadObject.likes - 1 + threadLikeOffset}</Text>
                 </TouchableOpacity>
             
             </View>
@@ -620,6 +634,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E7EB',
     borderTopWidth: 1,
     backgroundColor: '#fff',
+    maxWidth:380,
   },
   commentInputContainer: {
     flexDirection: 'row',

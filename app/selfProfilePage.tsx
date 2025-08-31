@@ -4,14 +4,15 @@ import { TextInput, Button, Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
-import { IP_STRING } from "./Constants";
+import { IP_STRING, timeAgo } from "./Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Settings2, DollarSign, Frown, Heart, MessageCircle, Users, Trash2, Pencil } from "lucide-react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { changeBio, getFriendship, getUserThreads, removeThread, sendFriendRequest, unfriend, changePfp } from "./API";
+import { changeBio, getFriendship, getUserThreads, removeThread, sendFriendRequest, unfriend, changePfp, registerThreadLike, getThreads, getThreadLikeExists } from "./API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import Video from 'react-native-video';
 import { selectImage} from "./Components/FBStorageService";
+import threadList from "./Components/ThreadList";
 
 
 
@@ -23,6 +24,7 @@ const SelfProfileScreen = ({navigation , route}: any) => {
     const [threads, setThreads] = useState<any[]>([]);
     const [bioMode,setBioMode] = useState(false);
     const [bioText, setBioText] = useState("");
+    const [loading, setLoading] = useState(true); // Show loading indicator
 
 
    
@@ -34,11 +36,42 @@ const SelfProfileScreen = ({navigation , route}: any) => {
 
 
 
-   
-    const { data: threadData, refetch: refetchThreads, isLoading: threadsLoading } = useQuery({
-        queryKey: ["userThreads"],
+
+    const { data: threadData, isLoading: threadsLoading, refetch: refetchThreads } = useQuery({
+        queryKey: ["userThreads" + user.uid],
         queryFn: () => getUserThreads(user.uid),
-    });  
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+    });
+   
+   
+
+
+    const getAllthreads = async () => {
+        try {
+            const threadResponse = await refetchThreads(); // use react-query’s refetch
+            if (!threadResponse.data) return;
+
+            const updatedThreads = await Promise.all(
+                threadResponse.data.map(async (thread: any) => ({
+                ...thread,
+                like: await getThreadLikeExists(thread.tid),
+                }))
+            );
+            setThreads(updatedThreads);
+
+        } catch (error) {
+            Alert.alert("Error:", "Failed to fetch threads");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
+    useEffect(() => {
+        getAllthreads();
+    }, []);
      
     useFocusEffect(
         useCallback(() => {
@@ -52,8 +85,6 @@ const SelfProfileScreen = ({navigation , route}: any) => {
 
             user.bio !== "undefined" ? setBioText(user.bio) : setBioText(""); 
             
-            refetchThreads();
-           
             return async () => {
                 queryClient.invalidateQueries({queryKey: ["user"]});
                 console.log("Screen is unfocused! Cleanup if needed.");       
@@ -73,6 +104,8 @@ const SelfProfileScreen = ({navigation , route}: any) => {
         await changeBio(bioText);
         setBioMode(!bioMode);
     }
+
+    
     
     useEffect(() => {
         if (threadData) {
@@ -88,25 +121,8 @@ const SelfProfileScreen = ({navigation , route}: any) => {
         }));
     } 
     
-    function deleteThread(tid: number) {
-        Alert.alert("Delete Thread", "Are you sure you want to delete this thread?", [
-            {
-                text: "Cancel",
-                style: "cancel",
-            },
-            {
-                text: "OK",
-                onPress: () => {
-                    // Call the API to delete the thread here
-                    removeThread(tid);
-                    setThreads((prevData) => prevData.filter(item => item.tid !== tid));   
-                },
-            },
-        ]);
-    }
-
+    
    
-
     const changeProfilePicture = async () => {
         try {
             setUploading(true);
@@ -210,72 +226,8 @@ const SelfProfileScreen = ({navigation , route}: any) => {
             
             </View>
             
-                {threadsLoading ? (
-                    <ActivityIndicator size="large" color="blue" /> // Show loading spinner
-                ) : (
-                    <View style = {{height: 700}}>
-                <FlatList
-                    data={threads}
-                    ListEmptyComponent={<View style = {styles.notFound}>
-                    <Frown size={50} color="gray" />
-                    <Text>No threads available</Text>
-                    </View>}
-                    keyExtractor={(item) => item.tid.toString()}
-                    removeClippedSubviews={false}
-                    onRefresh={() => refetchThreads} // Enable pull-to-refresh
-                    refreshing={threadsLoading} // Show loading state during refresh
-                    nestedScrollEnabled={true}
-                    renderItem={({ item }) => (
-
-                    <View style={styles.post}>
-                        <TouchableOpacity onPress={() => navigation.navigate("Thread_S",item)}>
-
-                            <View style={styles.postHeader}>
-                               
-                               <View style = {{flexDirection:"row", alignItems:"center"}}>
-                                    <View style={styles.avatar} />
-                                    <View>
-                                        <Text style={styles.userName}>{ user.user_name }</Text>
-                                        <Text style={styles.timestamp}>2h ago</Text>
-                                    </View>
-                                </View>
-
-                                <TouchableOpacity onPress={() => deleteThread(item.tid)} >
-                                    <Trash2 size = {20} color = {'red'}></Trash2>
-                                </TouchableOpacity>
-                            </View>
-                            <Text style={styles.postText}>
-                                {threads.at(item.index).title}
-                            </Text>
-                            <View style={styles.postFooter}>
-                            <View style={styles.actionsLeft}>
-                                <TouchableOpacity style={styles.actionButton}>
-                                <Heart size={18} color="gray" />
-                                <Text>24</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.actionButton}>
-                                <MessageCircle size={18} color="gray" />
-                                <Text>12</Text>
-                                </TouchableOpacity>
-                            </View>
-                            <View style={styles.actionsRight}>
-                                <View style={styles.actionButton}>
-                                <DollarSign size={18} color="green" />
-                                <Text>$2.5K</Text>
-                                </View>
-                                <View style={styles.actionButton}>
-                                <Users size={18} color="green" />
-                                <Text>18</Text>
-                                </View>
-                            </View>
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-                    )}
-                />
-                </View>
-                )}
-                    </ScrollView>
+                {threadList(threads, refetchThreads, loading, navigation, "Thread_H",setThreads,true)}
+            </ScrollView>
         </SafeAreaView>
     );
 }

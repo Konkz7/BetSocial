@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "axios"; 
 import { IP_STRING } from "./Constants";
 import { Alert } from "react-native";
 
@@ -11,15 +11,54 @@ export const getProfile = async() =>{
     }
   }
 
-  export const getUserThreads = async(uid) =>{
-    try {
-        const threads = await axios.get(IP_STRING + "/api/threads/user/"+uid);
-        return threads.data;
-    } catch (error) {
-      Alert.alert("Error!", "Threads couldnt be obtained.")
-    }
+  //THREADS
+export const getThreads = async() =>{
+  try {
+      const threads = await axios.get(IP_STRING + "/api/threads/active");
+      return threads.data;
+  } catch (error) {
+    Alert.alert("Error!", "Threads couldnt be obtained.")
   }
+}
 
+
+export const getUserThreads = async(uid) =>{
+  try {
+      const threads = await axios.get(IP_STRING + "/api/threads/user/"+uid);
+      return threads.data;
+  } catch (error) {
+    Alert.alert("Error!", "Threads couldnt be obtained.")
+  }
+}
+
+export const getThreadLikeExists = async(tid) =>{
+  try {
+      const likes = await axios.get(IP_STRING + "/api/threads/like-exists/"+tid);
+      return likes.data;
+  } catch (error) {
+    Alert.alert("Error!", "Like couldnt be determined.");
+  }
+}
+
+export const registerThreadLike = async(tid , liked) =>{
+  try {
+      const registerLike = await axios.put(IP_STRING + "/api/threads/register-like?tid="+tid+"&liked="+liked);
+      return (registerLike.data);
+  } catch (error) {
+    Alert.alert("Error!", "Thread like couldnt be processed.")
+  }
+}
+
+export const removeThread = async(tid) =>{
+  try {
+      const removedThread = await axios.put(IP_STRING + "/api/threads/remove/"+tid);
+      return (removedThread.data);
+  } catch (error) {
+    Alert.alert("Error!", "Thread couldnt be removed.")
+  }
+}
+
+// USERS
 export const getUsers = async() =>{
     try {
         const users = await axios.get(IP_STRING + "/api/users/all");
@@ -39,6 +78,7 @@ export const getUsers = async() =>{
     }
   }
 
+  //GROUPS
   export const getGroupProfiles = async(uid) =>{
     try {
         const groupUsers = await axios.get(IP_STRING + "/api/groups/groups-users");
@@ -66,6 +106,7 @@ export const getUsers = async() =>{
     }
   }
 
+  //PROFILE
   export const changeBio = async(text) =>{
     try {
         const changedBio = await axios.put(IP_STRING + "/api/users/change-bio?bio="+text);
@@ -102,6 +143,7 @@ export const getUsers = async() =>{
     }
   }
 
+//NOTIFICATIONS
 export const getActiveNotifications = async() =>{
   try {
       const notifications = await axios.get(IP_STRING + "/api/notifications/active-notifications");
@@ -120,7 +162,7 @@ export const removeNotification = async(nid) =>{
   }
 }
 
-
+//COMMENTS
 export const createComment = async(comment) =>{
   try {
       const result = await axios.post(IP_STRING + "/api/comments/make",comment);
@@ -139,8 +181,7 @@ export const getComments = async(tid) =>{
   }
 }
 
-
-
+//FRIENDS
 export const getFriends = async() =>{
   try {
       const friends = await axios.get(IP_STRING + "/api/friends/list");
@@ -197,15 +238,9 @@ export const unfriend = async(ouid) =>{
   }
 }
 
-export const removeThread = async(tid) =>{
-  try {
-      const removedThread = await axios.put(IP_STRING + "/api/threads/remove/"+tid);
-      return (removedThread.data);
-  } catch (error) {
-    Alert.alert("Error!", "Thread couldnt be removed.")
-  }
-}
 
+
+//MESSAGES
 export const getChatMessages = async(gid) =>{
   try {
       const messages = await axios.get(IP_STRING + "/api/messages/group/"+gid);
@@ -251,7 +286,7 @@ export const fillReadMarker = async(mid) =>{
   }
 }
 
-
+//MISC
 export const getCircleSecret = async () =>{
     try {
       const response = await axios.get(IP_STRING + "/circle/get-secret");
