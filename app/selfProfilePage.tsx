@@ -8,7 +8,7 @@ import { IP_STRING, timeAgo } from "./Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Settings2, DollarSign, Frown, Heart, MessageCircle, Users, Trash2, Pencil } from "lucide-react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { changeBio, getFriendship, getUserThreads, removeThread, sendFriendRequest, unfriend, changePfp, registerThreadLike, getThreads, getThreadLikeExists } from "./API";
+import { changeBio, getFriendship, getUserThreads, removeThread, sendFriendRequest, unfriend, changePfp, registerThreadLike, getThreads, getThreadLikes } from "./API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import Video from 'react-native-video';
 import { selectImage} from "./Components/FBStorageService";
@@ -53,13 +53,8 @@ const SelfProfileScreen = ({navigation , route}: any) => {
             const threadResponse = await refetchThreads(); // use react-query’s refetch
             if (!threadResponse.data) return;
 
-            const updatedThreads = await Promise.all(
-                threadResponse.data.map(async (thread: any) => ({
-                ...thread,
-                like: await getThreadLikeExists(thread.tid),
-                }))
-            );
-            setThreads(updatedThreads);
+        
+            setThreads(threadResponse.data);
 
         } catch (error) {
             Alert.alert("Error:", "Failed to fetch threads");
@@ -109,19 +104,11 @@ const SelfProfileScreen = ({navigation , route}: any) => {
     
     useEffect(() => {
         if (threadData) {
-          setThreads(addUserInfo(threadData));
+          setThreads(threadData);
         }
     }, [threadData]);
 
-  
-    function addUserInfo(threads: any) {
-        return threads.map((thread: any) => ({
-            ...thread,
-            user: user, // Attach user data to each thread
-        }));
-    } 
-    
-    
+   
    
     const changeProfilePicture = async () => {
         try {

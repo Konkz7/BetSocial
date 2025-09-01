@@ -2,12 +2,27 @@ import React, { useState } from "react";
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import { Heart, Reply, X } from "lucide-react-native"; // install lucide-react-native
 import { timeAgo } from "../Constants";
+import { registerCommentLike } from "../API";
 
-const Comment = ({ comment, onReply, onLike, replyNum }) => {
+const Comment = ({ comment, onReply, replyNum }) => {
   const [showReplies, setShowReplies] = useState(false);
- 
+  const [isLiked, setIsLiked] = useState(comment.liked);
+  const [likes, setLikes] = useState(comment.likes);
+
   const isReplying = replyNum === comment.cid;
-  
+
+  const handleLike = (comment) => {
+    console.log("Liked comment:", comment.cid);
+
+    if(isLiked){
+      setLikes(likes - 1);
+    }else{
+      setLikes(likes + 1);
+    }
+    setIsLiked(!isLiked);
+    registerCommentLike(comment.cid,comment.tid ,!isLiked);
+  };
+
   //console.log(comment.cid);
 
   return (
@@ -31,10 +46,11 @@ const Comment = ({ comment, onReply, onLike, replyNum }) => {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 , marginTop: 10 }}>
         <TouchableOpacity 
           style={{ flexDirection: "row", alignItems: "center", gap: 4 }} 
-          onPress={() => onLike(comment.cid)}
+          onPress={() => handleLike(comment)}
         >
-          <Heart size={18} color="gray" />
-          <Text style={{ fontSize: 12, color: "gray" }}>Like</Text>
+          <Heart size={18} color={isLiked ? "red": "gray"} fill={isLiked ? "red" : "transparent"} />
+          <Text style={{ fontSize: 12, color: "gray" }}>{likes}</Text>
+          <Text style={{ fontSize: 12, color: "gray" }}>likes</Text>
         </TouchableOpacity>
 
         {!isReplying ? (
@@ -43,7 +59,7 @@ const Comment = ({ comment, onReply, onLike, replyNum }) => {
               onPress={() => onReply(comment)}
             >
               <Reply size={18} color="gray" />
-              <Text style={{ fontSize: 12, color: "gray" }}>Reply</Text>
+              <Text style={{ fontSize: 12, color: "gray" }}>reply</Text>
             </TouchableOpacity>
           ) :
           (
@@ -75,7 +91,7 @@ const Comment = ({ comment, onReply, onLike, replyNum }) => {
           key={reply.cid} 
           style={{ marginTop: 6, marginLeft: 24, padding: 6, backgroundColor: isReplying ? "#f0f8ff" : null , borderRadius: 10 }}
         >
-          <Comment comment={reply} onReply={onReply} onLike={onLike} replyNum={replyNum}/>
+          <Comment comment={reply} onReply={onReply} replyNum={replyNum}/>
         </View>
       ))}
     </View>
@@ -83,10 +99,6 @@ const Comment = ({ comment, onReply, onLike, replyNum }) => {
 };
 export function CommentList({ loadedComments ,replyNum ,setReplyNum}) {
 
-  const handleLike = (cid) => {
-    console.log("Liked comment:", cid);
-    // update like count in backend
-  };
 
   const handleReply = (comment) =>{
 
@@ -107,7 +119,6 @@ export function CommentList({ loadedComments ,replyNum ,setReplyNum}) {
           key={comment.cid} 
           comment={comment} 
           onReply={handleReply} 
-          onLike={handleLike} 
           replyNum={replyNum}
         />
       ))}

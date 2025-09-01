@@ -5,7 +5,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import axios, {  } from "axios";
 import { IP_STRING } from "./Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   Bookmark,
   BookmarkCheck, 
@@ -55,7 +55,10 @@ const ThreadScreen = ({navigation,route}:any) => {
   
 
   const threadObject = route.params;
-  const threadLikeOffset = threadObject.like ? 0 : 1;
+  const threadLikeOffset = threadObject.liked ? 0 : 1;
+
+  const queryClient = useQueryClient();
+  const self = queryClient.getQueryData(["user"]) as any;
 
   const statusStrings = [
     "Active" ,
@@ -153,7 +156,38 @@ const ThreadScreen = ({navigation,route}:any) => {
       "description": comment,
     }
 
-    await createComment(commentData);
+    const updatedComment = await createComment(commentData);
+    const commentObject = {
+      "cid": updatedComment.cid,
+      "tid": threadObject.tid,
+      "uid": self.uid,
+      "replies": [],
+      "user_name": self.user_name,
+      "profile_picture": self.profile_picture,
+      "parent_cid": PCID,
+      "description": comment,
+      "created_at": updatedComment.created_at,
+      "likes": 0,
+      "liked": false,
+    }
+    
+
+    if(PCID === null){
+      setLoadedComments(prevComments => [commentObject, ...prevComments]);  
+    }else{
+      const updatedComments = loadedComments.map(comment => {
+        if (comment.cid === PCID) {
+          return {
+            ...comment,
+            replies: [...comment.replies, commentObject]
+          };
+        }
+        return comment;
+      });
+      setLoadedComments(updatedComments);
+    }
+
+    
     setComment("");
     setReplyNum(-1);
 
@@ -172,7 +206,7 @@ const ThreadScreen = ({navigation,route}:any) => {
           setLoadedComments(res);
         });
 
-        setThreadLike(threadObject.like);
+        setThreadLike(threadObject.liked);
 
         //console.log("comments:",loadedComments);
         console.log("thread:",threadObject);

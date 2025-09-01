@@ -29,15 +29,15 @@ import { timeAgo } from "../Constants";
 const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,selfProfile) =>  {
     
 
-    const threadLikeAction = async (tid, liked) => {
-        await registerThreadLike(tid, !liked);
+    const threadLikeAction = async (tid, likeResult) => {
+        await registerThreadLike(tid, !likeResult);
     
         const updatedThreads = threads.map(thread =>
           thread.tid === tid
             ? { 
-                ...thread, 
-                like: !liked, 
-                likes: liked ? thread.likes - 1 : thread.likes + 1 
+                ...thread,   
+                liked: !likeResult,
+                likes: likeResult ? thread.likes - 1 : thread.likes + 1 
               }
             : thread
         );
@@ -131,8 +131,8 @@ const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,s
 
                         <View style={styles.postFooter}>
                             <View style={styles.actionsLeft}>
-                                <TouchableOpacity style={styles.actionButton} onPress={() => threadLikeAction(item.tid,item.like)}>
-                                    <Heart size={18} color={item.like ? "red":"gray"} fill={item.like ? "red":"transparent"} style = {{marginRight:5}}  />
+                                <TouchableOpacity style={styles.actionButton} onPress={() => threadLikeAction(item.tid,item.liked)}>
+                                    <Heart size={18} color={item.liked ? "red":"gray"} fill={item.liked ? "red":"transparent"} style = {{marginRight:5}}  />
                                     <Text>{item.likes}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.actionButton}>

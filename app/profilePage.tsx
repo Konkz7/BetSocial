@@ -16,7 +16,7 @@ import {
   } 
     from "lucide-react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getFriendship, getUserThreads, sendFriendRequest, unfriend , DMCheck , makePrivateGroup, fillReadMarkers, getThreadLikeExists, registerThreadLike} from "./API";
+import { getFriendship, getUserThreads, sendFriendRequest, unfriend , DMCheck , makePrivateGroup, fillReadMarkers, getThreadLikes, registerThreadLike} from "./API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import threadList from "./Components/ThreadList";
 
@@ -69,13 +69,8 @@ const ProfileScreen = ({navigation , route}: any) => {
             const threadResponse = await refetchThreads(); // use react-query’s refetch
             if (!threadResponse.data) return;
 
-            const updatedThreads = await Promise.all(
-                threadResponse.data.map(async (thread: any) => ({
-                ...thread,
-                like: await getThreadLikeExists(thread.tid),
-                }))
-            );
-            setThreads(updatedThreads);
+            
+            setThreads(threadResponse.data);
 
         } catch (error) {
             Alert.alert("Error:", "Failed to fetch threads");
@@ -91,7 +86,7 @@ const ProfileScreen = ({navigation , route}: any) => {
             
             refetchThreads();
             refetchFriendship(); // Ensure this refetches correctly
-            addLikes(threadData);
+            
             console.log("Friendship data:", friendshipData);
 
             return async () => {
@@ -122,14 +117,6 @@ const ProfileScreen = ({navigation , route}: any) => {
     }, [friendshipData]);
 
       
-    const addLikes = async (threads: any) => {
-        const updatedThreads = await Promise.all(threads.map(async (thread: any) => ({
-            ...thread,
-            like: await getThreadLikeExists(thread.tid), 
-        })));
-
-        setThreads(updatedThreads);
-    }
 
     async function goToDMScreen(){
 
@@ -184,25 +171,6 @@ const ProfileScreen = ({navigation , route}: any) => {
         queryClient.invalidateQueries({queryKey: ["friendship"]});
         
     }
-
-    const threadLikeAction = async (tid:number, liked: boolean) => {
-        await registerThreadLike(tid, !liked);
-    
-        const updatedThreads = threads.map(thread =>
-          thread.tid === tid
-            ? { 
-                ...thread, 
-                like: !liked, 
-                likes: liked ? thread.likes - 1 : thread.likes + 1 
-              }
-            : thread
-        );
-    
-        setThreads(updatedThreads);
-      };
-
-    
-
 
 
     return (

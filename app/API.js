@@ -31,12 +31,12 @@ export const getUserThreads = async(uid) =>{
   }
 }
 
-export const getThreadLikeExists = async(tid) =>{
+export const getThreadLikes = async() =>{
   try {
-      const likes = await axios.get(IP_STRING + "/api/threads/like-exists/"+tid);
+      const likes = await axios.get(IP_STRING + "/api/threads/thread-likes");
       return likes.data;
   } catch (error) {
-    Alert.alert("Error!", "Like couldnt be determined.");
+    Alert.alert("Error!", "Likes couldnt be determined.");
   }
 }
 
@@ -178,6 +178,24 @@ export const getComments = async(tid) =>{
       return comments.data;
   } catch (error) {
     Alert.alert("Error!", "Comments couldnt be found.");
+  }
+}
+
+export const getCommentLikes = async(tid) =>{
+  try {
+      const likes = await axios.get(IP_STRING + "/api/comments/comment-likes/"+tid);
+      return likes.data;
+  } catch (error) {
+    Alert.alert("Error!", "Likes couldnt be found.");
+  }
+}
+
+export const registerCommentLike = async(cid,tid , liked) =>{
+  try {
+      const registerLike = await axios.put(IP_STRING + "/api/comments/register-like?tid="+tid+"&cid="+cid+"&liked="+liked);
+      return (registerLike.data);
+  } catch (error) {
+    Alert.alert("Error!", "Comment like couldnt be processed.")
   }
 }
 

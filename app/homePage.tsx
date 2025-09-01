@@ -26,7 +26,7 @@ import {
   Frown,
 } from "lucide-react-native";
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {getBalance, getCircleSecret,getFriends,getIpAddress,getProfile,getWallet,getGroupProfiles, getThreadLikeExists, registerThreadLike, getThreads} from "./API";
+import {getBalance, getCircleSecret,getFriends,getIpAddress,getProfile,getWallet,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads} from "./API";
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
@@ -75,18 +75,14 @@ const HomeScreen = ({navigation}:any) => {
 
   useNotificationListener();
 
+  /*
   const getAllthreads = async () => {
     try {
       const threadResponse = await refetchThreads(); // use react-query’s refetch
       if (!threadResponse.data) return;
 
-        const updatedThreads = await Promise.all(
-          threadResponse.data.map(async (thread: any) => ({
-            ...thread,
-            like: await getThreadLikeExists(thread.tid),
-          }))
-        );
-        setActiveThreads(updatedThreads);
+      
+      setActiveThreads(threadResponse.data);
 
     } catch (error) {
       Alert.alert("Error:", "Failed to fetch threads");
@@ -94,23 +90,54 @@ const HomeScreen = ({navigation}:any) => {
       setLoading(false);
     }
   };
-     
+  */
 
-  useEffect(() => {
-    getAllthreads();
-  }, []);
+  const updateThreadLikes = async (baseThreads: any[]) => {
+    try {
+      const likedThreads = await getThreadLikes();
+      const likedTids = likedThreads.map((l: any) => l.tid);
+
+      return baseThreads.map(thread => {
+        const newLiked = likedTids.includes(thread.tid);
+        if (newLiked === thread.liked) return thread;
+        return {
+          ...thread,
+          liked: newLiked,
+          likes: newLiked ? thread.likes + 1 : thread.likes - 1,
+        };
+      });
+    } catch (err) {
+      Alert.alert("Error", "Failed to update likes");
+      return baseThreads;
+    }
+  };
 
   
-  useFocusEffect(
-      useCallback(() => {
-        console.log("Screen is focused! Perform refresh or action here.");  
-        
-        return () => {
-          console.log("Screen is unfocused! Cleanup if needed.");
-          //console.log(threads)
 
-        };
-      }, [])
+  useEffect(() => {
+    if (!threadData) return;
+    (async () => {
+      const updated = await updateThreadLikes(threadData);
+      setActiveThreads(updated);
+      setLoading(false);
+    })();
+  }, [threadData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log("Screen focused → refresh threads");
+      (async () => {
+        if (threadData) {
+          const updated = await updateThreadLikes(threadData);
+          setActiveThreads(updated);
+        } else {
+          await refetchThreads();
+        }
+      })();
+      return () => {
+        console.log("Screen unfocused");
+      };
+    }, [threadData])
   );
 
   return (
@@ -163,7 +190,7 @@ const HomeScreen = ({navigation}:any) => {
 
 
       {/* Main Content */}  
-      {threadList(threads, getAllthreads, loading, navigation, "Thread_H", setActiveThreads,false)}
+      {threadList(threads, refetchThreads, loading, navigation, "Thread_H", setActiveThreads,false)}
       
      
     </SafeAreaView>
