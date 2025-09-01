@@ -1,26 +1,29 @@
 package com.example.World.Comments;
 
+import com.example.World.Threads.ThreadRepository;
+import com.example.World.Threads.Threadlike_;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.User_;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class CommentService {
 
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
+    private final CommentLikeRepository commentLikeRepository;
+    private final ThreadRepository threadRepository;
 
-    public CommentService(UserRepository userRepository, CommentRepository commentRepository) {
+    public CommentService(UserRepository userRepository, CommentRepository commentRepository, CommentLikeRepository commentLikeRepository, ThreadRepository threadRepository) {
         this.userRepository = userRepository;
         this.commentRepository = commentRepository;
+        this.commentLikeRepository = commentLikeRepository;
+        this.threadRepository = threadRepository;
     }
 
-    public List<CommentProfile> getComments(Long tid) {
+    public List<CommentProfile> getComments(Long userID,Long tid) {
         List<Comment_> comments = commentRepository.findCommentsByTidAsc(tid);
         Map<Long, CommentProfile> allComments = new HashMap<>();
         List<CommentProfile> rootComments = new ArrayList<>();
@@ -38,6 +41,8 @@ public class CommentService {
                     user.profile_picture(),
                     c.parent_cid(),
                     c.description(),
+                    c.likes(),
+                    commentLikeRepository.findByCommentAndUser(c.cid(),userID).isPresent(),
                     c.created_at()
             );
 
@@ -52,7 +57,8 @@ public class CommentService {
                 } else {
                     // In case parent is not processed yet, ensure placeholder
                     allComments.putIfAbsent(c.parent_cid(),
-                            new CommentProfile(c.parent_cid(), tid, null, new ArrayList<>(), null, null, null, null, null)
+                            new CommentProfile(c.parent_cid(), tid, null, new ArrayList<>(), null,
+                                    null, null, null, 0L,false,null)
                     );
                     allComments.get(c.parent_cid()).replies.add(profile);
                 }
@@ -63,6 +69,27 @@ public class CommentService {
         }
 
         return rootComments;
+    }
+
+    public List<Commentlike_> getCommentLikes (Long uid , Long tid){
+        return commentLikeRepository.findByThreadAndUser(tid,uid);
+    }
+
+
+    public void registerCommentLike(Long uid , Long cid, Long tid, boolean liked){
+        Optional<Commentlike_> cl = commentLikeRepository.findByCommentAndUser(cid,uid);
+        if(cl.isEmpty()){
+            if(liked) {
+                commentLikeRepository.save(new Commentlike_(null, tid,cid, uid));
+                commentRepository.increment(cid);
+            }
+        }else{
+            if(!liked){
+                commentLikeRepository.delete(cl.get());
+                commentRepository.decrement(cid);
+            }
+        }
+
     }
 
 }

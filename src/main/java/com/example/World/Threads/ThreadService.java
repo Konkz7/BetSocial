@@ -2,11 +2,15 @@ package com.example.World.Threads;
 
 import com.example.World.Bets.BetRepository;
 import com.example.World.Bets.Status;
+import com.example.World.Users.UserRepository;
+import com.example.World.Users.User_;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -14,11 +18,15 @@ public class ThreadService {
 
     private final ThreadRepository threadRepository;
     private final BetRepository betRepository;
+    private final ThreadLikeRepository threadLikeRepository;
+    private final UserRepository userRepository;
 
-    ThreadService(ThreadRepository threadRepository, BetRepository betRepository){
+    ThreadService(ThreadRepository threadRepository, BetRepository betRepository, ThreadLikeRepository threadLikeRepository, UserRepository userRepository){
 
         this.threadRepository = threadRepository;
         this.betRepository = betRepository;
+        this.threadLikeRepository = threadLikeRepository;
+        this.userRepository = userRepository;
     }
 
     public void removeThread(Long tid, Long uid){
@@ -41,5 +49,62 @@ public class ThreadService {
             betRepository.updateStatus(bet.bid(), Status.CANCELLED.toInt());
             betRepository.remove(bet.bid(), new Date().getTime());
         });
+    }
+
+    private boolean isThreadLike(Long uid , Long tid){
+        return threadLikeRepository.findByThreadAndUser(tid,uid).isPresent();
+    }
+
+    public List<Threadlike_> getUserThreadLikes(Long uid){
+        return threadLikeRepository.findByUser(uid);
+    }
+
+    public List<ThreadProfile> threadDTOList(Long uid){
+
+        List<ThreadProfile> result = new ArrayList<>();
+        List<Thread_> threads = threadRepository.findAllActiveThreads();
+
+
+        for(Thread_ t : threads){
+            User_ user = userRepository.findById(t.uid()).orElseThrow();
+            result.add(new ThreadProfile(t.tid(),user,t.title(),t.media(),t.media_type(),t.category(),t.likes()
+                    ,isThreadLike(uid,t.tid()),t.created_at(),t.is_private()));
+        }
+
+
+        return result;
+    }
+
+    public List<ThreadProfile> threadDTOList(Long user_uid,Long target_uid){
+
+        List<ThreadProfile> result = new ArrayList<>();
+        List<Thread_> threads = threadRepository.findAllUserThreads(target_uid);
+        User_ user = userRepository.findById(target_uid).orElseThrow();
+
+
+        for(Thread_ t : threads){
+            result.add(new ThreadProfile(t.tid(),user,t.title(),t.media(),t.media_type(),t.category(),t.likes(),
+                    isThreadLike(user_uid,t.tid()), t.created_at(),t.is_private()));
+        }
+
+
+        return result;
+    }
+
+
+    public void registerThreadLike(Long uid , Long tid , boolean liked){
+        Optional<Threadlike_> tl = threadLikeRepository.findByThreadAndUser(tid,uid);
+        if(tl.isEmpty()){
+            if(liked) {
+                threadLikeRepository.save(new Threadlike_(null, tid, uid));
+                threadRepository.increment(tid);
+            }
+        }else{
+            if(!liked){
+                threadLikeRepository.delete(tl.get());
+                threadRepository.decrement(tid);
+            }
+        }
+
     }
 }

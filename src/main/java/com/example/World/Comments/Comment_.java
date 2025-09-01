@@ -18,6 +18,8 @@ public record Comment_(
         @NotEmpty
         String description,       // Comment text
         @NonNull
+        Long likes,
+        @NonNull
         Long created_at, // Timestamp
         Long deleted_at,
         @Version

@@ -21,6 +21,8 @@ public record Thread_(
         @NotEmpty
         String category,
         @NonNull
+        Long likes,
+        @NonNull
         Long created_at,
         Long deleted_at,
         @NonNull

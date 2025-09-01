@@ -49,15 +49,30 @@ public class CommentController {
 
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/make")
-    void makeComment(@Valid @RequestBody CommentDTO comment, HttpSession session){
+    Comment_ makeComment(@Valid @RequestBody CommentDTO comment, HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
-        commentRepository.save(new Comment_(null, comment.tid(), uid, comment.parent_cid(), comment.description(),new Date().getTime(),null,null));
+        return commentRepository.save(new Comment_(null, comment.tid(), uid, comment.parent_cid(), comment.description(),0L,
+                new Date().getTime(),null,null));
     }
 
 
     @GetMapping("/get-by-thread/{tid}")
-    List<CommentProfile> getComments(@PathVariable Long tid){
-        return commentService.getComments(tid);
+    List<CommentProfile> getComments(@PathVariable Long tid,HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        return commentService.getComments(uid,tid);
+    }
+
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PutMapping("/register-like")
+    void registerCommentLike(@RequestParam Long tid, @RequestParam Long cid , @RequestParam boolean liked,HttpSession session){
+        Long userId = (Long) session.getAttribute("userId");
+        commentService.registerCommentLike(userId,cid ,tid, liked);
+    }
+
+    @GetMapping("/comment-likes/{tid}")
+    List<Commentlike_> getCommentLikes(@PathVariable Long tid,HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        return commentService.getCommentLikes(uid,tid);
     }
 
 /*

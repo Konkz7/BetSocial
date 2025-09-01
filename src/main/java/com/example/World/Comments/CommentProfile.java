@@ -12,12 +12,14 @@ public class CommentProfile {
         public String profile_picture;
         public Long parent_cid;       // Parent Comment ID (null for top-level comments)
         public String description;    // Comment text
+        public Long likes;
+        public boolean liked;
         public Long created_at;       // Timestamp
 
         // All-args constructor
         public CommentProfile(Long cid, Long tid, Long uid, List<CommentProfile> replies,
                               String user_name, String profile_picture, Long parent_cid,
-                              String description, Long created_at) {
+                              String description, Long likes , boolean liked, Long created_at) {
                 this.cid = cid;
                 this.tid = tid;
                 this.uid = uid;
@@ -27,5 +29,7 @@ public class CommentProfile {
                 this.parent_cid = parent_cid;
                 this.description = description;
                 this.created_at = created_at;
+                this.likes = likes;
+                this.liked = liked;
         }
 }

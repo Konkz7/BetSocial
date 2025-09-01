@@ -36,13 +36,21 @@ public class ThreadController {
     }
 
     @GetMapping("/active")
-    List<Thread_>findAllActive(){
-        return threadRepository.findAllActiveThreads();
+    List<ThreadProfile>findAllActive(HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        return threadService.threadDTOList(uid);
     }
 
-    @GetMapping("/user/{uid}")
-    List<Thread_> findAllByUID(@PathVariable Long uid){
-        return threadRepository.findAllUserThreads(uid);
+    @GetMapping("/user/{other_uid}")
+    List<ThreadProfile> findAllByUID(@PathVariable Long other_uid,HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        return threadService.threadDTOList(uid,other_uid);
+    }
+
+    @GetMapping("/thread-likes")
+    List<Threadlike_> threadLike(HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        return threadService.getUserThreadLikes(uid);
     }
 
     @GetMapping("/{tid}")
@@ -68,11 +76,19 @@ public class ThreadController {
             return ResponseEntity.badRequest().body("Error: Please make sure fields are filled out properly");
         }
         Long uid = (Long) session.getAttribute("userId");
-        Long tid = threadRepository.save(new Thread_(null,uid,thread.title(), thread.media(), thread.media_type(), thread.category(),
+        Long tid = threadRepository.save(new Thread_(null,uid,thread.title(), thread.media(), thread.media_type(), thread.category(),0L,
                 new Date().getTime(),null,thread.is_private(),null)).tid();
 
         return ResponseEntity.ok(String.valueOf(tid));
     }
+
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PutMapping("/register-like")
+    void registerThreadLike(@RequestParam Long tid , @RequestParam boolean liked,HttpSession session){
+        Long userId = (Long) session.getAttribute("userId");
+        threadService.registerThreadLike(userId,tid, liked);
+    }
+
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping("/remove/{tid}")

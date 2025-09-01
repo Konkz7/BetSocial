@@ -8,6 +8,8 @@ public record Commentlike_(
         @Id
         Long clid,
         @NonNull
+        Long tid,
+        @NonNull
         Long cid,
         @NonNull
         Long uid

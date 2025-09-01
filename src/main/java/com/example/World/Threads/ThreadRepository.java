@@ -22,6 +22,19 @@ public interface ThreadRepository extends ListCrudRepository<Thread_, Long> {
             @Param("id") Long id,
             @Param("deleted_at") Long deleted_at);
 
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Thread_ SET  likes = likes + 1 WHERE tid = :id AND deleted_at IS NULL")
+    int increment(
+            @Param("id") Long id);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Thread_ SET  likes = likes - 1 WHERE tid = :id AND deleted_at IS NULL")
+    int decrement(
+            @Param("id") Long id);
+
     @Query("SELECT * FROM Thread_ WHERE uid = :uid AND deleted_at IS NULL")
     List<Thread_> findAllUserThreads(@Param("uid") Long uid);
 
