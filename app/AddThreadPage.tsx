@@ -145,7 +145,7 @@ const AddThreadScreen = ({navigation}:any) => {
         }
       }
       reset();
-      navigation.navigate("Home");
+      navigation.navigate("Home",{"refresh":true});
     } catch (error) {
       Alert.alert("Error:", "Make sure all thread fields are filled out correctly.");
     }

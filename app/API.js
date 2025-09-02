@@ -199,6 +199,16 @@ export const registerCommentLike = async(cid,tid , liked) =>{
   }
 }
 
+export const deleteComment = async(cid) =>{
+  try {
+      const deletedComment = await axios.put(IP_STRING + "/api/comments/delete/"+cid);
+      return (deletedComment.data);
+  } catch (error) {
+    Alert.alert("Error!", "Comment deletion couldnt be processed.")
+  }
+}
+
+
 //FRIENDS
 export const getFriends = async() =>{
   try {

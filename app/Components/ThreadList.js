@@ -137,7 +137,7 @@ const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,s
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.actionButton}>
                                     <MessageCircle size={18} color="gray" style = {{marginRight:5}} />
-                                    <Text>12</Text>
+                                    <Text>{item.commentCount}</Text>
                                 </TouchableOpacity>
                             </View>
                         <View style={styles.actionsRight}>

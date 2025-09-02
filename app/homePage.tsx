@@ -44,7 +44,7 @@ const categories = [
 ];
 
 
-const HomeScreen = ({navigation}:any) => {
+const HomeScreen = ({navigation,route}:any) => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [threads, setActiveThreads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true); // Show loading indicator
@@ -125,11 +125,20 @@ const HomeScreen = ({navigation}:any) => {
 
   useFocusEffect(
     useCallback(() => {
-      console.log("Screen focused → refresh threads");
+      console.log("Screen focused → refresh threads" + route.params?.refresh);
       (async () => {
-        if (threadData) {
+        
+        if (route.params?.refresh) {
+          console.log("Refetching because refetch flag is true");
+          refetchThreads();
+          // clear the flag so it doesn’t loop forever
+          navigation.setParams({ refresh: false });
+          return;
+        }
+
+        if (threadData) {     
           const updated = await updateThreadLikes(threadData);
-          setActiveThreads(updated);
+          setActiveThreads(updated);       
         } else {
           await refetchThreads();
         }
@@ -137,7 +146,7 @@ const HomeScreen = ({navigation}:any) => {
       return () => {
         console.log("Screen unfocused");
       };
-    }, [threadData])
+    }, [threadData,route.params])
   );
 
   return (

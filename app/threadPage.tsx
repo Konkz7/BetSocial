@@ -146,6 +146,24 @@ const ThreadScreen = ({navigation,route}:any) => {
     setThreadLike(!threadLike);
   }
 
+  const addReplyRecursive = (comments : any, parentCid:number |null, newReply: any) => {
+    return comments.map((comment:any) => {
+      if (comment.cid === parentCid) {
+        return {
+          ...comment,
+          replies: [...comment.replies, newReply]
+        };
+      }
+      if (comment.replies && comment.replies.length > 0) {
+        return {
+          ...comment,
+          replies: addReplyRecursive(comment.replies, parentCid, newReply)
+        };
+      }
+      return comment;
+    });
+  };
+
   const makeComment = async () => {
 
     const PCID = replyNum === -1 ? null : replyNum;
@@ -172,19 +190,12 @@ const ThreadScreen = ({navigation,route}:any) => {
     }
     
 
-    if(PCID === null){
-      setLoadedComments(prevComments => [commentObject, ...prevComments]);  
-    }else{
-      const updatedComments = loadedComments.map(comment => {
-        if (comment.cid === PCID) {
-          return {
-            ...comment,
-            replies: [...comment.replies, commentObject]
-          };
-        }
-        return comment;
-      });
-      setLoadedComments(updatedComments);
+    if (PCID === null) {
+      // top-level comment
+      setLoadedComments(prevComments => [commentObject, ...prevComments]);
+    } else {
+      // nested reply (recursive insert)
+      setLoadedComments(prevComments => addReplyRecursive(prevComments, PCID, commentObject));
     }
 
     
@@ -468,7 +479,7 @@ const ThreadScreen = ({navigation,route}:any) => {
 
 
           {loadedComments.length > 0 && (
-            <CommentList loadedComments={loadedComments} setReplyNum = {setReplyNum} replyNum={replyNum} />
+            <CommentList loadedComments={loadedComments} setLoadedComments={setLoadedComments} setReplyNum = {setReplyNum} replyNum={replyNum} uid = {self.uid} />
           )}
 
         </View>

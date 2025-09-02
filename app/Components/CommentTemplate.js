@@ -1,19 +1,20 @@
 import React, { useState } from "react";
-import { View, Text, Image, TouchableOpacity } from "react-native";
+import { View, Text, Image, TouchableOpacity, Pressable, Alert } from "react-native";
 import { Heart, Reply, X } from "lucide-react-native"; // install lucide-react-native
 import { timeAgo } from "../Constants";
-import { registerCommentLike } from "../API";
+import { registerCommentLike,deleteComment } from "../API";
 
-const Comment = ({ comment, onReply, replyNum }) => {
+const Comment = ({ comment, onReply, replyNum , handleDelete}) => {
   const [showReplies, setShowReplies] = useState(false);
   const [isLiked, setIsLiked] = useState(comment.liked);
   const [likes, setLikes] = useState(comment.likes);
 
   const isReplying = replyNum === comment.cid;
+  
 
-  const handleLike = (comment) => {
+  const handleLike = () => {
     console.log("Liked comment:", comment.cid);
-
+  
     if(isLiked){
       setLikes(likes - 1);
     }else{
@@ -23,10 +24,12 @@ const Comment = ({ comment, onReply, replyNum }) => {
     registerCommentLike(comment.cid,comment.tid ,!isLiked);
   };
 
+  
+
   //console.log(comment.cid);
 
   return (
-    <View style={{ marginVertical: 6, padding: 8, borderRadius:20, backgroundColor: isReplying ? "#f0f8ff" : null }}>
+    <Pressable style={{ marginVertical: 6, padding: 8, borderRadius:20, backgroundColor: isReplying ? "#f0f8ff" : null }} onLongPress = {() => handleDelete(comment)}>
       {/* Header: Avatar + Username */}
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
         <Image source={{ uri: comment.profile_picture }} style={{ width: 36, height: 36, borderRadius: 18, marginRight: 8 }} />
@@ -46,7 +49,7 @@ const Comment = ({ comment, onReply, replyNum }) => {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 , marginTop: 10 }}>
         <TouchableOpacity 
           style={{ flexDirection: "row", alignItems: "center", gap: 4 }} 
-          onPress={() => handleLike(comment)}
+          onPress={() => handleLike()}
         >
           <Heart size={18} color={isLiked ? "red": "gray"} fill={isLiked ? "red" : "transparent"} />
           <Text style={{ fontSize: 12, color: "gray" }}>{likes}</Text>
@@ -87,18 +90,27 @@ const Comment = ({ comment, onReply, replyNum }) => {
 
       {/* Nested replies */}
       {showReplies && comment.replies?.map(reply => (
-        <View 
+        <Pressable 
           key={reply.cid} 
-          style={{ marginTop: 6, marginLeft: 24, padding: 6, backgroundColor: isReplying ? "#f0f8ff" : null , borderRadius: 10 }}
+          style={{ marginTop: 6, marginLeft: 24, padding: 6, backgroundColor: isReplying ? "#f0f8ff" : null , borderRadius: 10 }} onLongPress = {() => handleDelete(reply)}
         >
-          <Comment comment={reply} onReply={onReply} replyNum={replyNum}/>
-        </View>
+          <Comment comment={reply} onReply={onReply} replyNum={replyNum} handleDelete={handleDelete}/>
+        </Pressable>
       ))}
-    </View>
+    </Pressable>
   );
 };
-export function CommentList({ loadedComments ,replyNum ,setReplyNum}) {
+export function CommentList({ loadedComments, setLoadedComments ,replyNum ,setReplyNum , uid ,}) {
 
+
+  const removeCommentRecursive = (comments, cidToRemove) => {
+  return comments
+    .filter(c => c.cid !== cidToRemove)
+    .map(c => ({
+      ...c,
+      replies: c.replies ? removeCommentRecursive(c.replies, cidToRemove) : []
+    }));
+  };
 
   const handleReply = (comment) =>{
 
@@ -112,6 +124,35 @@ export function CommentList({ loadedComments ,replyNum ,setReplyNum}) {
      
   }
 
+  const deleteCommentAction = (comment) => {
+    const ownComment = uid === comment.uid;
+    if(!ownComment) return;
+
+    // Show a confirmation dialog before deleting
+    Alert.alert(
+      "Delete Comment",
+      "Are you sure you want to delete this comment?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", 
+          onPress: async () => {
+            try {
+              await deleteComment(comment.cid);
+
+              // Recursively remove from state
+              setLoadedComments(prev =>
+                removeCommentRecursive(prev, comment.cid)
+              );
+            } catch (err) {
+              console.error("Failed to delete comment:", err);
+            }
+          } 
+        }
+      ]
+    );
+
+  }
+
   return (
     <View style={{alignSelf: "stretch" }}>
       {loadedComments.map(comment => (
@@ -120,6 +161,7 @@ export function CommentList({ loadedComments ,replyNum ,setReplyNum}) {
           comment={comment} 
           onReply={handleReply} 
           replyNum={replyNum}
+          handleDelete={deleteCommentAction}
         />
       ))}
     </View>
