@@ -2,6 +2,8 @@ package com.example.World.Threads;
 
 import com.example.World.Bets.BetRepository;
 import com.example.World.Bets.Status;
+import com.example.World.Comments.CommentLikeRepository;
+import com.example.World.Comments.CommentRepository;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.User_;
 import org.springframework.http.HttpStatus;
@@ -20,13 +22,16 @@ public class ThreadService {
     private final BetRepository betRepository;
     private final ThreadLikeRepository threadLikeRepository;
     private final UserRepository userRepository;
+    private final CommentRepository commentRepository;
 
-    ThreadService(ThreadRepository threadRepository, BetRepository betRepository, ThreadLikeRepository threadLikeRepository, UserRepository userRepository){
+    ThreadService(ThreadRepository threadRepository, BetRepository betRepository, ThreadLikeRepository threadLikeRepository,
+                  UserRepository userRepository, CommentRepository commentRepository){
 
         this.threadRepository = threadRepository;
         this.betRepository = betRepository;
         this.threadLikeRepository = threadLikeRepository;
         this.userRepository = userRepository;
+        this.commentRepository = commentRepository;
     }
 
     public void removeThread(Long tid, Long uid){
@@ -68,11 +73,11 @@ public class ThreadService {
         for(Thread_ t : threads){
             User_ user = userRepository.findById(t.uid()).orElseThrow();
             result.add(new ThreadProfile(t.tid(),user,t.title(),t.media(),t.media_type(),t.category(),t.likes()
-                    ,isThreadLike(uid,t.tid()),t.created_at(),t.is_private()));
+                    ,isThreadLike(uid,t.tid()),(long) commentRepository.findByThread(t.tid()).size(),t.created_at(), t.is_private()));
         }
 
 
-        return result;
+        return result.reversed();
     }
 
     public List<ThreadProfile> threadDTOList(Long user_uid,Long target_uid){
@@ -84,11 +89,11 @@ public class ThreadService {
 
         for(Thread_ t : threads){
             result.add(new ThreadProfile(t.tid(),user,t.title(),t.media(),t.media_type(),t.category(),t.likes(),
-                    isThreadLike(user_uid,t.tid()), t.created_at(),t.is_private()));
+                    isThreadLike(user_uid,t.tid()),(long) commentRepository.findByThread(t.tid()).size(), t.created_at(),t.is_private()));
         }
 
 
-        return result;
+        return result.reversed();
     }
 
 

@@ -75,6 +75,14 @@ public class CommentController {
         return commentService.getCommentLikes(uid,tid);
     }
 
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PutMapping("/delete/{cid}")
+    void deleteComment(@PathVariable Long cid){
+        try {
+            commentService.deleteComment(cid);
+        }catch (Exception e){
+        }
+    }
 /*
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping("/update/{cid}")

@@ -22,4 +22,9 @@ public interface ThreadLikeRepository extends ListCrudRepository<Threadlike_, Lo
             @Param("uid") Long uid);
 
 
+    @Query("SELECT * FROM ThreadLike_ WHERE tid = :tid")
+    List<Threadlike_> findByThread(
+            @Param("tid") Long tid);
+
+
 }

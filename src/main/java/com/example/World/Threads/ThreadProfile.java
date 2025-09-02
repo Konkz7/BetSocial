@@ -21,6 +21,8 @@ public record ThreadProfile(
         @NonNull
         boolean liked,
         @NonNull
+        Long commentCount,
+        @NonNull
         Long created_at,
         @NonNull
         Boolean is_private

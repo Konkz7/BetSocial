@@ -5,6 +5,7 @@ import com.example.World.Threads.Threadlike_;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.User_;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -68,7 +69,7 @@ public class CommentService {
             }
         }
 
-        return rootComments;
+        return rootComments.reversed();
     }
 
     public List<Commentlike_> getCommentLikes (Long uid , Long tid){
@@ -90,6 +91,20 @@ public class CommentService {
             }
         }
 
+    }
+
+    @Transactional
+    public void deleteComment(Long cid) {
+        long now = System.currentTimeMillis();
+
+        // soft delete this comment
+        commentRepository.softDelete(cid, now);
+
+        // fetch children and recursively delete them , if approach is slow do SQL approach
+        List<Comment_> children = commentRepository.findCommentsByParentCID(cid);
+        for (Comment_ child : children) {
+            deleteComment(child.cid());
+        }
     }
 
 }
