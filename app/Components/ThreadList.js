@@ -26,7 +26,7 @@ import { removeThread, registerThreadLike} from "../API";
 import { timeAgo } from "../Constants";
 
 
-const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,selfProfile) =>  {
+const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,page) =>  {
     
 
     const threadLikeAction = async (tid, likeResult) => {
@@ -81,7 +81,7 @@ const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,s
             renderItem={({ item }) => (
 
             <View style={styles.post}>
-                <TouchableOpacity onPress={() => navigation.navigate(nav,item)} onLongPress={selfProfile ? () => deleteThread(item.tid) : null}>
+                <TouchableOpacity onPress={() => navigation.navigate(nav,item)} onLongPress={page === "self" ? () => deleteThread(item.tid) : null}>
                     <View style = {{flexDirection:"row", alignItems:"center",justifyContent:"space-between", marginBottom:10}}>
                         <View >
                             <View style={styles.postHeader}>
@@ -131,10 +131,13 @@ const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,s
 
                         <View style={styles.postFooter}>
                             <View style={styles.actionsLeft}>
-                                <TouchableOpacity style={styles.actionButton} onPress={() => threadLikeAction(item.tid,item.liked)}>
-                                    <Heart size={18} color={item.liked ? "red":"gray"} fill={item.liked ? "red":"transparent"} style = {{marginRight:5}}  />
-                                    <Text>{item.likes}</Text>
-                                </TouchableOpacity>
+                                {page === "search" ? null : (
+                                    <TouchableOpacity style={styles.actionButton} onPress={() => threadLikeAction(item.tid,item.liked)}>
+                                        <Heart size={18} color={item.liked ? "red":"gray"} fill={item.liked ? "red":"transparent"} style = {{marginRight:5}}  />
+                                        <Text>{item.likes}</Text>
+                                    </TouchableOpacity>
+                                    )
+                                }
                                 <TouchableOpacity style={styles.actionButton}>
                                     <MessageCircle size={18} color="gray" style = {{marginRight:5}} />
                                     <Text>{item.commentCount}</Text>

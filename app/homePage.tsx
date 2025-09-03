@@ -48,7 +48,9 @@ const HomeScreen = ({navigation,route}:any) => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [threads, setActiveThreads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true); // Show loading indicator
+  const [trueThreads , setTrueThreads] = useState<any[]>([]);
 
+  
   // Fetch data using React Query
   // ✅ Fetching profile, circle secret, and wallet using useQuery
 
@@ -62,6 +64,7 @@ const HomeScreen = ({navigation,route}:any) => {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+
 
   //const { data: groupProfiles, isLoading: groupProfilesLoading } = useQuery({ queryKey: ["groupProfiles"], queryFn: getGroupProfiles});
 
@@ -92,6 +95,15 @@ const HomeScreen = ({navigation,route}:any) => {
   };
   */
 
+  const updateThreadCat = (category:string) => {
+    setActiveCategory(category);
+    if (category === "All") {
+      setActiveThreads(trueThreads);
+    } else {
+      setActiveThreads(trueThreads.filter(thread => thread.category === category));
+    }  
+  }
+
   const updateThreadLikes = async (baseThreads: any[]) => {
     try {
       const likedThreads = await getThreadLikes();
@@ -117,17 +129,19 @@ const HomeScreen = ({navigation,route}:any) => {
   useEffect(() => {
     if (!threadData) return;
     (async () => {
+      setActiveCategory("All");
       const updated = await updateThreadLikes(threadData);
       setActiveThreads(updated);
+      setTrueThreads(updated);
       setLoading(false);
     })();
   }, [threadData]);
 
   useFocusEffect(
     useCallback(() => {
-      console.log("Screen focused → refresh threads" + route.params?.refresh);
+      console.log("Screen focused → refresh threads" + route.params?.params);
       (async () => {
-        
+        setActiveCategory("All");
         if (route.params?.refresh) {
           console.log("Refetching because refetch flag is true");
           refetchThreads();
@@ -138,7 +152,8 @@ const HomeScreen = ({navigation,route}:any) => {
 
         if (threadData) {     
           const updated = await updateThreadLikes(threadData);
-          setActiveThreads(updated);       
+          setActiveThreads(updated);
+          setTrueThreads(updated);       
         } else {
           await refetchThreads();
         }
@@ -178,7 +193,7 @@ const HomeScreen = ({navigation,route}:any) => {
           {categories.map((category) => (
             <TouchableOpacity
               key={category}
-              onPress={() => setActiveCategory(category)}
+              onPress={() =>updateThreadCat(category)}
               style={[
                 styles.categoryButton,
                 activeCategory === category && styles.categoryActive,
@@ -199,7 +214,7 @@ const HomeScreen = ({navigation,route}:any) => {
 
 
       {/* Main Content */}  
-      {threadList(threads, refetchThreads, loading, navigation, "Thread_H", setActiveThreads,false)}
+      {threadList(threads, refetchThreads, loading, navigation, "Thread_H", setActiveThreads,"non")}
       
      
     </SafeAreaView>

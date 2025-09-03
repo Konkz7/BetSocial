@@ -259,7 +259,7 @@ const ProfileScreen = ({navigation , route}: any) => {
             
             </View>
 
-            {threadList(threads, refetchThreads, threadsLoading, navigation, "Thread_S", setThreads,false)}
+            {threadList(threads, refetchThreads, threadsLoading, navigation, "Thread_S", setThreads,"non")}
 
             </ScrollView>
         </SafeAreaView>

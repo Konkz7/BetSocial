@@ -213,7 +213,7 @@ const SelfProfileScreen = ({navigation , route}: any) => {
             
             </View>
             
-                {threadList(threads, refetchThreads, loading, navigation, "Thread_H",setThreads,true)}
+                {threadList(threads, refetchThreads, loading, navigation, "Thread_H",setThreads,"self")}
             </ScrollView>
         </SafeAreaView>
     );

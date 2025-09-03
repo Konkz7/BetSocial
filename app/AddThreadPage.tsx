@@ -145,7 +145,10 @@ const AddThreadScreen = ({navigation}:any) => {
         }
       }
       reset();
-      navigation.navigate("Home",{"refresh":true});
+      navigation.navigate("Home", {
+        screen: "Home_H",
+        params: { refresh: true }
+      });
     } catch (error) {
       Alert.alert("Error:", "Make sure all thread fields are filled out correctly.");
     }
@@ -299,18 +302,7 @@ const AddThreadScreen = ({navigation}:any) => {
                 )}
             </View>
             <View style = {styles.categoryContainer}>
-            <TextInput
-              style={[styles.inputBox, { textAlign: "center" }]}
-              value={category}
-              onChangeText={setCategory}
-              multiline
-              textColor="green"
-              underlineColor="transparent"
-              activeUnderlineColor="transparent"
-              maxLength={maxCharacters}
-              placeholder="Tap to enter category..."
-              placeholderTextColor="gray" // Make it clear it's not actual input text
-            /> 
+                <Text style = {styles.categoryTitle}> Category: </Text>
             </View>
             <View style = {styles.scrollContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
@@ -464,18 +456,20 @@ const styles = StyleSheet.create({
     color: "green",
   },postbutton:{
     backgroundColor: "green",
-  }
-  ,body:{
+  },body:{
     justifyContent: "center",
     alignItems: "center",
   },inputContainer:{
     height:220,
     width:380,
     backgroundColor: "white",
-   
-
+  },categoryTitle:{
+    fontSize: 16,
+    color:"green",
+    alignSelf: "center",
+    justifyContent: "center",
   },categoryContainer:{
-    height:40,
+    height:25,
     width:380,
     backgroundColor: "white",
   },mediaContainer:{

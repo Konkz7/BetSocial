@@ -3,8 +3,9 @@ import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet,SafeAreaView 
 import { Search ,X} from 'lucide-react-native';
 import { TextInput,Searchbar } from 'react-native-paper';
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {getUsers} from "./API";
+import {getThreadLikes, getThreads, getUsers} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
+import threadList from './Components/ThreadList';
 
 
 const SearchScreen = ({ navigation} : any) => {
@@ -14,18 +15,19 @@ const SearchScreen = ({ navigation} : any) => {
 
 
     const { data: users, isLoading: usersLoading } = useQuery({ queryKey: ["Users"], queryFn: getUsers });
+    const { data: threads, isLoading: threadsLoading } = useQuery({ queryKey: ["threads"], queryFn: getThreads });
 
 
     useFocusEffect(
-          useCallback(() => {
-            console.log("Screen is focused! Perform refresh or action here.");  
-            
-            return () => {
-              console.log("Screen is unfocused! Cleanup if needed."); 
-              
-            };
-          }, [])
-      );
+      useCallback(() => {
+        console.log("Screen is focused! Perform refresh or action here.");  
+        
+        return () => {
+          console.log("Screen is unfocused! Cleanup if needed."); 
+          
+        };
+      }, [])
+    );
     
 
   const handleSearch = (text: string) => {
@@ -34,11 +36,19 @@ const SearchScreen = ({ navigation} : any) => {
     if (text.trim() === '') {
       setFilteredData([]);
     } else {
-      setFilteredData(
-        users.filter((item: any) => 
-          item.user_name.toLowerCase().includes(text.toLowerCase())
-        )
-      );
+      if(currentTab === 'People'){
+        setFilteredData(
+          users.filter((item: any) => 
+            item.user_name.toLowerCase().includes(text.toLowerCase())
+          )
+        );
+      }else{
+        setFilteredData(
+          threads.filter((item: any) => 
+            item.title.toLowerCase().includes(text.toLowerCase())
+          )
+        );
+      }
     }
   };
 
@@ -51,7 +61,7 @@ const SearchScreen = ({ navigation} : any) => {
           onChangeText={handleSearch}
           autoCapitalize='none'
           style = {styles.searchBar}
-          icon={() => <Search size={20}  />}
+          icon={() => <Search size={20} />}
           clearIcon={() => <X></X>}
           elevation={2}    
         />
@@ -84,37 +94,26 @@ const SearchScreen = ({ navigation} : any) => {
             </TouchableOpacity>
         </View>
 
-        <View style = {styles.tab}>
-            <TouchableOpacity  onPress={() => setCurrentTab('Categories')}>
-                <Text 
-                    style={[
-                    styles.tabText, 
-                    currentTab === 'Categories' ? { backgroundColor: '#e6f4ea' } : {}
-                    ]}
-                >
-                Categories
-                </Text>
-            </TouchableOpacity>
-        </View>
-
       </View>
 
 
 
-    {usersLoading ? (<Text style={styles.loadingText}>Loading...</Text>) :
-      <FlatList
-        data={filteredData}
-        removeClippedSubviews={false}
-        keyExtractor={(item) => item.uid.toString() }
-        renderItem={( {item }) => (
+    {currentTab === 'Threads' ? threadList(filteredData,() =>{} , threadsLoading,navigation,"Thread_S",filteredData,"search") :
+    
+      usersLoading ? (<Text style={styles.loadingText}>Loading...</Text>) :
+        <FlatList
+          data={filteredData}
+          removeClippedSubviews={false}
+          keyExtractor={(item) => item.uid.toString() }
+          renderItem={( {item }) => (
 
-          <TouchableOpacity style={styles.item} onPress={() => navigation.navigate("Profile_S",item)}>
-            <Text style={styles.itemText}>{item.user_name}</Text>
-          </TouchableOpacity>
-        )}
-        ListEmptyComponent={<Text style={styles.noResults}>No results found</Text>}
-      />
-      }
+            <TouchableOpacity style={styles.item} onPress={() => navigation.navigate("Profile_S",item)}>
+              <Text style={styles.itemText}>{item.user_name}</Text>
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={<Text style={styles.noResults}>No results found</Text>}
+        />
+    }
      
     </SafeAreaView> 
   );

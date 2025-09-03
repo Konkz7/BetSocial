@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet,SafeAreaView } from 'react-native';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Smile } from 'lucide-react-native';
 import {DMCheck, fillReadMarkers, getConversations, getUser, makePrivateGroup} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
 import { timeAgo } from './Constants';
@@ -61,6 +61,10 @@ const MessageScreen = ({ navigation , route } : any) => {
         data={conversations}
         keyExtractor={(item) => item.gid.toString()}
         removeClippedSubviews={false}
+        ListEmptyComponent={<View style = {styles.notFound}>
+                    <Smile size={50} color="gray" />
+                    <Text>Your message list seems empty</Text>
+                    </View>}
         renderItem={({ item }) => (   
           
             <TouchableOpacity style={styles.conversationItem} onPress={() => goToDMScreen(item.uid, item.gid)}> 
@@ -157,7 +161,11 @@ const styles = StyleSheet.create({
   unread: {
     color: '#111827',
     fontWeight: '600',
-  },
+  },notFound:{
+    marginTop: 50,
+    justifyContent:"center",
+    alignItems:"center",
+    }
 });
 
 export default MessageScreen;
