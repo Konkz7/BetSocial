@@ -46,35 +46,44 @@ const Comment = ({ comment, onReply, replyNum , handleDelete}) => {
      
 
       {/* Actions: Like + Reply */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 , marginTop: 10 }}>
-        <TouchableOpacity 
-          style={{ flexDirection: "row", alignItems: "center", gap: 4 }} 
-          onPress={() => handleLike()}
-        >
-          <Heart size={18} color={isLiked ? "red": "gray"} fill={isLiked ? "red" : "transparent"} />
-          <Text style={{ fontSize: 12, color: "gray" }}>{likes}</Text>
-          <Text style={{ fontSize: 12, color: "gray" }}>likes</Text>
-        </TouchableOpacity>
+      
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 }}>
+          {!comment.deleted && (
+            <>
+            {/* Like button */}
+            <TouchableOpacity 
+              style={{ flexDirection: "row", alignItems: "center", gap: 4 }} 
+              onPress={() => handleLike()}
+            >
+              <Heart 
+                size={18} 
+                color={isLiked ? "red" : "gray"} 
+                fill={isLiked ? "red" : "transparent"} 
+              />
+              <Text style={{ fontSize: 12, color: "gray" }}>{likes}</Text>
+              <Text style={{ fontSize: 12, color: "gray" }}>likes</Text>
+            </TouchableOpacity>
 
-        {!isReplying ? (
-            <TouchableOpacity 
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }} 
-              onPress={() => onReply(comment)}
-            >
-              <Reply size={18} color="gray" />
-              <Text style={{ fontSize: 12, color: "gray" }}>reply</Text>
-            </TouchableOpacity>
-          ) :
-          (
-            <TouchableOpacity 
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }} 
-              onPress={() => onReply(comment)}
-            >
-              <X size={18} color="red" />
-              <Text style={{ fontSize: 12, color: "red" }}>Cancel</Text>
-            </TouchableOpacity>
-          )
-        }
+            {/* Reply / Cancel toggle */}
+            {!isReplying ? (
+              <TouchableOpacity 
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }} 
+                onPress={() => onReply(comment)}
+              >
+                <Reply size={18} color="gray" />
+                <Text style={{ fontSize: 12, color: "gray" }}>reply</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }} 
+                onPress={() => onReply(comment)}
+              >
+                <X size={18} color="red" />
+                <Text style={{ fontSize: 12, color: "red" }}>Cancel</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
 
         {comment.replies?.length > 0 && (
           <TouchableOpacity onPress={() => setShowReplies(!showReplies)}>
@@ -105,12 +114,14 @@ export function CommentList({ loadedComments, setLoadedComments ,replyNum ,setRe
 
   const removeCommentRecursive = (comments, cidToRemove) => {
   return comments
-    .filter(c => c.cid !== cidToRemove)
     .map(c => ({
       ...c,
+      deleted: c.cid === cidToRemove ? true : c.deleted,
+      description: c.cid === cidToRemove ? "[deleted]" : c.description,
       replies: c.replies ? removeCommentRecursive(c.replies, cidToRemove) : []
     }));
   };
+  
 
   const handleReply = (comment) =>{
 
@@ -126,7 +137,7 @@ export function CommentList({ loadedComments, setLoadedComments ,replyNum ,setRe
 
   const deleteCommentAction = (comment) => {
     const ownComment = uid === comment.uid;
-    if(!ownComment) return;
+    if(!ownComment || comment.deleted) return;
 
     // Show a confirmation dialog before deleting
     Alert.alert(
@@ -138,11 +149,13 @@ export function CommentList({ loadedComments, setLoadedComments ,replyNum ,setRe
           onPress: async () => {
             try {
               await deleteComment(comment.cid);
-
+              
               // Recursively remove from state
               setLoadedComments(prev =>
                 removeCommentRecursive(prev, comment.cid)
               );
+              
+              
             } catch (err) {
               console.error("Failed to delete comment:", err);
             }

@@ -187,6 +187,7 @@ const ThreadScreen = ({navigation,route}:any) => {
       "created_at": updatedComment.created_at,
       "likes": 0,
       "liked": false,
+      "deleted":false,
     }
     
 

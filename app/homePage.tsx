@@ -77,7 +77,7 @@ const HomeScreen = ({navigation,route}:any) => {
   */
 
   useNotificationListener();
-
+  
   /*
   const getAllthreads = async () => {
     try {
@@ -95,13 +95,16 @@ const HomeScreen = ({navigation,route}:any) => {
   };
   */
 
-  const updateThreadCat = (category:string) => {
-    setActiveCategory(category);
+  const updateThreadCat = (category:string, threads : any[] , resetCat:boolean) => {
+    if(resetCat){
+      setActiveCategory(category);
+    }
     if (category === "All") {
-      setActiveThreads(trueThreads);
+      setActiveThreads(threads);
     } else {
-      setActiveThreads(trueThreads.filter(thread => thread.category === category));
+      setActiveThreads(threads.filter(thread => thread.category === category));
     }  
+
   }
 
   const updateThreadLikes = async (baseThreads: any[]) => {
@@ -129,11 +132,10 @@ const HomeScreen = ({navigation,route}:any) => {
   useEffect(() => {
     if (!threadData) return;
     (async () => {
-      setActiveCategory("All");
-      const updated = await updateThreadLikes(threadData);
-      setActiveThreads(updated);
+      const updated = await updateThreadLikes(threadData);    
       setTrueThreads(updated);
       setLoading(false);
+
     })();
   }, [threadData]);
 
@@ -141,7 +143,6 @@ const HomeScreen = ({navigation,route}:any) => {
     useCallback(() => {
       console.log("Screen focused → refresh threads" + route.params?.params);
       (async () => {
-        setActiveCategory("All");
         if (route.params?.refresh) {
           console.log("Refetching because refetch flag is true");
           refetchThreads();
@@ -151,9 +152,9 @@ const HomeScreen = ({navigation,route}:any) => {
         }
 
         if (threadData) {     
-          const updated = await updateThreadLikes(threadData);
-          setActiveThreads(updated);
-          setTrueThreads(updated);       
+          const updated = await updateThreadLikes(threadData);          
+          setTrueThreads(updated);    
+          updateThreadCat(activeCategory,updated,false)   
         } else {
           await refetchThreads();
         }
@@ -161,7 +162,7 @@ const HomeScreen = ({navigation,route}:any) => {
       return () => {
         console.log("Screen unfocused");
       };
-    }, [threadData,route.params])
+    }, [threadData,route.params,activeCategory])
   );
 
   return (
@@ -193,7 +194,7 @@ const HomeScreen = ({navigation,route}:any) => {
           {categories.map((category) => (
             <TouchableOpacity
               key={category}
-              onPress={() =>updateThreadCat(category)}
+              onPress={() =>updateThreadCat(category,trueThreads,true)}
               style={[
                 styles.categoryButton,
                 activeCategory === category && styles.categoryActive,
