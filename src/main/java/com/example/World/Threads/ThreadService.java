@@ -77,7 +77,7 @@ public class ThreadService {
         }
 
 
-        return result.reversed();
+        return result;
     }
 
     public List<ThreadProfile> threadDTOList(Long user_uid,Long target_uid){
@@ -93,7 +93,7 @@ public class ThreadService {
         }
 
 
-        return result.reversed();
+        return result;
     }
 
 

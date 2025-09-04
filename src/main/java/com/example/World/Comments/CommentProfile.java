@@ -15,11 +15,13 @@ public class CommentProfile {
         public Long likes;
         public boolean liked;
         public Long created_at;       // Timestamp
+        public boolean deleted;
+
 
         // All-args constructor
         public CommentProfile(Long cid, Long tid, Long uid, List<CommentProfile> replies,
                               String user_name, String profile_picture, Long parent_cid,
-                              String description, Long likes , boolean liked, Long created_at) {
+                              String description, Long likes , boolean liked, Long created_at,boolean deleted) {
                 this.cid = cid;
                 this.tid = tid;
                 this.uid = uid;
@@ -31,5 +33,6 @@ public class CommentProfile {
                 this.created_at = created_at;
                 this.likes = likes;
                 this.liked = liked;
+                this.deleted = deleted;
         }
 }

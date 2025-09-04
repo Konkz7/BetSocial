@@ -13,11 +13,11 @@ import java.util.List;
 
 public interface CommentRepository extends ListCrudRepository<Comment_,Long> {
 
-    @Query("SELECT * FROM Comment_ WHERE tid = :tid AND deleted_at IS NULL ORDER BY created_at ASC")
+    @Query("SELECT * FROM Comment_ WHERE tid = :tid ORDER BY created_at DESC")
     List<Comment_> findCommentsByTidAsc(@Param("tid") Long tid);
 
 
-    @Query("SELECT * FROM Comment_ WHERE tid = :tid AND deleted_at IS NULL")
+    @Query("SELECT * FROM Comment_ WHERE tid = :tid ")
     List<Comment_> findByThread(
             @Param("tid") Long tid);
 
@@ -41,7 +41,7 @@ public interface CommentRepository extends ListCrudRepository<Comment_,Long> {
 
     @Modifying
     @Transactional
-    @Query("UPDATE Comment_ SET  deleted_at = :time WHERE cid = :id AND deleted_at IS NULL")
+    @Query("UPDATE Comment_ SET  deleted_at = :time , description = '[deleted]' WHERE cid = :id AND deleted_at IS NULL")
     int softDelete(
             @Param("id") Long id,
             @Param("time") Long time);

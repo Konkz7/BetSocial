@@ -26,50 +26,38 @@ public class CommentService {
 
     public List<CommentProfile> getComments(Long userID,Long tid) {
         List<Comment_> comments = commentRepository.findCommentsByTidAsc(tid);
-        Map<Long, CommentProfile> allComments = new HashMap<>();
         List<CommentProfile> rootComments = new ArrayList<>();
+        Map<Long, CommentProfile> allComments = new HashMap<>();
 
+// Pass 1: build all profiles
         for (Comment_ c : comments) {
             User_ user = userRepository.findById(c.uid()).orElseThrow();
-
-            // Build the profile
             CommentProfile profile = new CommentProfile(
-                    c.cid(),
-                    tid,
-                    c.uid(),
-                    new ArrayList<>(), // start with empty replies list
-                    user.user_name(),
-                    user.profile_picture(),
-                    c.parent_cid(),
-                    c.description(),
+                    c.cid(), tid, c.uid(), new ArrayList<>(),
+                    user.user_name(), user.profile_picture(),
+                    c.parent_cid(), c.description(),
                     c.likes(),
-                    commentLikeRepository.findByCommentAndUser(c.cid(),userID).isPresent(),
-                    c.created_at()
+                    commentLikeRepository.findByCommentAndUser(c.cid(), userID).isPresent(),
+                    c.created_at(), c.deleted_at() != null
             );
-
-            // Put into global map
             allComments.put(c.cid(), profile);
+        }
 
-            // If it has a parent, attach it to the parent's replies
-            if (c.parent_cid() != null) {
-                CommentProfile parent = allComments.get(c.parent_cid());
+// Pass 2: attach to parents
+        for (CommentProfile cp : allComments.values()) {
+            if (cp.parent_cid != null) {
+                CommentProfile parent = allComments.get(cp.parent_cid);
                 if (parent != null) {
-                    parent.replies.add(profile);
+                    parent.replies.add(cp);
                 } else {
-                    // In case parent is not processed yet, ensure placeholder
-                    allComments.putIfAbsent(c.parent_cid(),
-                            new CommentProfile(c.parent_cid(), tid, null, new ArrayList<>(), null,
-                                    null, null, null, 0L,false,null)
-                    );
-                    allComments.get(c.parent_cid()).replies.add(profile);
+                    rootComments.add(cp); // orphaned → treat as root
                 }
             } else {
-                // Top-level comment
-                rootComments.add(profile);
+                rootComments.add(cp);
             }
         }
 
-        return rootComments.reversed();
+        return rootComments;
     }
 
     public List<Commentlike_> getCommentLikes (Long uid , Long tid){
@@ -100,11 +88,14 @@ public class CommentService {
         // soft delete this comment
         commentRepository.softDelete(cid, now);
 
+        /*
         // fetch children and recursively delete them , if approach is slow do SQL approach
         List<Comment_> children = commentRepository.findCommentsByParentCID(cid);
         for (Comment_ child : children) {
             deleteComment(child.cid());
         }
+
+         */
     }
 
 }

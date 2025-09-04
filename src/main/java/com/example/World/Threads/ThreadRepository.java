@@ -35,10 +35,10 @@ public interface ThreadRepository extends ListCrudRepository<Thread_, Long> {
     int decrement(
             @Param("id") Long id);
 
-    @Query("SELECT * FROM Thread_ WHERE uid = :uid AND deleted_at IS NULL")
+    @Query("SELECT * FROM Thread_ WHERE uid = :uid AND deleted_at IS NULL ORDER BY created_at DESC")
     List<Thread_> findAllUserThreads(@Param("uid") Long uid);
 
-    @Query("SELECT * FROM Thread_ WHERE deleted_at IS NULL")
+    @Query("SELECT * FROM Thread_ WHERE deleted_at IS NULL ORDER BY created_at DESC")
     List<Thread_> findAllActiveThreads();
 /*
     List<Thread> findAll();
