@@ -55,7 +55,7 @@ const HomeScreen = ({navigation,route}:any) => {
   // ✅ Fetching profile, circle secret, and wallet using useQuery
 
   // consider this in backend
-  const { data: profile, isLoading: profileLoading } = useQuery({ queryKey: ["user"], queryFn: getProfile });
+  const { data: profile, isLoading: profileLoading , refetch: refetchProfile } = useQuery({ queryKey: ["user"], queryFn: getProfile });
   const { data: friends, isLoading: friendsLoading } = useQuery({ queryKey: ["friends"], queryFn: getFriends});
   const { data: threadData, isLoading, refetch: refetchThreads } = useQuery({
     queryKey: ["threads"],
@@ -186,7 +186,10 @@ const HomeScreen = ({navigation,route}:any) => {
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => navigation.navigate("SelfProfile_H")}>
-              <View style = {styles.avatar}></View>
+              <Image
+                source={{ uri: profile?.profile_picture }}
+                style={styles.avatar}
+              />
             </TouchableOpacity>
           </View>
         </View>

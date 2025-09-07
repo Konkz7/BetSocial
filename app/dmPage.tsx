@@ -34,6 +34,7 @@ const DMScreen = ({ navigation ,route }:any) => {
   const [newMessage, setNewMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageIndex, setMessageIndex] = useState(0);
+  const [isReading  , setIsReading] = useState(false);
 
 
   const recipient = route.params;
@@ -61,13 +62,30 @@ const DMScreen = ({ navigation ,route }:any) => {
   useFocusEffect(
     useCallback(() => {
       // 1) Connect the socket
+      updateLastTimestamp(chatGid);
+
       webSocketService.connect(self.uid, chatGid, (message: any) => {
+        
+        if (message.description === undefined && message.online !== undefined) {
+          setIsReading(message.online);
+
+          // Optional: mark all my sent messages as seen when the recipient is reading
+          if (message.online) {
+            setMessages(prev =>
+              prev.map(m =>
+                m.sent ? { ...m, seen: true } : m
+              )
+            );
+          }
+          return; // stop here so we don't mis-treat as chat
+        }
+
         const newMessageObj: Message = {
           id: getMIndex(),
           text: message.description,
-          sent: true,
+          sent: message.uid == self.uid,
           time: formatMessageTime(Date.now()),
-          seen: false,
+          seen: message.is_read,
           type: message.media_type,
         };
         setMessages(prevMessages => [...prevMessages, newMessageObj ]);
@@ -99,7 +117,6 @@ const DMScreen = ({ navigation ,route }:any) => {
   
       // 4) Cleanup on unmount
       return () => {
-        updateLastTimestamp(chatGid);
         webSocketService.disconnect();
       };
     }, [self.uid, chatGid, refetchChat])
@@ -116,6 +133,7 @@ const DMScreen = ({ navigation ,route }:any) => {
         media_type: 0, 
       };
       webSocketService.sendMessage(messageObj);
+      console.log("IS READING:", isReading);
 
       setNewMessage('');
 

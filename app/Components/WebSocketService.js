@@ -1,7 +1,7 @@
 // WebSocketService.js
 import { Client } from '@stomp/stompjs';
 import { IP_STRING } from '../Constants';
-
+ 
 class WebSocketService {
   constructor() {
     this.stompClient = null;
@@ -13,6 +13,7 @@ class WebSocketService {
 
       connectHeaders: {
         userId: String(uid), // Send userId as a native STOMP header
+        chatId: String(gid),
       },
       
       debug: (str) => {
@@ -24,7 +25,9 @@ class WebSocketService {
         console.log('Connected');
         this.stompClient.subscribe(`/topic/chat/${gid}`, (frame) => {
           const message = JSON.parse(frame.body);
-          if (!message.description?.trim()){return} else{console.log ("Message: ", message.description);};
+          console.log(message.online);
+          
+          if (!message.description?.trim() && message.online === undefined){return} else{console.log ("Message: ", message.description);};
           onMessageReceived(message);
         });
       },
