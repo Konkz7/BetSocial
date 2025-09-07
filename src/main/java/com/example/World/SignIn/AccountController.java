@@ -117,6 +117,7 @@ public class AccountController {
                 null,
                 USER.toInt(),          // Retain the user role
                 null,
+                "offline",
                 null,              // wallet address
                 0.0,     // balance
                 null            // Retain the version for optimistic locking

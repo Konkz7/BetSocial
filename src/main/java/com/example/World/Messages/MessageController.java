@@ -6,6 +6,7 @@ import com.example.World.Notifications.NotificationService;
 import com.example.World.Threads.ThreadDTO;
 import com.example.World.Threads.Thread_;
 import com.example.World.Users.UserRepository;
+import com.example.World.Users.User_;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -30,13 +31,15 @@ public class MessageController {
     private final MessageService messageService;
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     public MessageController(MessageRepository messageRepository, MessageService messageService,
-                             SimpMessagingTemplate simpMessagingTemplate, NotificationService notificationService) {
+                             SimpMessagingTemplate simpMessagingTemplate, NotificationService notificationService, UserRepository userRepository) {
         this.messageRepository = messageRepository;
         this.messageService = messageService;
         this.simpMessagingTemplate = simpMessagingTemplate;
         this.notificationService = notificationService;
+        this.userRepository = userRepository;
     }
 
     @GetMapping("/all")
@@ -64,6 +67,8 @@ public class MessageController {
         Long uid = (Long) uidObj;
         Long gid = message.gid();
         System.out.println("MESSAGE: " + message.description());
+        User_ recipient = userRepository.findById(message.recipient_id()).orElseThrow();
+        boolean is_read = recipient.status().equals("online/chat/" + message.gid());
         Message_ result = messageService.sendMessage(gid, uid, message.recipient_id(), message.description(), message.media_type());
 
         simpMessagingTemplate.convertAndSend("/topic/chat/" + gid, result);
@@ -71,6 +76,7 @@ public class MessageController {
         return result;
     }
 
+    /*
     @MessageMapping("/add-user/{gid}")
     @SendTo("/topic/chat/{gid}")
     public GroupStatus addUser(SimpMessageHeaderAccessor headerAccessor,HttpSession session) {
@@ -78,6 +84,8 @@ public class MessageController {
         headerAccessor.getSessionAttributes().put("userId",uid);
         return new GroupStatus(uid,true); 
     }
+    
+     */
 
     @GetMapping("/group/{gid}")
     List<Message_> getGroupMessages(@PathVariable Long gid){

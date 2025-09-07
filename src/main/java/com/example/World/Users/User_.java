@@ -53,6 +53,9 @@ public record User_(
 
         String fb_notification_token,
 
+        @NonNull
+        String status,
+
         String wallet_address,
 
         @NonNull

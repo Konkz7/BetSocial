@@ -63,4 +63,9 @@ public interface UserRepository extends ListCrudRepository<User_, Long> {
     @Transactional
     @Query("UPDATE User_ SET fb_notification_token = :FBNtoken WHERE uid = :id AND deleted_at IS NULL")
     int saveFBNtoken(@Param("id") Long id,@Param("FBNtoken") String FBNtoken);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE User_ SET status = :status WHERE uid = :id AND deleted_at IS NULL")
+    int changeStatus(@Param("id") Long id,@Param("status") String status);
 }

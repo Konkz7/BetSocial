@@ -28,7 +28,6 @@ public class Startup {
 
         if(userRepository.findAll().isEmpty()) {
             createUser("admin", "+2348039919669", UserRole.ADMIN);
-
             createUser("john", "+2348012345678", UserRole.USER);
             createUser("jane", "+2348023456789", UserRole.USER);
             createUser("mike", "+2348034567890", UserRole.USER);
@@ -63,6 +62,7 @@ public class Startup {
                 null,
                 role.toInt(), // Retain the user role
                 "",
+                "offline",
                 null,              // default no wallet
                 0.0,      // Default the balance to 0.0
                 null            // Retain the version for optimistic locking
