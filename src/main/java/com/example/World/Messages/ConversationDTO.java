@@ -7,7 +7,6 @@ public record ConversationDTO(
         String name,
         Long uid,
         Message_ lastMessage,
-        Long time,
         boolean unread,
         String avatar,
         Long gid

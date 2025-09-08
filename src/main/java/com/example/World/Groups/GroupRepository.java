@@ -16,8 +16,8 @@ public interface GroupRepository extends ListCrudRepository<Group_,Long> {
 
     @Modifying
     @Transactional
-    @Query("UPDATE Group_ SET last_message = :message, last_time = :time WHERE gid = :gid")
-    int updateGroupRecentData(@Param("gid") Long gid, @Param("message") String message , @Param("time") Long time);
+    @Query("UPDATE Group_ SET last_mid = :mid WHERE gid = :gid")
+    int updateGroupRecentData(@Param("gid") Long gid, @Param("mid") Long mid);
 
 
 }

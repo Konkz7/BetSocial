@@ -23,7 +23,6 @@ public class GroupService {
             name,
             1,
             null,
-            null,
             time,
    null,
     null
@@ -71,7 +70,6 @@ public class GroupService {
                 name,
                 0,
                 null,
-                null,
                 time,
                 null,
                 null
@@ -107,8 +105,8 @@ public class GroupService {
         return group;
     }
 
-    public int updateRecentData(Long gid, String message, Long message_time){
-        return groupRepository.updateGroupRecentData(gid, message, message_time);
+    public int updateRecentData(Long gid, Long message){
+        return groupRepository.updateGroupRecentData(gid, message);
     }
 
     public int updateLastReadTimestamp(Long gid , Long uid){

@@ -26,6 +26,8 @@ public class MessageService {
 
     public Message_ sendMessage(Long gid, Long senderId, Long recipientId , String content, Integer mediaType) {
 
+        User_ recipient = userRepository.findById(recipientId).orElseThrow();
+        boolean is_read = recipient.status().equals("online/chat/" + gid);
 
         Message_ message = new Message_(
            null,
@@ -36,21 +38,16 @@ public class MessageService {
                 new Date().getTime(),
                 null,
                 gid,
-                false,
+                is_read,
                 null
         );
 
 
 
 
-        messageRepository.save(message);
-        if(message.media_type() == 1){
-            groupService.updateRecentData(gid,"Photo was sent", message.created_at());
-        }else if(message.media_type() == 2){
-            groupService.updateRecentData(gid,"Video was sent", message.created_at());
-        }else{
-            groupService.updateRecentData(gid,content, message.created_at());
-        }
+        Message_ msg = messageRepository.save(message);
+        groupService.updateRecentData(gid,msg.mid());
+
 
 
 
@@ -75,41 +72,40 @@ public class MessageService {
 
     public List<ConversationDTO> getConversations( Long uid ){
         List<ConversationDTO> convoList = new ArrayList<>();
-        List<Groupuser_> gu =  groupService.getGroupProfiles(uid)
-                .stream()
-                .sorted(Comparator.comparingLong(Groupuser_::gid)) 
-                .toList();
+
         List<Group_> groups =  groupService.getUserGroups(uid)
                 .stream()
-                .sorted(Comparator.comparingLong(Group_::gid)) 
+                .sorted(Comparator.comparingLong(Group_::gid))
+                .toList();
+        List<Groupuser_> gu =  groupService.getGroupProfiles(uid)
+                .stream()
+                .sorted(Comparator.comparingLong(Groupuser_::gid))
                 .toList();
 
         for (int i = 0; i < gu.size(); i++) {
             Group_ group = groups.get(i);
             Groupuser_ gUser = gu.get(i);
             User_ other = userRepository.findById(gUser.other_uid()).orElseThrow();
-            boolean unread = true;
+            Message_ lastMessage = messageRepository.findById(group.last_mid()).orElseThrow();
 
-            if(group.last_time() < gUser.last_read_timestamp()){
-                unread = false;
-            }
 
             if(group.sort() == 0) {
                 ConversationDTO temp = new ConversationDTO(other.user_name(), other.uid(),
-                        group.last_message(),group.last_time(),unread,other.profile_picture(), group.gid()); // TODO replace with avatar
+                        lastMessage,lastMessage.is_read(),other.profile_picture(), group.gid()); // TODO replace with avatar
 
                 convoList.add(temp);
             }else{
                 ConversationDTO temp = new ConversationDTO(group.group_name(), other.uid(),
-                        group.last_message(),group.last_time(),unread,other.profile_picture(),group.gid()); // TODO replace with avatar
+                        lastMessage,lastMessage.is_read(),other.profile_picture(),group.gid()); // TODO replace with avatar
 
                 convoList.add(temp);
             }
         }
 
 
-
-        return convoList.stream().sorted(Comparator.comparingLong(ConversationDTO::time)).toList().reversed();
+        return convoList.stream().sorted(Comparator.comparingLong(c -> c.lastMessage().created_at()))
+                .toList()
+                .reversed();
     }
 
 
