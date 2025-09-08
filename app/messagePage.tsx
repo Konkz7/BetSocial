@@ -4,12 +4,16 @@ import { ArrowLeft, Smile } from 'lucide-react-native';
 import {DMCheck, fillReadMarkers, getConversations, getUser, makePrivateGroup} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
 import { timeAgo } from './Constants';
+import { useQueryClient } from '@tanstack/react-query';
 
   
 
 const MessageScreen = ({ navigation , route } : any) => {
 
   //fix seen issues
+
+  const queryClient = useQueryClient();
+  const self = queryClient.getQueryData(["user"]) as any;
 
   const [conversations, setConversations] = useState<any[]>([]);
 
@@ -75,10 +79,10 @@ const MessageScreen = ({ navigation , route } : any) => {
             <View style={styles.messageInfo}>
               <View style={styles.messageHeader}>
                 <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.time}>{item.time} ago</Text>
+                <Text style={styles.time}>{timeAgo(item.lastMessage.created_at)} ago</Text>
               </View>
-              <Text style={[styles.lastMessage, item.unread && styles.unread]}>
-                {item.lastMessage}
+              <Text style={[styles.lastMessage, !item.lastMessage.is_read && item.lastMessage.recipient_id === self.uid && styles.unread]}>
+                {item.lastMessage.description}
               </Text>
             </View>
             </TouchableOpacity>

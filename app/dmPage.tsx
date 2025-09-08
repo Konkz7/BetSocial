@@ -62,7 +62,6 @@ const DMScreen = ({ navigation ,route }:any) => {
   useFocusEffect(
     useCallback(() => {
       // 1) Connect the socket
-      updateLastTimestamp(chatGid);
 
       webSocketService.connect(self.uid, chatGid, (message: any) => {
         
@@ -117,6 +116,7 @@ const DMScreen = ({ navigation ,route }:any) => {
   
       // 4) Cleanup on unmount
       return () => {
+        updateLastTimestamp(chatGid);
         webSocketService.disconnect();
       };
     }, [self.uid, chatGid, refetchChat])
@@ -169,10 +169,10 @@ const DMScreen = ({ navigation ,route }:any) => {
           <View style={styles.profileImageContainer}>
             <Image
               source={{
-                uri: user.profile_picture,
+                uri: user.profile_picture, 
               }}
               style={styles.profileImage}
-            />
+            /> 
             <View style={styles.onlineIndicator} />
           </View>
           <View style={styles.profileInfo}>
