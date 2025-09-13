@@ -1,6 +1,9 @@
 package com.example.World.Messages;
 
 import com.example.World.Groups.*;
+import com.example.World.Notifications.NotificationDTO;
+import com.example.World.Notifications.NotificationService;
+import com.example.World.Notifications.Notification_;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.User_;
 import org.springframework.stereotype.Service;
@@ -17,14 +20,16 @@ public class MessageService {
     private final MessageRepository messageRepository;
     private final GroupService groupService;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
-    public MessageService(MessageRepository messageRepository, GroupService groupService, GroupUserRepository groupUserRepository, UserRepository userRepository) {
+    public MessageService(MessageRepository messageRepository, GroupService groupService, GroupUserRepository groupUserRepository, UserRepository userRepository, NotificationService notificationService) {
         this.messageRepository = messageRepository;
         this.groupService = groupService;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
-    public Message_ sendMessage(Long gid, Long senderId, Long recipientId , String content, Integer mediaType) {
+    public Message_ sendMessage(Long gid, Long senderId, Long recipientId , String content, Integer mediaType ) {
 
         User_ recipient = userRepository.findById(recipientId).orElseThrow();
         boolean is_read = recipient.status().equals("online/chat/" + gid);
@@ -48,7 +53,11 @@ public class MessageService {
         Message_ msg = messageRepository.save(message);
         groupService.updateRecentData(gid,msg.mid());
 
+        NotificationDTO temp = new NotificationDTO(senderId,"message",gid,"user");
 
+
+        notificationService.registerNotification(recipient.fb_notification_token(),
+                mediaType == 0 ? content : mediaType == 1 ? "Photo was sent" : "Video was sent",temp,recipientId);
 
 
         return message;

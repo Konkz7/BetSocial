@@ -17,6 +17,7 @@ public class FirebaseConfig {
         FirebaseOptions.Builder builder = FirebaseOptions.builder();
         FirebaseOptions options = builder
                 .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                .setDatabaseUrl("https://betsocial-e7e93-default-rtdb.europe-west1.firebasedatabase.app")
                 .build();
 
         if (FirebaseApp.getApps().isEmpty()) {

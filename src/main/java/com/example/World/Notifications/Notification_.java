@@ -19,7 +19,9 @@ public record Notification_(
         @Size(max = 50)
         String target_type,
 
-        String description,
+        String title,
+
+        String body,
 
         boolean is_read,
 

@@ -7,15 +7,37 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface NotificationRepository extends ListCrudRepository<Notification_,Long> {
 
     @Query(value = "SELECT * FROM Notification_ WHERE uid = :uid AND is_deleted = false")
     List<Notification_> getActiveNotifications(@Param("uid") Long uid );
 
+
+    @Query("""
+    SELECT * FROM Notification_
+    WHERE notification_type = :type
+      AND actor_id = :actorId
+      AND target_id = :targetId
+      AND is_read = false
+      AND is_deleted = false
+    ORDER BY created_at DESC
+    """)
+    Optional<Notification_> findLatestUnread(
+            @Param("type") String type,
+            @Param("actorId") Long actorId,
+            @Param("targetId") Long targetId
+    );
+
     @Modifying
     @Transactional
     @Query("UPDATE Notification_ SET  is_deleted = true WHERE nid = :id")
     int remove(@Param("id") Long id);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Notification_ SET body = :body WHERE nid = :id")
+    int changeContent(@Param("id") Long id , @Param("body") String body);
 
 }
