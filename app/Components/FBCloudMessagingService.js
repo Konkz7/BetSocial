@@ -3,6 +3,7 @@ import { saveFBN } from "../API";
 import { useEffect } from 'react';
 import { Alert } from 'react-native';
 
+
 //const messaging = getMessaging(firebaseApp);
 
     
@@ -31,11 +32,14 @@ export const useNotificationListener = () => {
   useEffect(() => {
     const unsubscribe = messaging().onMessage(async remoteMessage => {
       Alert.alert('New FCM Message!', JSON.stringify(remoteMessage));
+
     });
 
     return unsubscribe;
   }, []);
 };
+
+
 
 
     

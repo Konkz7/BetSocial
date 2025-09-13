@@ -92,6 +92,8 @@ function ActivityStackNavigator() {
   return (
     <ActivityStack.Navigator screenOptions={{ headerShown: false }}>
       <ActivityStack.Screen name="Activity_A" component={ActivityScreen}  />
+      <ActivityStack.Screen name="DMScreen_A" component={DMScreen}  />
+
     </ActivityStack.Navigator>
   );
 };

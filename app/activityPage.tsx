@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import { useQuery } from "@tanstack/react-query";
-import { acceptFriendshipRequest, getActiveNotifications, getUsers, rejectFriendshipRequest, removeNotification} from "./API";
+import { acceptFriendshipRequest, fillReadMarkers, getActiveNotifications, getUser, getUsers, rejectFriendshipRequest, removeNotification} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
 import { timeAgo } from './Constants';
 
@@ -21,11 +21,13 @@ const ActivityScreen = ({ navigation, route } : any) => {
 
     useFocusEffect(
         useCallback(() => {
+            refetchNotifications();
+            setFilteredData(notifications || []);
             console.log("Screen is focused! Refetching threads...");
             return () => {
                 console.log("Screen is unfocused! Cleanup if needed.");
             };
-        }, [refetchUsers, refetchNotifications])
+        }, [refetchUsers, refetchNotifications,notifications])
     );
         
     
@@ -46,6 +48,19 @@ const ActivityScreen = ({ navigation, route } : any) => {
         setFilteredData((prevData) => prevData.filter(item => item.nid !== nid));
         removeNotification(nid); 
     };
+
+     async function goToDMScreen(user: any, gid:number , nid:number){
+    
+        
+        const recipient : any = {};
+        recipient["user"] = user;
+        recipient["gid"] = gid;
+    
+        fillReadMarkers(recipient["gid"]);
+        removeNotification(nid);
+        navigation.navigate("DMScreen_A",recipient);
+        
+      }
 
     const notificationComponents = {
         friend_request: (item : any , user : any) => ( 
@@ -86,6 +101,23 @@ const ActivityScreen = ({ navigation, route } : any) => {
                 </View>
             </View>
         ),
+ 
+        new_message: (item:any, user: any) => (
+            <TouchableOpacity onPress={() => goToDMScreen(user,item.target_id,item.nid)}>
+                <View style = {styles.extrasContainer}>
+                    <TouchableOpacity style = {{}} onPress={() => action(item.nid,doNothing,0)}>
+                        <Text style = {{color: 'red'}} >X</Text>
+                    </TouchableOpacity>
+                </View>
+                <View style = {styles.notificationContainer}>                   
+                    <View style = {styles.avatar}></View> 
+                    <Text style={styles.itemText}>{item.title}</Text>
+                </View>
+                <View style = {styles.extrasContainer}>
+                    <Text style={[styles.itemText, {color: 'gray', fontSize: 12}]}>{timeAgo(item.created_at)}</Text>
+                </View>
+            </TouchableOpacity>
+        ),
         
     };
     
@@ -95,8 +127,10 @@ const ActivityScreen = ({ navigation, route } : any) => {
         if(item.notification_type === "friend_request") {
             return notificationComponents.friend_request(item, getUserById(item.actor_id))
         } else if(item.notification_type === "friend_request_accepted") {
-            return notificationComponents.accepted_friend_request(item, getUserById(item.actor_id))
-        }else{ 
+            return notificationComponents.accepted_friend_request(item, getUserById(item.actor_id))      
+        }else if(item.notification_type === "message") {
+            return notificationComponents.new_message(item, getUserById(item.actor_id))}
+        else{ 
             return(
             <View style={styles.notificationContainer}>
                 <Text style={styles.itemText}>{item.description}</Text>
@@ -152,8 +186,13 @@ const styles = StyleSheet.create({
         color: 'green',
     },
     itemText: {
-        fontSize: 20,
-        paddingLeft: 10,
+        fontSize: 15,
+        paddingLeft: 10,    
+    },
+    nameText: {
+        fontSize: 15,
+        fontWeight: 'bold' , 
+        color: 'green'
     },
     noResults: {
         textAlign: 'center',
@@ -187,7 +226,7 @@ const styles = StyleSheet.create({
     notificationContainer:{
         flexDirection: 'row', 
         alignItems: 'center',
-        maxWidth: '80%',
+        maxWidth: '70%',
     },
     extrasContainer:{
         flexDirection: 'row-reverse', 
