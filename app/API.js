@@ -162,6 +162,15 @@ export const removeNotification = async(nid) =>{
   }
 }
 
+export const readNotifications = async() =>{
+  try {
+      const result = await axios.put(IP_STRING + "/api/notifications/update-read-markers");
+      return (result.data);
+  } catch (error) {
+    Alert.alert("Error!", "Notifications couldnt be read.")
+  }
+}
+
 //COMMENTS
 export const createComment = async(comment) =>{
   try {

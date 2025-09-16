@@ -19,6 +19,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getFriendship, getUserThreads, sendFriendRequest, unfriend , DMCheck , makePrivateGroup, fillReadMarkers, getThreadLikes, registerThreadLike} from "./API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import threadList from "./Components/ThreadList";
+import { screenStore } from "./GlobalFlags";
 
 
 
@@ -83,7 +84,7 @@ const ProfileScreen = ({navigation , route}: any) => {
     useFocusEffect(
         useCallback(() => {
             console.log("Screen is focused! Refetching threads and friendship...");
-            
+            screenStore.set("Profile");
             refetchThreads();
             refetchFriendship(); // Ensure this refetches correctly
             

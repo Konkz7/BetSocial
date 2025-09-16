@@ -13,6 +13,7 @@ import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import Video from 'react-native-video';
 import { selectImage} from "./Components/FBStorageService";
 import threadList from "./Components/ThreadList";
+import { screenStore } from "./GlobalFlags";
 
 
 
@@ -71,7 +72,7 @@ const SelfProfileScreen = ({navigation , route}: any) => {
     useFocusEffect(
         useCallback(() => {
             console.log("Screen is focused! Refetching threads and friendship...");
-
+            screenStore.set("SelfProfile");
             console.log(user.profile_picture);
 
             setPfp(user.profile_picture);

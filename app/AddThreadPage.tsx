@@ -14,6 +14,7 @@ import { uploadImage, uploadVideo, selectLocalMedia} from './Components/FBStorag
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {getProfile} from "./API";
 import Video from "react-native-video";
+import { screenStore } from "./GlobalFlags";
 
 
 
@@ -225,6 +226,7 @@ const AddThreadScreen = ({navigation}:any) => {
 
   useFocusEffect(
       useCallback(() => {
+        screenStore.set("addThread"); 
         console.log("Screen is focused! Perform refresh or action here.");  
         return () => {
           console.log("Screen is unfocused! Cleanup if needed.");

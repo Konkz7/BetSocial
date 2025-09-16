@@ -26,13 +26,14 @@ import {
   Frown,
 } from "lucide-react-native";
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {getBalance, getCircleSecret,getFriends,getIpAddress,getProfile,getWallet,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads} from "./API";
+import {getBalance, getCircleSecret,getFriends,getIpAddress,getProfile,getWallet,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads, getActiveNotifications} from "./API";
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
 import Video from "react-native-video";
 import {useNotificationListener } from "./Components/FBCloudMessagingService";
 import threadList from "./Components/ThreadList";
+import { activitySeenStore, screenStore } from "./GlobalFlags";
 
 const categories = [
   "All",
@@ -56,6 +57,10 @@ const HomeScreen = ({navigation,route}:any) => {
 
   // consider this in backend
   const { data: profile, isLoading: profileLoading , refetch: refetchProfile } = useQuery({ queryKey: ["user"], queryFn: getProfile });
+  const { data: notifications, isLoading: notificationsLoading } = useQuery({
+    queryKey: ["activeNotifications"],
+    queryFn: getActiveNotifications
+  });
   const { data: friends, isLoading: friendsLoading } = useQuery({ queryKey: ["friends"], queryFn: getFriends});
   const { data: threadData, isLoading, refetch: refetchThreads } = useQuery({
     queryKey: ["threads"],
@@ -127,7 +132,18 @@ const HomeScreen = ({navigation,route}:any) => {
     }
   };
 
-  
+  useEffect(() => {
+
+    if (!notifications) return;
+    console.log("BBBBB");
+    (async () => {
+      if(!notifications[0].is_read){
+        // mark notifications as unseen
+        activitySeenStore.set(false);
+        console.log("GGGG" + notifications[0].is_read);
+      }
+    })();
+  }, [notifications]);
 
   useEffect(() => {
     if (!threadData) return;
@@ -142,6 +158,8 @@ const HomeScreen = ({navigation,route}:any) => {
   useFocusEffect(
     useCallback(() => {
       console.log("Screen focused → refresh threads" + route.params?.params);
+      screenStore.set("Home");
+      
       (async () => {
         if (route.params?.refresh) {
           console.log("Refetching because refetch flag is true");
@@ -155,7 +173,7 @@ const HomeScreen = ({navigation,route}:any) => {
           const updated = await updateThreadLikes(threadData);          
           setTrueThreads(updated);    
           updateThreadCat(activeCategory,updated,false)   
-        } else {
+        } else { 
           await refetchThreads();
         }
       })();

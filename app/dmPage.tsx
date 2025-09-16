@@ -17,6 +17,7 @@ import { getChatMessages,updateLastTimestamp } from './API';
 import { formatMessageTime, timeAgo } from './Constants';
 import { selectMedia } from './Components/FBStorageService';
 import Video from 'react-native-video';
+import { screenStore } from './GlobalFlags';
 
 
 type Message = {
@@ -62,7 +63,7 @@ const DMScreen = ({ navigation ,route }:any) => {
   useFocusEffect(
     useCallback(() => {
       // 1) Connect the socket
-
+      screenStore.set("Chat"); 
       webSocketService.connect(self.uid, chatGid, (message: any) => {
         
         if (message.description === undefined && message.online !== undefined) {

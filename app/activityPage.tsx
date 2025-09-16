@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import { useQuery } from "@tanstack/react-query";
-import { acceptFriendshipRequest, fillReadMarkers, getActiveNotifications, getUser, getUsers, rejectFriendshipRequest, removeNotification} from "./API";
+import { acceptFriendshipRequest, fillReadMarkers, getActiveNotifications, getUser, getUsers, readNotifications, rejectFriendshipRequest, removeNotification} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
 import { timeAgo } from './Constants';
+import { activitySeenStore, screenStore } from './GlobalFlags';
+import { eventEmitter } from './Components/EventBus';
 
 const ActivityScreen = ({ navigation, route } : any) => {
     const [filteredData, setFilteredData] = useState<any[]>([]);
@@ -21,10 +23,22 @@ const ActivityScreen = ({ navigation, route } : any) => {
 
     useFocusEffect(
         useCallback(() => {
+            screenStore.set("Activity");
             refetchNotifications();
+            readNotifications();
+            activitySeenStore.set(true);
+            // mark notifications as read ui-wise
             setFilteredData(notifications || []);
+            const sub =  eventEmitter.addListener('notificationReceived', (data : any) => {
+                refetchNotifications();
+                console.log("Notification received via event bus" + data.title);
+                
+            });
+
+        
             console.log("Screen is focused! Refetching threads...");
-            return () => {
+            return () => {     
+                sub.remove();
                 console.log("Screen is unfocused! Cleanup if needed.");
             };
         }, [refetchUsers, refetchNotifications,notifications])
@@ -50,8 +64,7 @@ const ActivityScreen = ({ navigation, route } : any) => {
     };
 
      async function goToDMScreen(user: any, gid:number , nid:number){
-    
-        
+     
         const recipient : any = {};
         recipient["user"] = user;
         recipient["gid"] = gid;

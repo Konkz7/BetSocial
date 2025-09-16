@@ -28,6 +28,7 @@ import Card from "./Components/Card";
 import { getProfile, createComment, getComments, registerThreadLike } from "./API";
 import Video from "react-native-video";
 import { CommentList } from "./Components/CommentTemplate";
+import { screenStore } from "./GlobalFlags";
 
 
 
@@ -212,7 +213,7 @@ const ThreadScreen = ({navigation,route}:any) => {
   useFocusEffect(
       useCallback(() => {
         console.log("ThreadScreen is focused! Perform refresh or action here."); 
-
+        screenStore.set("Thread");
         getBets();
         getComments(threadObject.tid).then(res => {
           setLoadedComments(res);

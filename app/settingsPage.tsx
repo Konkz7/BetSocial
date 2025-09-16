@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,8 @@ import {
   Shield,
   Bookmark,
 } from 'lucide-react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { screenStore } from './GlobalFlags';
 
 
 
@@ -70,6 +72,17 @@ const SettingItem: React.FC<SettingItemProps> = ({
 );
 
 const SettingsScreen = ({navigation}: any) => {
+
+  useFocusEffect(
+    useCallback(() => {
+      screenStore.set("Settings");
+      console.log("Screen is focused! Perform refresh or action here.");
+      return () => {
+        console.log("Screen is unfocused! Cleanup if needed.");
+      };
+    }, [])
+  );
+  
   return (
     <View style={styles.container}>
       <View style={styles.header}>

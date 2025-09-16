@@ -5,6 +5,8 @@ import {DMCheck, fillReadMarkers, getConversations, getUser, makePrivateGroup} f
 import { useFocusEffect } from '@react-navigation/native';
 import { timeAgo } from './Constants';
 import { useQueryClient } from '@tanstack/react-query';
+import { eventEmitter } from './Components/EventBus';
+import { screenStore } from './GlobalFlags';
 
   
 
@@ -45,13 +47,17 @@ const MessageScreen = ({ navigation , route } : any) => {
 
   useFocusEffect(
       useCallback(() => {
-
+        screenStore.set("Message"); 
         // will cache conversations and automatically update when dm screen is focused
         fetchConversations();
+        const sub =  eventEmitter.addListener('notificationReceived', (data : any) => {
+          fetchConversations();
+          console.log("Notification received via event bus" + data.title);    
+        });
 
         
         return () => {
-          
+            sub.remove();
         };
       }, [])
   );

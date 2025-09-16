@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { View, StyleSheet,Alert } from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import axios, { Axios, AxiosError } from "axios";
 import auth from '@react-native-firebase/auth';
 import { IP_STRING } from "./Constants";
+import { useFocusEffect } from "@react-navigation/native";
+import { screenStore } from "./GlobalFlags";
 
 
 
@@ -55,6 +57,17 @@ type RootStackParamList = {
 
     navigation.navigate("OTP",bundle);
   }
+
+
+  useFocusEffect(
+    useCallback(() => {
+      screenStore.set("Register"); 
+      console.log("Screen is focused! Perform refresh or action here.");  
+      return () => {
+        console.log("Screen is unfocused! Cleanup if needed.");
+      };
+    }, [])
+  );
 
 
 

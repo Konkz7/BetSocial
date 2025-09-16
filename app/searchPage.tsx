@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient 
 import {getThreadLikes, getThreads, getUsers} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
 import threadList from './Components/ThreadList';
+import { screenStore } from './GlobalFlags';
 
 
 const SearchScreen = ({ navigation} : any) => {
@@ -20,11 +21,10 @@ const SearchScreen = ({ navigation} : any) => {
 
     useFocusEffect(
       useCallback(() => {
-        console.log("Screen is focused! Perform refresh or action here.");  
-        
+        screenStore.set("Search");
+        console.log("Screen is focused! Perform refresh or action here.");      
         return () => {
           console.log("Screen is unfocused! Cleanup if needed."); 
-          
         };
       }, [])
     );
