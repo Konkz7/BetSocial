@@ -7,6 +7,7 @@ import com.google.firebase.messaging.Notification;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -20,14 +21,14 @@ public class NotificationService {
         this.userRepository = userRepository;
     }
 
-    private void sendFBNotification(String token, String title, String body) throws Exception {
+    private void sendFBNotification(String token, String title, String body, String type) throws Exception {
         Message message = Message.builder()
                 .setToken(token)
                 .setNotification(Notification.builder()
                         .setTitle(title)
                         .setBody(body)
                         .build())
-                .putData("extraData", "some_value")
+                .putData("type", type)
                 .build();
 
         String response = FirebaseMessaging.getInstance().send(message);
@@ -50,12 +51,12 @@ public class NotificationService {
 
         try {
 
-            sendFBNotification(token, title, body);
+            sendFBNotification(token, title, body, notificationDTO.notification_type());
             Optional<Notification_> noti = notificationRepository.findLatestUnread(notificationDTO.notification_type(),
                     notificationDTO.actor_id(), notificationDTO.target_id());
 
             if(noti.isPresent()){
-                notificationRepository.changeContent(noti.get().nid(),body);
+                notificationRepository.changeContent(noti.get().nid(),body, new Date().getTime());
             }else {
                 notificationRepository.save(new Notification_(null, recipient_id, notificationDTO.actor_id(), notificationDTO.notification_type(),
                         notificationDTO.target_id(), notificationDTO.target_type(), title,body, false, false, new Date().getTime()));
@@ -65,6 +66,14 @@ public class NotificationService {
             System.out.println("Notification Failed!");
             System.out.println(e);
 
+        }
+    }
+
+    public void readNotifications(Long uid){
+        List<Notification_> notis = notificationRepository.getActiveNotifications(uid);
+
+        for(Notification_ n : notis){
+            notificationRepository.updateReadMarkers(n.nid());
         }
     }
 

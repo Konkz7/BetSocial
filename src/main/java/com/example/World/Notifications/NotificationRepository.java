@@ -11,7 +11,7 @@ import java.util.Optional;
 
 public interface NotificationRepository extends ListCrudRepository<Notification_,Long> {
 
-    @Query(value = "SELECT * FROM Notification_ WHERE uid = :uid AND is_deleted = false")
+    @Query(value = "SELECT * FROM Notification_ WHERE uid = :uid AND is_deleted = false ORDER BY created_at DESC")
     List<Notification_> getActiveNotifications(@Param("uid") Long uid );
 
 
@@ -37,7 +37,13 @@ public interface NotificationRepository extends ListCrudRepository<Notification_
 
     @Modifying
     @Transactional
-    @Query("UPDATE Notification_ SET body = :body WHERE nid = :id")
-    int changeContent(@Param("id") Long id , @Param("body") String body);
+    @Query("UPDATE Notification_ SET body = :body , created_at = :now WHERE nid = :id")
+    int changeContent(@Param("id") Long id , @Param("body") String body , @Param("now") Long now);
+
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Notification_ SET is_read = true WHERE nid = :id")
+    int updateReadMarkers(@Param("id") Long id );
 
 }

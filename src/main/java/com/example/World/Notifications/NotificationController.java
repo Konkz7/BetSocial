@@ -11,9 +11,11 @@ import java.util.List;
 public class NotificationController {
 
     private final NotificationRepository notificationRepository;
+    private final NotificationService notificationService;
 
-    public NotificationController(NotificationRepository notificationRepository){
+    public NotificationController(NotificationRepository notificationRepository, NotificationService notificationService){
         this.notificationRepository = notificationRepository;
+        this.notificationService = notificationService;
     }
 
     @GetMapping("/active-notifications")
@@ -23,7 +25,15 @@ public class NotificationController {
     }
 
     @PutMapping("/delete/{nid}")
-    public int getActiveNotifications(@PathVariable Long nid){
+    public int deleteNotifications(@PathVariable Long nid){
         return notificationRepository.remove(nid);
     }
+
+    @PutMapping("/update-read-markers")
+    public void readNotifications(HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        notificationService.readNotifications(uid);
+    }
+
+
 }
