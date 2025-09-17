@@ -8,7 +8,7 @@ export const screenStore = {
   }
 };
 
-let seenActivity: boolean = false;
+let seenActivity: boolean = true;
 
 
 export const activitySeenStore = {
@@ -16,5 +16,16 @@ export const activitySeenStore = {
   set: (value:boolean) => {
     seenActivity = value;
     console.log("Activity seen status:", value);
+  }
+};
+
+let seenMessages: boolean = true;
+
+
+export const messageSeenStore = {
+  get: () => seenMessages, 
+  set: (value:boolean) => {
+    seenMessages = value;
+    console.log("Message seen status:", value);
   }
 };

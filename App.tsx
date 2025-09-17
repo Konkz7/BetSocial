@@ -36,7 +36,7 @@ import ActivityScreen from './app/activityPage';
 import SelfProfileScreen from './app/selfProfilePage';
 import SettingsScreen from './app/settingsPage';
 import DMScreen from './app/dmPage';
-import { activitySeenStore } from './app/GlobalFlags';
+import { activitySeenStore, messageSeenStore } from './app/GlobalFlags';
 
 
 const queryClient = new QueryClient();
@@ -121,14 +121,22 @@ function WalletStackNavigator() {
 
 function TabNavigator(){
   const [seenActivity, setSeenActivity] = useState(activitySeenStore.get());
+  const [seenMessages, setSeenMessages] = useState(messageSeenStore.get());
 
   useEffect(() => {
-    // Patch your store's set method to notify React
-    const originalSet = activitySeenStore.set;
+    // Patch store's set method to notify React
+    const originalActivitySet = activitySeenStore.set;
     activitySeenStore.set = (value: boolean) => {
-      originalSet(value);
+      originalActivitySet(value);
       setSeenActivity(value); // trigger re-render
     };
+
+    const originalMessageSet = messageSeenStore.set;
+    messageSeenStore.set = (value: boolean) => {
+      originalMessageSet(value);
+      setSeenMessages(value); // trigger re-render  
+    };
+
   }, []);
     return(
       <MainTab.Navigator 
@@ -143,7 +151,11 @@ function TabNavigator(){
                     <Bell size={size} color={focused ? "green" : "gray"} />
                     { !seenActivity && <View style = {{width:10,height:10,backgroundColor:'red',borderRadius:5,position:'absolute',top:-2,right:-10}}></View>}
                   </View>;
-              else if (route.name === "Messages") return < Mail size={size} color={focused ? "green" : "gray"} />;
+              else if (route.name === "Messages") 
+                return <View>
+                    <Mail size={size} color={focused ? "green" : "gray"} />
+                    { !seenMessages && <View style = {{width:10,height:10,backgroundColor:'red',borderRadius:5,position:'absolute',top:-2,right:-10}}></View>}
+                  </View>;
 
               return < BanIcon size={size} color={focused ? "green" : "gray"} />;
             },

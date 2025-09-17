@@ -2,7 +2,7 @@ import messaging from '@react-native-firebase/messaging';
 import { saveFBN } from "../API";
 import { useEffect } from 'react';
 import { Alert } from 'react-native';
-import { activitySeenStore, screenStore } from '../GlobalFlags';
+import { activitySeenStore, messageSeenStore, screenStore } from '../GlobalFlags';
 import { eventEmitter } from './EventBus';
 
 
@@ -44,6 +44,10 @@ export const useNotificationListener = () => {
 
 
 function handleIncomingNotification(remoteMessage) {
+  if(remoteMessage.data?.type === "message"){
+      messageSeenStore.set(false);
+  }
+
   if (screenStore.get() === 'Activity') {   
 
     console.log('Refreshing Activity Screen...');
@@ -53,16 +57,10 @@ function handleIncomingNotification(remoteMessage) {
 
     console.log('Refreshing Messages Screen...');
     eventEmitter.emit('notificationReceived', remoteMessage.data);
-    if(remoteMessage.data?.type !== "message"){
-      activitySeenStore.set(false);
-    }
 
   } else if (screenStore.get() === 'Chat') {   
  
     eventEmitter.emit('notificationReceived', remoteMessage.data);
-    if(remoteMessage.data?.type !== "message"){
-      activitySeenStore.set(false);
-    }
 
   }else {
     // Show normal notification UI (banner, toast, etc.)

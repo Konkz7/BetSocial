@@ -26,14 +26,14 @@ import {
   Frown,
 } from "lucide-react-native";
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {getBalance, getCircleSecret,getFriends,getIpAddress,getProfile,getWallet,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads, getActiveNotifications} from "./API";
+import {getBalance, getCircleSecret,getFriends,getIpAddress,getProfile,getWallet,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads, getActiveNotifications, getConversations} from "./API";
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
 import Video from "react-native-video";
 import {useNotificationListener } from "./Components/FBCloudMessagingService";
 import threadList from "./Components/ThreadList";
-import { activitySeenStore, screenStore } from "./GlobalFlags";
+import { activitySeenStore, messageSeenStore, screenStore } from "./GlobalFlags";
 
 const categories = [
   "All",
@@ -70,6 +70,7 @@ const HomeScreen = ({navigation,route}:any) => {
     refetchOnReconnect: false,
   });
 
+  
 
   //const { data: groupProfiles, isLoading: groupProfilesLoading } = useQuery({ queryKey: ["groupProfiles"], queryFn: getGroupProfiles});
 
@@ -132,18 +133,39 @@ const HomeScreen = ({navigation,route}:any) => {
     }
   };
 
-  useEffect(() => {
-
-    if (!notifications) return;
-    console.log("BBBBB");
-    (async () => {
-      if(!notifications[0].is_read){
-        // mark notifications as unseen
-        activitySeenStore.set(false);
-        console.log("GGGG" + notifications[0].is_read);
+  const is_Unread_Conversations = async () => {
+    try {
+      const data = await getConversations();
+      for (const conversation of data) {
+        if (!conversation.lastMessage.is_read) {
+          messageSeenStore.set(false);
+          break;
+        }
       }
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+    }
+  };
+
+  const is_Unread_Activity = async () => {
+    try {
+      const data = await getActiveNotifications();
+      
+      if (!data[0].is_read) {
+        activitySeenStore.set(false);   
+      }
+      
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  };
+
+  useEffect(() => {
+    (async () => {
+      is_Unread_Activity();
+      is_Unread_Conversations();
     })();
-  }, [notifications]);
+  }, []);
 
   useEffect(() => {
     if (!threadData) return;

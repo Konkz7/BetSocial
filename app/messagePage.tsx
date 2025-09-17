@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet,SafeAreaView } from 'react-native';
 import { ArrowLeft, Smile } from 'lucide-react-native';
 import {DMCheck, fillReadMarkers, getConversations, getUser, makePrivateGroup} from "./API";
@@ -6,7 +6,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { timeAgo } from './Constants';
 import { useQueryClient } from '@tanstack/react-query';
 import { eventEmitter } from './Components/EventBus';
-import { screenStore } from './GlobalFlags';
+import { messageSeenStore, screenStore } from './GlobalFlags';
 
   
 
@@ -22,14 +22,26 @@ const MessageScreen = ({ navigation , route } : any) => {
   const fetchConversations = async () => {
     try {
       const data = await getConversations();
-      setConversations(data.map((entry:any) => ({
-        ...entry,
-        time: timeAgo(entry.time) 
-        
-      })));
+      setConversations(data);
     } catch (error) {
       console.error("Error fetching conversations:", error);
     }
+  };
+
+  const is_Unread_Conversations = async () => {   
+    console.log("Message:", conversations)
+    
+    for (const conversation of conversations) {
+
+      if (!conversation.lastMessage.is_read && conversation.lastMessage.recipient_id === self.uid) {
+        messageSeenStore.set(false);
+        break;
+      }else{
+        messageSeenStore.set(true)
+      }
+    }    
+
+    console.log("Message seen status updated:", messageSeenStore.get())
   };
 
   async function goToDMScreen(uid:number, gid:number){
@@ -40,16 +52,30 @@ const MessageScreen = ({ navigation , route } : any) => {
     recipient["gid"] = gid;
 
     fillReadMarkers(recipient["gid"]);
-
+    setConversations((prevConversations) =>
+      prevConversations.map((conv) => {
+        if (conv.gid === gid) {
+          return { ...conv, lastMessage: { ...conv.lastMessage, is_read: true } };
+        }
+        return conv;
+    }));  
     navigation.navigate("DMScreen_M",recipient);
     
   }
 
-  useFocusEffect(
+  useEffect(() => {
+    if (conversations.length > 0) {
+      is_Unread_Conversations();
+    }
+  }, [conversations]);
+
+  useFocusEffect( 
       useCallback(() => {
-        screenStore.set("Message"); 
+        screenStore.set("Message");     
         // will cache conversations and automatically update when dm screen is focused
         fetchConversations();
+    
+
         const sub =  eventEmitter.addListener('notificationReceived', (data : any) => {
           fetchConversations();
           console.log("Notification received via event bus" + data.title);    
@@ -58,6 +84,7 @@ const MessageScreen = ({ navigation , route } : any) => {
         
         return () => {
             sub.remove();
+          
         };
       }, [])
   );

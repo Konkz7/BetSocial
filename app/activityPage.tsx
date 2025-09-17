@@ -68,10 +68,14 @@ const ActivityScreen = ({ navigation, route } : any) => {
         const recipient : any = {};
         recipient["user"] = user;
         recipient["gid"] = gid;
+
     
         fillReadMarkers(recipient["gid"]);
         removeNotification(nid);
-        navigation.navigate("DMScreen_A",recipient);
+        navigation.navigate("Messages", {
+            screen: "DMScreen_M",
+            params: recipient,
+        });
         
       }
 
