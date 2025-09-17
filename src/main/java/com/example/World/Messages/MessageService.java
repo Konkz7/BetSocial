@@ -32,6 +32,8 @@ public class MessageService {
     public Message_ sendMessage(Long gid, Long senderId, Long recipientId , String content, Integer mediaType ) {
 
         User_ recipient = userRepository.findById(recipientId).orElseThrow();
+        User_ sender = userRepository.findById(senderId).orElseThrow();
+
         boolean is_read = recipient.status().equals("online/chat/" + gid);
 
         Message_ message = new Message_(
@@ -53,13 +55,14 @@ public class MessageService {
         Message_ msg = messageRepository.save(message);
         groupService.updateRecentData(gid,msg.mid());
 
-        NotificationDTO temp = new NotificationDTO(senderId,"message",gid,"user");
+        if(!(sender.status().equals(recipient.status()))) {
+            NotificationDTO temp = new NotificationDTO(senderId, "message", gid, "user");
 
 
-        notificationService.registerNotification(recipient.fb_notification_token(),
-                mediaType == 0 ? content : mediaType == 1 ? "Photo was sent" : "Video was sent",temp,recipientId);
+            notificationService.registerNotification(recipient.fb_notification_token(),
+                    mediaType == 0 ? content : mediaType == 1 ? "Photo was sent" : "Video was sent", temp, recipientId);
 
-
+        }
         return message;
     }
 
@@ -100,12 +103,12 @@ public class MessageService {
 
             if(group.sort() == 0) {
                 ConversationDTO temp = new ConversationDTO(other.user_name(), other.uid(),
-                        lastMessage,lastMessage.is_read(),other.profile_picture(), group.gid()); // TODO replace with avatar
+                        lastMessage,lastMessage.is_read(),other.profile_picture(), group.gid()); // TODO replace unread (useless)
 
                 convoList.add(temp);
             }else{
                 ConversationDTO temp = new ConversationDTO(group.group_name(), other.uid(),
-                        lastMessage,lastMessage.is_read(),other.profile_picture(),group.gid()); // TODO replace with avatar
+                        lastMessage,lastMessage.is_read(),other.profile_picture(),group.gid()); // TODO replace unread (useless)
 
                 convoList.add(temp);
             }

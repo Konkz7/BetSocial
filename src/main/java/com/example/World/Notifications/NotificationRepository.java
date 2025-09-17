@@ -20,11 +20,10 @@ public interface NotificationRepository extends ListCrudRepository<Notification_
     WHERE notification_type = :type
       AND actor_id = :actorId
       AND target_id = :targetId
-      AND is_read = false
       AND is_deleted = false
     ORDER BY created_at DESC
     """)
-    Optional<Notification_> findLatestUnread(
+    Optional<Notification_> findLatestNonDeleted(
             @Param("type") String type,
             @Param("actorId") Long actorId,
             @Param("targetId") Long targetId

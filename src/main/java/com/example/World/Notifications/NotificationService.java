@@ -21,7 +21,7 @@ public class NotificationService {
         this.userRepository = userRepository;
     }
 
-    private void sendFBNotification(String token, String title, String body, String type) throws Exception {
+    private void sendFBNotification(String token, String title, String body, String type, Long target_id) throws Exception {
         Message message = Message.builder()
                 .setToken(token)
                 .setNotification(Notification.builder()
@@ -29,6 +29,7 @@ public class NotificationService {
                         .setBody(body)
                         .build())
                 .putData("type", type)
+                .putData("target_id", String.valueOf(target_id))
                 .build();
 
         String response = FirebaseMessaging.getInstance().send(message);
@@ -51,8 +52,8 @@ public class NotificationService {
 
         try {
 
-            sendFBNotification(token, title, body, notificationDTO.notification_type());
-            Optional<Notification_> noti = notificationRepository.findLatestUnread(notificationDTO.notification_type(),
+            sendFBNotification(token, title, body, notificationDTO.notification_type(), notificationDTO.target_id());
+            Optional<Notification_> noti = notificationRepository.findLatestNonDeleted(notificationDTO.notification_type(),
                     notificationDTO.actor_id(), notificationDTO.target_id());
 
             if(noti.isPresent()){
