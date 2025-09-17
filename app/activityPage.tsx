@@ -74,7 +74,7 @@ const ActivityScreen = ({ navigation, route } : any) => {
         removeNotification(nid);
         navigation.navigate("Messages", {
             screen: "DMScreen_M",
-            params: recipient,
+            params: recipient, 
         });
         
       }

@@ -37,6 +37,7 @@ import SelfProfileScreen from './app/selfProfilePage';
 import SettingsScreen from './app/settingsPage';
 import DMScreen from './app/dmPage';
 import { activitySeenStore, messageSeenStore } from './app/GlobalFlags';
+import { BannerProvider } from './app/Components/BannerProvider';
 
 
 const queryClient = new QueryClient();
@@ -187,7 +188,7 @@ function App(): React.JSX.Element {
 
   return (
 
-    
+    <BannerProvider>
       <NavigationContainer>
        <QueryClientProvider client={queryClient}>
         <LoginStack.Navigator screenOptions={{ headerShown: false }}>
@@ -201,6 +202,7 @@ function App(): React.JSX.Element {
         </LoginStack.Navigator>  
        </QueryClientProvider>
       </NavigationContainer>
+    </BannerProvider>
       
 
   

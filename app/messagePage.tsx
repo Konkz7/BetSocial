@@ -23,13 +23,13 @@ const MessageScreen = ({ navigation , route } : any) => {
     try {
       const data = await getConversations();
       setConversations(data);
+      console.log(data);
     } catch (error) {
       console.error("Error fetching conversations:", error);
     }
   };
 
   const is_Unread_Conversations = async () => {   
-    console.log("Message:", conversations)
     
     for (const conversation of conversations) {
 
@@ -51,7 +51,6 @@ const MessageScreen = ({ navigation , route } : any) => {
     recipient["user"] = await getUser(uid);
     recipient["gid"] = gid;
 
-    fillReadMarkers(recipient["gid"]);
     setConversations((prevConversations) =>
       prevConversations.map((conv) => {
         if (conv.gid === gid) {
@@ -74,6 +73,7 @@ const MessageScreen = ({ navigation , route } : any) => {
         screenStore.set("Message");     
         // will cache conversations and automatically update when dm screen is focused
         fetchConversations();
+        
     
 
         const sub =  eventEmitter.addListener('notificationReceived', (data : any) => {

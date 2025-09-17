@@ -13,7 +13,7 @@ import { ArrowLeft, Send, Check,ImageUp } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import webSocketService from './Components/WebSocketService';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getChatMessages,updateLastTimestamp } from './API';
+import { fillReadMarkers, getChatMessages,updateLastTimestamp } from './API';
 import { formatMessageTime, timeAgo } from './Constants';
 import { selectMedia } from './Components/FBStorageService';
 import Video from 'react-native-video';
@@ -64,6 +64,9 @@ const DMScreen = ({ navigation ,route }:any) => {
     useCallback(() => {
       // 1) Connect the socket
       screenStore.set("Chat"); 
+
+      fillReadMarkers(recipient["gid"]);
+
       webSocketService.connect(self.uid, chatGid, (message: any) => {
         
         if (message.description === undefined && message.online !== undefined) {
@@ -118,6 +121,7 @@ const DMScreen = ({ navigation ,route }:any) => {
       // 4) Cleanup on unmount
       return () => {
         updateLastTimestamp(chatGid);
+
         webSocketService.disconnect();
       };
     }, [self.uid, chatGid, refetchChat])
