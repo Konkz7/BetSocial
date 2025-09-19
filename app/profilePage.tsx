@@ -16,7 +16,7 @@ import {
   } 
     from "lucide-react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getFriendship, getUserThreads, sendFriendRequest, unfriend , DMCheck , makePrivateGroup, fillReadMarkers, getThreadLikes, registerThreadLike} from "./API";
+import { getFollow, getUserThreads, follow, unfollow , DMCheck , makePrivateGroup, fillReadMarkers, getThreadLikes, registerThreadLike, getOtherFollow, getFollowsByID, getFollowersByID} from "./API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import threadList from "./Components/ThreadList";
 import { screenStore } from "./GlobalFlags";
@@ -29,10 +29,12 @@ const ProfileScreen = ({navigation , route}: any) => {
     const [currentTab,setCurrentTab] = useState('Threads');
     const [threads, setThreads] = useState<any[]>([]);
     const [threadsLoading, setThreadsLoading] = useState(true); // Show loading indicator
-    const [friendState, setFriendState] = useState(0); // 0: not friends, 1: friend request sent, 2: friends
+    const [following, setFollowing] = useState(false);
+    const [followed , setFollowed] = useState(false);
 
-    
-   
+    const[follows , setFollows] = useState(0);
+    const[followers , setFollowers] = useState(0);
+
     const queryClient = useQueryClient();
     const profile = queryClient.getQueryData(["user"]) as any;
     const groupProfiles = queryClient.getQueryData(["groupProfiles"]) as any;
@@ -47,24 +49,28 @@ const ProfileScreen = ({navigation , route}: any) => {
         refetchOnReconnect: false,
     });
        
-    const { data: friendshipData, refetch: refetchFriendship, isLoading: friendshipLoading } = useQuery({ 
-        queryKey: ["friendship"], 
-        queryFn: () => getFriendship(user.uid),
+    const { data: followData, refetch: refetchFollow, isLoading: followLoading } = useQuery({ 
+        queryKey: ["follow"], 
+        queryFn: () => getFollow(user.uid),
     });
 
-    const { data: friendRequestData, refetch: refetchFriendRequest, isLoading: friendRequestLoading } = useQuery({ 
-        queryKey: ["sendFollow"], 
-        queryFn: () => sendFriendRequest(user.uid),
-        enabled: false, // Prevents automatic execution
+    const { data: otherFollowData, refetch: refetchOtherFollow, isLoading: otherFollowLoading } = useQuery({ 
+        queryKey: ["otherFollow"], 
+        queryFn: () => getOtherFollow(user.uid),
     });
-    
-    const { data: unfriendData, refetch: refetchUnfriend, isLoading: unfriendLoading } = useQuery({ 
-        queryKey: ["unfriend"], 
-        queryFn: () => unfriend(user.uid),
-        enabled: false, // Prevents automatic execution
+
+    const { data: followsData, refetch: refetchFollows, isLoading: followsLoading } = useQuery({ 
+        queryKey: ["follows" + user.uid], 
+        queryFn: () => getFollowsByID(user.uid),
+    });
+
+    const { data: followersData, refetch: refetchFollowers, isLoading: followersLoading } = useQuery({ 
+        queryKey: ["followers" + user.uid], 
+        queryFn: () => getFollowersByID(user.uid),
     });
 
 
+   
     const getAllthreads = async () => {
         try {
             const threadResponse = await refetchThreads(); // use react-query’s refetch
@@ -86,9 +92,12 @@ const ProfileScreen = ({navigation , route}: any) => {
             console.log("Screen is focused! Refetching threads and friendship...");
             screenStore.set("Profile");
             refetchThreads();
-            refetchFriendship(); // Ensure this refetches correctly
-            
-            console.log("Friendship data:", friendshipData);
+            refetchFollow(); // Ensure this refetches correctly
+            refetchOtherFollow();
+            refetchFollowers();
+            refetchFollows();
+             
+            console.log("Friendship data:", followData);
 
             return async () => {
 
@@ -103,21 +112,37 @@ const ProfileScreen = ({navigation , route}: any) => {
     }, []);
 
     useEffect(() => {
-        if (friendshipData) {
-            console.log("Friendship data:", friendshipData);
-            if(friendshipData.stage === 0){
-                setFriendState(1);
-            }else if(friendshipData.stage === 1){
-                setFriendState(2);
-            }else{
-                setFriendState(0);
-            }
+        if (followData) {
+            console.log("Friendship data:", followData);
+            setFollowing(true)
         }else{
-            setFriendState(0);
+            setFollowing(false);
         }
-    }, [friendshipData]);
+    }, [followData]);
 
-      
+    useEffect(() => {
+        if (otherFollowData) {
+            console.log("Other Friendship data:", otherFollowData);
+            setFollowed(true)
+        }else{
+            setFollowed(false);
+        }
+    }, [otherFollowData]);
+
+    useEffect(() => {
+        if (followsData) {
+            setFollows(followsData.length)
+        }
+    }, [followsData]);
+
+    useEffect(() => {
+        if (followersData) {
+            setFollowers(followersData.length)
+        }
+    }, [followersData]);
+
+
+
 
     async function goToDMScreen(){
 
@@ -135,41 +160,33 @@ const ProfileScreen = ({navigation , route}: any) => {
             recipient["gid"] = gid;
         }
 
-        fillReadMarkers(recipient["gid"]);
+        //fillReadMarkers(recipient["gid"]);
 
-        navigation.navigate("DMScreen_S",recipient);
+        navigation.navigate("DMScreen_S",recipient); 
     }
     
-    async function handleFriendRequest() {
-        if (friendState === 0) {
+    async function handleFollow() {
+        if (!following) {
             
             try{
-                await refetchFriendRequest();
+                await follow(user.uid);
                 Alert.alert("Message:", "Friend request sent to " + user.user_name);
-                setFriendState(1); // Friend request sent         
+                setFollowing(true);    
             }catch (error) {
                 Alert.alert("Error:", "Failed to send friend request");
             }
 
-        } else if (friendState === 1) {          
+        } else  {          
             try{
-                await refetchUnfriend();
+                await unfollow(user.uid);
                 Alert.alert("Message:", "Friend request cancelled for " + user.user_name);
-                setFriendState(0); // Not friends anymore
+                setFollowing(false); 
             }catch (error) {
                 Alert.alert("Error:", "Failed to send friend request");
             }
-        } else if (friendState === 2) {
-            try{
-                await refetchUnfriend();
-                Alert.alert("Message:", "Unfriended " + user.user_name);
-                setFriendState(0); // Unfriend
-            }catch (error) {
-                Alert.alert("Error:", "Failed to send friend request");
-            }
-        }
+        } 
         
-        queryClient.invalidateQueries({queryKey: ["friendship"]});
+        queryClient.invalidateQueries({queryKey: ["follow"]});
         
     }
 
@@ -185,15 +202,16 @@ const ProfileScreen = ({navigation , route}: any) => {
                         <ArrowLeft size={36} color={"#10B981"} />   
                     </TouchableOpacity>
 
-                    <Text style = {styles.name}> {user.user_name} </Text>
+                    <Text style = {[styles.name , followed ? {color: "blue"} : null]}> {user.user_name} </Text>
             
-                    {friendshipLoading ? 
+                    {followLoading ? 
                     <ActivityIndicator size = "small" color = " green"/>
                     :
-                    <TouchableOpacity style = {styles.button} onPress={() => handleFriendRequest()}> 
-                        {friendState === 0 ? <UserRoundPlus color={"green"}></UserRoundPlus> :
-                        friendState == 1 ? <UserRoundCog color={"green"}></UserRoundCog> :
-                        <UserRoundCheck color={"green"}></UserRoundCheck> }
+                    <TouchableOpacity style = {styles.button} onPress={() => handleFollow()}> 
+                        {
+                        following === false ? <UserRoundPlus color={"green"}></UserRoundPlus> :
+                        <UserRoundCheck color={"green"}></UserRoundCheck> 
+                        }
                     </TouchableOpacity>
                     }
 
@@ -217,11 +235,11 @@ const ProfileScreen = ({navigation , route}: any) => {
 
                     <View style = {styles.statBlock}>
                         <Text style = {styles.stat}>Followers</Text>
-                        <Text style = {styles.number}>5</Text>
+                        <Text style = {styles.number}>{followers}</Text>
                         <Text style = {styles.stat}>Following</Text>
-                        <Text style = {styles.number}>5</Text>
+                        <Text style = {styles.number}>{follows}</Text>
                         <Text style = {styles.stat}>Threads</Text>
-                        <Text style = {styles.number}>5</Text>
+                        <Text style = {styles.number}>{threadData.length}</Text>
                     </View>
                 </View>
                 <View style = {{padding: 20, maxHeight: 115}}>

@@ -219,62 +219,78 @@ export const deleteComment = async(cid) =>{
 
 
 //FRIENDS
-export const getFriends = async() =>{
+
+export const getFollow = async(ouid) =>{
   try {
-      const friends = await axios.get(IP_STRING + "/api/friends/list");
-      return friends.data;
+      const follow = await axios.get(IP_STRING + "/api/follows/follow/"+ouid);
+      return follow.data;
   } catch (error) {
-    Alert.alert("Error!", "Friends couldnt be found.");
+    console.log("You dont follow this person");
   }
 }
 
-export const getFriendship = async(ouid) =>{
+export const getOtherFollow = async(ouid) =>{
   try {
-      const friendship = await axios.get(IP_STRING + "/api/friends/friendship/"+ouid);
-      return friendship.data;
+      const follow = await axios.get(IP_STRING + "/api/follows/other-follow/"+ouid);
+      return follow.data;
   } catch (error) {
-    console.log("these guys arent friends");
+    console.log("You dont follow this person");
   }
 }
 
-
-export const acceptFriendshipRequest = async(fid) =>{
-  try {
-      const accept = await axios.put(IP_STRING + "/api/friends/accept/"+fid);
-      return accept.data;
-  } catch (error) {
-      Alert.alert("Error!", "Request couldnt be accepted.")
-  }
-}
-
-export const rejectFriendshipRequest = async(fid) =>{
-  try {
-      const reject = await axios.put(IP_STRING + "/api/friends/reject/"+fid);
-      return reject.data;
-  } catch (error) {
-      Alert.alert("Error!", "Request couldnt be rejected.")
-  }
-}
-
-
-export const sendFriendRequest = async(ouid) =>{
+export const follow = async(ouid) =>{
     try {
-        const request = await axios.post(IP_STRING + "/api/friends/send/"+ouid);
+        const request = await axios.post(IP_STRING + "/api/follows/send/"+ouid);
         return (request.data);
     } catch (error) {
       Alert.alert("Error!", "Request couldnt be sent.")
     }
 }
 
-export const unfriend = async(ouid) =>{
+export const unfollow = async(ouid) =>{
   try {
-      const unfriend = await axios.delete(IP_STRING + "/api/friends/unfriend/"+ouid);
-      return (unfriend.data);
+      const unfollow = await axios.delete(IP_STRING + "/api/follows/unfollow/"+ouid);
+      return (unfollow.data);
   } catch (error) {
     Alert.alert("Error!", "Request couldnt be sent.")
   }
 }
 
+export const getFollows = async() =>{
+    try {
+        const follows = await axios.get(IP_STRING + "/api/follows/follows");
+        return (follows.data);
+    } catch (error) {
+      Alert.alert("Error!", "Follows couldnt be found.")
+    }
+}
+
+export const getFollowers = async() =>{
+    try {
+        const followers = await axios.get(IP_STRING + "/api/follows/followers");
+        return (followers.data);
+    } catch (error) {
+      Alert.alert("Error!", "Followers couldnt be found.")
+    }
+}
+
+export const getFollowsByID = async(uid) =>{
+    try {
+        const follows = await axios.get(IP_STRING + "/api/follows/follows/" + uid);
+        return (follows.data);
+    } catch (error) {
+      Alert.alert("Error!", "Follows couldnt be found.")
+    }
+}
+
+export const getFollowersByID = async(uid) =>{
+    try {
+        const followers = await axios.get(IP_STRING + "/api/follows/followers/" + uid);
+        return (followers.data);
+    } catch (error) {
+      Alert.alert("Error!", "Followers couldnt be found.")
+    }
+}
 
 
 //MESSAGES

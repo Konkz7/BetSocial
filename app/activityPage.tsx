@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import { useQuery } from "@tanstack/react-query";
-import { acceptFriendshipRequest, fillReadMarkers, getActiveNotifications, getUser, getUsers, readNotifications, rejectFriendshipRequest, removeNotification} from "./API";
+import { fillReadMarkers, getActiveNotifications, getUser, getUsers, readNotifications, removeNotification} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
 import { timeAgo } from './Constants';
 import { activitySeenStore, screenStore } from './GlobalFlags';
@@ -80,45 +80,23 @@ const ActivityScreen = ({ navigation, route } : any) => {
       }
 
     const notificationComponents = {
-        friend_request: (item : any , user : any) => ( 
+        follow_request: (item : any , user : any) => ( 
             <View>
                 <View style = {styles.notificationContainer}>
                     <View style = {styles.avatar}></View>
                     <Text style={[styles.itemText, {fontWeight: 'bold' , color: 'green'}]}>{user?.user_name}</Text>
-                    <Text style={styles.itemText}>has sent a friend request!</Text>
+                    <Text style={styles.itemText}>is following you!</Text>
                 </View>
                 <View style = {styles.extrasContainer}>
                     <Text style={[styles.itemText, {color: 'gray', fontSize: 12}]}>{timeAgo(item.created_at)}</Text>
                 </View>
                 <View style = {styles.extrasContainer}>
-                    <TouchableOpacity style = {styles.actionButton} onPress={() => action(item.nid,rejectFriendshipRequest,item.target_id)}>
-                        <Text style = {{color: 'red'}} >Reject</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style = {styles.actionButton} onPress={() => action(item.nid,acceptFriendshipRequest,item.target_id)}>
-                        <Text style = {{color: 'green'}} >Accept</Text>
-                    </TouchableOpacity>
+                    
                 </View>
             </View>
         ),
         
-        accepted_friend_request: (item:any, user: any) => (
-            <View>
-                <View style = {styles.extrasContainer}>
-                    <TouchableOpacity style = {{}} onPress={() => action(item.nid,doNothing,0)}>
-                        <Text style = {{color: 'red'}} >X</Text>
-                    </TouchableOpacity>
-                </View>
-                <View style = {styles.notificationContainer}>
-                    <View style = {styles.avatar}></View>
-                    <Text style={[styles.itemText, {fontWeight: 'bold' , color: 'green'}]}>{user?.user_name}</Text>
-                    <Text style={styles.itemText}>has accepted your friend request!</Text>
-                </View>
-                <View style = {styles.extrasContainer}>
-                    <Text style={[styles.itemText, {color: 'gray', fontSize: 12}]}>{timeAgo(item.created_at)}</Text>
-                </View>
-            </View>
-        ),
- 
+
         new_message: (item:any, user: any) => (
             <TouchableOpacity onPress={() => goToDMScreen(user,item.target_id,item.nid)}>
                 <View style = {styles.extrasContainer}>
@@ -141,10 +119,8 @@ const ActivityScreen = ({ navigation, route } : any) => {
     // Default case if notification type is not found
     const renderNotificationItem = (item : any) => {
 
-        if(item.notification_type === "friend_request") {
-            return notificationComponents.friend_request(item, getUserById(item.actor_id))
-        } else if(item.notification_type === "friend_request_accepted") {
-            return notificationComponents.accepted_friend_request(item, getUserById(item.actor_id))      
+        if(item.notification_type === "follow_request") {
+            return notificationComponents.follow_request(item, getUserById(item.actor_id))    
         }else if(item.notification_type === "message") {
             return notificationComponents.new_message(item, getUserById(item.actor_id))}
         else{ 
