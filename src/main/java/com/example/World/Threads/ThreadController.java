@@ -75,11 +75,9 @@ public class ThreadController {
         if(result.hasErrors()){
             return ResponseEntity.badRequest().body("Error: Please make sure fields are filled out properly");
         }
-        Long uid = (Long) session.getAttribute("userId");
-        Long tid = threadRepository.save(new Thread_(null,uid,thread.title(), thread.media(), thread.media_type(), thread.category(),0L,
-                new Date().getTime(),null,thread.is_private(),null)).tid();
 
-        return ResponseEntity.ok(String.valueOf(tid));
+
+        return ResponseEntity.ok("String.valueOf(tid)");
     }
 
     @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -4,6 +4,8 @@ import com.example.World.Bets.BetRepository;
 import com.example.World.Bets.Status;
 import com.example.World.Comments.CommentLikeRepository;
 import com.example.World.Comments.CommentRepository;
+import com.example.World.Notifications.NotificationDTO;
+import com.example.World.Notifications.NotificationService;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.User_;
 import org.springframework.http.HttpStatus;
@@ -23,15 +25,37 @@ public class ThreadService {
     private final ThreadLikeRepository threadLikeRepository;
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
+    private final NotificationService notificationService;
 
     ThreadService(ThreadRepository threadRepository, BetRepository betRepository, ThreadLikeRepository threadLikeRepository,
-                  UserRepository userRepository, CommentRepository commentRepository){
+                  UserRepository userRepository, CommentRepository commentRepository, NotificationService notificationService){
 
         this.threadRepository = threadRepository;
         this.betRepository = betRepository;
         this.threadLikeRepository = threadLikeRepository;
         this.userRepository = userRepository;
         this.commentRepository = commentRepository;
+        this.notificationService = notificationService;
+    }
+
+    public Thread_ makeThread(ThreadDTO thread , Long uid){
+
+        Thread_ newThread = threadRepository.save(new Thread_(null,uid,thread.title(), thread.media(), thread.media_type(), thread.category(),0L,
+                new Date().getTime(),null,thread.is_private(),null));
+
+        // get friends and loop
+        /*
+        NotificationDTO temp = new NotificationDTO(uid, "message", newThread.tid(), "user");
+
+
+        notificationService.registerNotification(recipient.fb_notification_token(),
+                mediaType == 0 ? content : mediaType == 1 ? "Photo was sent" : "Video was sent", temp, recipientId);
+
+
+         */
+        return newThread;
+
+
     }
 
     public void removeThread(Long tid, Long uid){
