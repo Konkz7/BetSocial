@@ -4,6 +4,8 @@ import com.example.World.Bets.BetRepository;
 import com.example.World.Bets.Status;
 import com.example.World.Comments.CommentLikeRepository;
 import com.example.World.Comments.CommentRepository;
+import com.example.World.Follows.FollowService;
+import com.example.World.Follows.Follow_;
 import com.example.World.Notifications.NotificationDTO;
 import com.example.World.Notifications.NotificationService;
 import com.example.World.Users.UserRepository;
@@ -26,9 +28,10 @@ public class ThreadService {
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
     private final NotificationService notificationService;
+    private final FollowService followService;
 
     ThreadService(ThreadRepository threadRepository, BetRepository betRepository, ThreadLikeRepository threadLikeRepository,
-                  UserRepository userRepository, CommentRepository commentRepository, NotificationService notificationService){
+                  UserRepository userRepository, CommentRepository commentRepository, NotificationService notificationService, FollowService followService){
 
         this.threadRepository = threadRepository;
         this.betRepository = betRepository;
@@ -36,6 +39,7 @@ public class ThreadService {
         this.userRepository = userRepository;
         this.commentRepository = commentRepository;
         this.notificationService = notificationService;
+        this.followService = followService;
     }
 
     public Thread_ makeThread(ThreadDTO thread , Long uid){
@@ -43,16 +47,20 @@ public class ThreadService {
         Thread_ newThread = threadRepository.save(new Thread_(null,uid,thread.title(), thread.media(), thread.media_type(), thread.category(),0L,
                 new Date().getTime(),null,thread.is_private(),null));
 
-        // get friends and loop
-        /*
-        NotificationDTO temp = new NotificationDTO(uid, "message", newThread.tid(), "user");
+        for(Follow_ f : followService.getFollowers(uid)) {
+            User_ follower = userRepository.findById(f.request_id()).orElseThrow();
+
+            // get friends and loop
+
+            NotificationDTO temp = new NotificationDTO(uid, "new_thread", newThread.tid(), "thread");
 
 
-        notificationService.registerNotification(recipient.fb_notification_token(),
-                mediaType == 0 ? content : mediaType == 1 ? "Photo was sent" : "Video was sent", temp, recipientId);
+            notificationService.registerNotification(follower.fb_notification_token(),
+                    thread.media_type() == 1 ? "Photo was posted" : thread.media_type() == 2 ? "Video was posted" : thread.title(),
+                    temp, f.request_id());
 
 
-         */
+        }
         return newThread;
 
 
@@ -88,7 +96,15 @@ public class ThreadService {
         return threadLikeRepository.findByUser(uid);
     }
 
-    public List<ThreadProfile> threadDTOList(Long uid){
+    public ThreadProfile toThreadProfile(Long tid){
+        Thread_ t = threadRepository.findById(tid).orElseThrow();
+        User_ user = userRepository.findById(t.uid()).orElseThrow();
+
+        return new ThreadProfile(t.tid(),user,t.title(),t.media(),t.media_type(),t.category(),t.likes()
+                ,isThreadLike(user.uid(),t.tid()),(long) commentRepository.findByThread(t.tid()).size(),t.created_at(), t.is_private());
+    }
+
+    public List<ThreadProfile> threadProfileList(Long uid){
 
         List<ThreadProfile> result = new ArrayList<>();
         List<Thread_> threads = threadRepository.findAllActiveThreads();
@@ -104,7 +120,7 @@ public class ThreadService {
         return result;
     }
 
-    public List<ThreadProfile> threadDTOList(Long user_uid,Long target_uid){
+    public List<ThreadProfile> threadProfileList(Long user_uid,Long target_uid){
 
         List<ThreadProfile> result = new ArrayList<>();
         List<Thread_> threads = threadRepository.findAllUserThreads(target_uid);

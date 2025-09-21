@@ -38,13 +38,13 @@ public class ThreadController {
     @GetMapping("/active")
     List<ThreadProfile>findAllActive(HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
-        return threadService.threadDTOList(uid);
+        return threadService.threadProfileList(uid);
     }
 
     @GetMapping("/user/{other_uid}")
     List<ThreadProfile> findAllByUID(@PathVariable Long other_uid,HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
-        return threadService.threadDTOList(uid,other_uid);
+        return threadService.threadProfileList(uid,other_uid);
     }
 
     @GetMapping("/thread-likes")
@@ -62,6 +62,11 @@ public class ThreadController {
         return thread.get();
     }
 
+    @GetMapping("thread-profile/{tid}")
+    ThreadProfile toThreadProfile(@PathVariable Long tid){
+        return threadService.toThreadProfile(tid);
+    }
+
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/create")
     void create(@Valid @RequestBody Thread_ thread){
@@ -76,8 +81,12 @@ public class ThreadController {
             return ResponseEntity.badRequest().body("Error: Please make sure fields are filled out properly");
         }
 
+        Long userId = (Long) session.getAttribute("userId");
 
-        return ResponseEntity.ok("String.valueOf(tid)");
+        Thread_ temp = threadService.makeThread(thread, userId);
+
+
+        return ResponseEntity.ok(String.valueOf(temp.tid()));
     }
 
     @ResponseStatus(HttpStatus.NO_CONTENT)

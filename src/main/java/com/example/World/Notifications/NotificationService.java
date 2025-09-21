@@ -45,6 +45,9 @@ public class NotificationService {
             case "message":
                 title = "You have received a message from: " + sender.user_name();
                 break;
+            case "new_thread":
+                title = sender.user_name() + " posted a new thread!";
+                break;
             default:
                 title = "Unknown";
         }
