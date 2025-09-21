@@ -8,7 +8,7 @@ import { IP_STRING, timeAgo } from "./Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Settings2, DollarSign, Frown, Heart, MessageCircle, Users, Trash2, Pencil } from "lucide-react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { changeBio, getFriendship, getUserThreads, removeThread, sendFriendRequest, unfriend, changePfp, registerThreadLike, getThreads, getThreadLikes } from "./API";
+import { changeBio, getUserThreads, removeThread, changePfp, registerThreadLike, getThreads, getThreadLikes, getFollows, getFollowers } from "./API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import Video from 'react-native-video';
 import { selectImage} from "./Components/FBStorageService";
@@ -27,6 +27,8 @@ const SelfProfileScreen = ({navigation , route}: any) => {
     const [bioText, setBioText] = useState("");
     const [loading, setLoading] = useState(true); // Show loading indicator
 
+    const[follows , setFollows] = useState(0);
+    const[followers , setFollowers] = useState(0);
 
    
     const [uploading, setUploading] = useState(false);
@@ -45,16 +47,26 @@ const SelfProfileScreen = ({navigation , route}: any) => {
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
     });
+
+    const { data: followsData, refetch: refetchFollows, isLoading: followsLoading } = useQuery({ 
+        queryKey: ["follows"], 
+        queryFn: () => getFollows(),
+    });
+
+    const { data: followersData, refetch: refetchFollowers, isLoading: followersLoading } = useQuery({ 
+        queryKey: ["followers"], 
+        queryFn: () => getFollowers(),
+    });
    
    
 
 
     const getAllthreads = async () => {
         try {
+            refetchFollowers();
+            refetchFollows();
             const threadResponse = await refetchThreads(); // use react-query’s refetch
-            if (!threadResponse.data) return;
-
-        
+            if (!threadResponse.data) return; 
             setThreads(threadResponse.data);
 
         } catch (error) {
@@ -69,6 +81,18 @@ const SelfProfileScreen = ({navigation , route}: any) => {
         getAllthreads();
     }, []);
      
+    useEffect(() => {
+        if (followsData) {
+            setFollows(followsData.length)
+        }
+    }, [followsData]);
+
+    useEffect(() => {
+        if (followersData) {
+            setFollowers(followersData.length)
+        }
+    }, [followersData]);
+    
     useFocusEffect(
         useCallback(() => {
             console.log("Screen is focused! Refetching threads and friendship...");
@@ -156,11 +180,11 @@ const SelfProfileScreen = ({navigation , route}: any) => {
                     
                     <View style = {styles.statBlock}>
                         <Text style = {styles.stat}>Followers</Text>
-                        <Text style = {styles.number}>5</Text>
+                        <Text style = {styles.number}>{followers}</Text>
                         <Text style = {styles.stat}>Following</Text>
-                        <Text style = {styles.number}>5</Text>
+                        <Text style = {styles.number}>{follows}</Text>
                         <Text style = {styles.stat}>Threads</Text>
-                        <Text style = {styles.number}>5</Text>
+                        <Text style = {styles.number}>{threadsLoading? 0 : threadData?.length}</Text>
                     </View>
                 </View>
          

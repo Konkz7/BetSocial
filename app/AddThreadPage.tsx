@@ -23,7 +23,7 @@ const AddThreadScreen = ({navigation}:any) => {
   const [threadText,setThreadText] = useState("");
   const [category, setCategory] = useState("");
   const [username, setUsername] = useState("Loading...");
-  const [is_private, setPrivacy] = useState(false);
+  const [is_private, setPrivacy] = useState(false);  
   const [bets, setBets]= useState <any>([]);
   const [threadMediaType, setThreadMediaType] = useState<"image" | "video" | "none">("none");
   const [threadMedia, setThreadMedia] = useState<string>("none");
@@ -308,16 +308,17 @@ const AddThreadScreen = ({navigation}:any) => {
             </View>
             <View style = {styles.scrollContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-                {categories.map((category) => (
+                {categories.map((cat) => (
                   <TouchableOpacity
-                    key={category}
-                    onPress={() => setCategory(category)}
+                    key={cat}
+                    onPress={() => setCategory(cat)}
                     style={[
                       styles.categoryButton,
+                      cat === category ? {backgroundColor:"lightgreen"} :{backgroundColor:"#e6f4ea"}  
                     ]}
                   >
                     <Text style={[styles.categoryText,]}>
-                      {category}
+                      {cat}
                     </Text>
                   </TouchableOpacity>
                 ))}

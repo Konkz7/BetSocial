@@ -26,7 +26,7 @@ import {
   Frown,
 } from "lucide-react-native";
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {getBalance, getCircleSecret,getFriends,getIpAddress,getProfile,getWallet,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads, getActiveNotifications, getConversations} from "./API";
+import {getBalance, getCircleSecret,getIpAddress,getProfile,getWallet,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads, getActiveNotifications, getConversations} from "./API";
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
@@ -61,7 +61,7 @@ const HomeScreen = ({navigation,route}:any) => {
     queryKey: ["activeNotifications"],
     queryFn: getActiveNotifications
   });
-  const { data: friends, isLoading: friendsLoading } = useQuery({ queryKey: ["friends"], queryFn: getFriends});
+
   const { data: threadData, isLoading, refetch: refetchThreads } = useQuery({
     queryKey: ["threads"],
     queryFn: getThreads,

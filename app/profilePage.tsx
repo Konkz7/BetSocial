@@ -239,7 +239,7 @@ const ProfileScreen = ({navigation , route}: any) => {
                         <Text style = {styles.stat}>Following</Text>
                         <Text style = {styles.number}>{follows}</Text>
                         <Text style = {styles.stat}>Threads</Text>
-                        <Text style = {styles.number}>{threadData.length}</Text>
+                        <Text style = {styles.number}>{threadsLoading? 0 : threadData?.length}</Text>
                     </View>
                 </View>
                 <View style = {{padding: 20, maxHeight: 115}}>

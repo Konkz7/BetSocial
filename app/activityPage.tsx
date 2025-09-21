@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import { useQuery } from "@tanstack/react-query";
-import { fillReadMarkers, getActiveNotifications, getUser, getUsers, readNotifications, removeNotification} from "./API";
+import { fillReadMarkers, getActiveNotifications, getUser, getUsers, readNotifications, removeNotification, toThreadProfile} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
 import { timeAgo } from './Constants';
 import { activitySeenStore, screenStore } from './GlobalFlags';
 import { eventEmitter } from './Components/EventBus';
+import { X } from 'lucide-react-native';
 
 const ActivityScreen = ({ navigation, route } : any) => {
     const [filteredData, setFilteredData] = useState<any[]>([]);
@@ -63,25 +64,43 @@ const ActivityScreen = ({ navigation, route } : any) => {
         removeNotification(nid); 
     };
 
-     async function goToDMScreen(user: any, gid:number , nid:number){
-     
+    async function goToDMScreen(user: any, gid:number , nid:number){
+    
         const recipient : any = {};
         recipient["user"] = user;
         recipient["gid"] = gid;
 
-    
+
         fillReadMarkers(recipient["gid"]);
         removeNotification(nid);
         navigation.navigate("Messages", {
             screen: "DMScreen_M",
             params: recipient, 
         });
-        
-      }
+    
+    }
+
+
+    async function goToThreadScreen(tid:number , nid:number){
+    
+        const profile = await toThreadProfile(tid);
+
+        removeNotification(nid);
+        navigation.navigate("Home", {
+        screen: "Thread_H",
+        params: profile, 
+        });
+    
+    }
 
     const notificationComponents = {
         follow_request: (item : any , user : any) => ( 
             <View>
+                <View style = {styles.extrasContainer}>
+                    <TouchableOpacity style = {{}} onPress={() => action(item.nid,doNothing,0)}>
+                        <X size = {16} color = {"red"}/>
+                    </TouchableOpacity>
+                </View>
                 <View style = {styles.notificationContainer}>
                     <View style = {styles.avatar}></View>
                     <Text style={[styles.itemText, {fontWeight: 'bold' , color: 'green'}]}>{user?.user_name}</Text>
@@ -96,12 +115,32 @@ const ActivityScreen = ({ navigation, route } : any) => {
             </View>
         ),
         
+         new_thread: (item : any , user : any) => ( 
+            <TouchableOpacity onPress={() => goToThreadScreen(item.target_id,item.nid)}>
+                <View style = {styles.extrasContainer}>
+                    <TouchableOpacity style = {{}} onPress={() => action(item.nid,doNothing,0)}>
+                        <X size = {16} color = {"red"}/> 
+                    </TouchableOpacity>
+                </View>
+                <View style = {styles.notificationContainer}>
+                    <View style = {styles.avatar}></View>
+                    <Text style={[styles.itemText, {fontWeight: 'bold' , color: 'green'}]}>{user?.user_name}</Text>
+                    <Text style={styles.itemText}>posted a new thread!</Text>
+                </View>
+                <View style = {styles.extrasContainer}>
+                    <Text style={[styles.itemText, {color: 'gray', fontSize: 12}]}>{timeAgo(item.created_at)}</Text>
+                </View>
+                <View style = {styles.extrasContainer}>
+                    
+                </View>
+            </TouchableOpacity>
+        ),
 
         new_message: (item:any, user: any) => (
             <TouchableOpacity onPress={() => goToDMScreen(user,item.target_id,item.nid)}>
                 <View style = {styles.extrasContainer}>
                     <TouchableOpacity style = {{}} onPress={() => action(item.nid,doNothing,0)}>
-                        <Text style = {{color: 'red'}} >X</Text>
+                        <X size = {16} color = {"red"}/>
                     </TouchableOpacity>
                 </View>
                 <View style = {styles.notificationContainer}>                   
@@ -119,10 +158,14 @@ const ActivityScreen = ({ navigation, route } : any) => {
     // Default case if notification type is not found
     const renderNotificationItem = (item : any) => {
 
+        //console.log(item.notification_type);
         if(item.notification_type === "follow_request") {
             return notificationComponents.follow_request(item, getUserById(item.actor_id))    
         }else if(item.notification_type === "message") {
-            return notificationComponents.new_message(item, getUserById(item.actor_id))}
+            return notificationComponents.new_message(item, getUserById(item.actor_id))
+        }else if(item.notification_type === "new_thread") {
+            return notificationComponents.new_thread(item, getUserById(item.actor_id))
+        }
         else{ 
             return(
             <View style={styles.notificationContainer}>

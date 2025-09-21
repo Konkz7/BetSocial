@@ -21,6 +21,15 @@ export const getThreads = async() =>{
   }
 }
 
+export const toThreadProfile = async(tid) =>{
+  try {
+      const threadProfile = await axios.get(IP_STRING + "/api/threads/thread-profile/"+tid);
+      return threadProfile.data;
+  } catch (error) {
+    Alert.alert("Error!", "Thread profile couldnt be obtained.")
+  }
+}
+
 
 export const getUserThreads = async(uid) =>{
   try {
