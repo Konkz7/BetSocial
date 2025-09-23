@@ -86,6 +86,8 @@ public class UserController {
     ResponseEntity<String> refreshFBN(@RequestParam String FBNtoken, HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
 
+        System.out.println("DONE");
+
         return userService.saveFBNToken(uid,FBNtoken) ? ResponseEntity.ok().body("FBN changed!") :
                 ResponseEntity.badRequest().body("FBN couldnt be saved");
 

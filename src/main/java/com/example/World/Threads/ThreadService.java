@@ -48,7 +48,13 @@ public class ThreadService {
                 new Date().getTime(),null,thread.is_private(),null));
 
         for(Follow_ f : followService.getFollowers(uid)) {
+
+            //System.out.println(f.request_id());
             User_ follower = userRepository.findById(f.request_id()).orElseThrow();
+
+            if(followService.getFollow(uid, follower.uid()) == null && thread.is_private()){
+                continue;
+            }
 
             // get friends and loop
 
@@ -112,6 +118,10 @@ public class ThreadService {
 
         for(Thread_ t : threads){
             User_ user = userRepository.findById(t.uid()).orElseThrow();
+            if((followService.getFollow(uid,user.uid()) == null || followService.getFollow(user.uid(),uid) == null) && t.is_private()
+            && !t.uid().equals(uid)){
+                continue;
+            }
             result.add(new ThreadProfile(t.tid(),user,t.title(),t.media(),t.media_type(),t.category(),t.likes()
                     ,isThreadLike(uid,t.tid()),(long) commentRepository.findByThread(t.tid()).size(),t.created_at(), t.is_private()));
         }
@@ -127,7 +137,12 @@ public class ThreadService {
         User_ user = userRepository.findById(target_uid).orElseThrow();
 
 
+
         for(Thread_ t : threads){
+            if((followService.getFollow(user_uid,target_uid) == null || followService.getFollow(target_uid,user_uid) == null) && t.is_private()
+                    && !t.uid().equals(user_uid)){
+                continue;
+            }
             result.add(new ThreadProfile(t.tid(),user,t.title(),t.media(),t.media_type(),t.category(),t.likes(),
                     isThreadLike(user_uid,t.tid()),(long) commentRepository.findByThread(t.tid()).size(), t.created_at(),t.is_private()));
         }
@@ -143,6 +158,19 @@ public class ThreadService {
             if(liked) {
                 threadLikeRepository.save(new Threadlike_(null, tid, uid));
                 threadRepository.increment(tid);
+
+                Long toID = threadRepository.findById(tid).orElseThrow().uid();
+
+                if(toID.equals(uid)){return;}
+
+                User_ threadOwner = userRepository.findById(toID).orElseThrow();
+
+
+                NotificationDTO temp = new NotificationDTO(uid, "thread_like", tid, "thread");
+
+
+                notificationService.registerNotification(threadOwner.fb_notification_token(), "Go check it out!" ,
+                        temp, toID);
             }
         }else{
             if(!liked){

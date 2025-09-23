@@ -27,9 +27,11 @@ import java.io.IOException;
 public class SecurityConfig {
 
     private final UserService userService;
+    private final CustomLogoutSuccessHandler customLogoutSuccessHandler;
 
-    SecurityConfig(UserService userService){
+    SecurityConfig(UserService userService, CustomLogoutSuccessHandler customLogoutSuccessHandler){
         this.userService = userService;
+        this.customLogoutSuccessHandler = customLogoutSuccessHandler;
     }
 
     @Bean
@@ -76,7 +78,12 @@ public class SecurityConfig {
                             response.getWriter().flush();
                         }
                     });
-        })
+        }).logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessHandler(customLogoutSuccessHandler)
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
+                )
         .build();
     }
 

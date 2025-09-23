@@ -21,7 +21,7 @@ public class NotificationService {
         this.userRepository = userRepository;
     }
 
-    private void sendFBNotification(String token, String title, String body, String type, Long target_id) throws Exception {
+    private void sendFBNotification(String token, Long uid, String title, String body, String type, Long target_id) throws Exception {
         Message message = Message.builder()
                 .setToken(token)
                 .setNotification(Notification.builder()
@@ -30,6 +30,7 @@ public class NotificationService {
                         .build())
                 .putData("type", type)
                 .putData("target_id", String.valueOf(target_id))
+                .putData("uid", String.valueOf(uid))
                 .build();
 
         String response = FirebaseMessaging.getInstance().send(message);
@@ -48,29 +49,43 @@ public class NotificationService {
             case "new_thread":
                 title = sender.user_name() + " posted a new thread!";
                 break;
+            case "new_comment":
+                title = sender.user_name() + " commented on your thread!";
+                break;
+            case "follow_request":
+                title = sender.user_name() + " sent you a follow!";
+                break;
+            case "thread_like":
+                title = sender.user_name() + " liked your thread!!";
+                break;
+            case "comment_like":
+                title = sender.user_name() + " liked your comment!";
+                break;
             default:
                 title = "Unknown";
         }
 
+        Optional<Notification_> noti = notificationRepository.findLatestNonDeleted(notificationDTO.notification_type(),
+                notificationDTO.actor_id(), notificationDTO.target_id());
+
+        if(noti.isPresent()){
+            notificationRepository.changeContent(noti.get().nid(),body, new Date().getTime());
+        }else {
+            notificationRepository.save(new Notification_(null, recipient_id, notificationDTO.actor_id(), notificationDTO.notification_type(),
+                    notificationDTO.target_id(), notificationDTO.target_type(), title,body, false, false, new Date().getTime()));
+        }
 
         try {
-
-            sendFBNotification(token, title, body, notificationDTO.notification_type(), notificationDTO.target_id());
-            Optional<Notification_> noti = notificationRepository.findLatestNonDeleted(notificationDTO.notification_type(),
-                    notificationDTO.actor_id(), notificationDTO.target_id());
-
-            if(noti.isPresent()){
-                notificationRepository.changeContent(noti.get().nid(),body, new Date().getTime());
-            }else {
-                notificationRepository.save(new Notification_(null, recipient_id, notificationDTO.actor_id(), notificationDTO.notification_type(),
-                        notificationDTO.target_id(), notificationDTO.target_type(), title,body, false, false, new Date().getTime()));
-            }
+            System.out.println("TOKEN: " + token);
+            sendFBNotification(token, recipient_id ,title, body, notificationDTO.notification_type(), notificationDTO.target_id());
 
         } catch (Exception e) {
             System.out.println("Notification Failed!");
             System.out.println(e);
 
         }
+
+
     }
 
     public void readNotifications(Long uid){

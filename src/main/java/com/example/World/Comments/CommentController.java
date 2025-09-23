@@ -51,8 +51,7 @@ public class CommentController {
     @PostMapping("/make")
     Comment_ makeComment(@Valid @RequestBody CommentDTO comment, HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
-        return commentRepository.save(new Comment_(null, comment.tid(), uid, comment.parent_cid(), comment.description(),0L,
-                new Date().getTime(),null,null));
+        return commentService.makeComment(comment,uid);
     }
 
 

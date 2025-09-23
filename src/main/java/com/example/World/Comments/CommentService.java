@@ -1,5 +1,9 @@
 package com.example.World.Comments;
 
+import com.example.World.Follows.FollowService;
+import com.example.World.Follows.Follow_;
+import com.example.World.Notifications.NotificationDTO;
+import com.example.World.Notifications.NotificationService;
 import com.example.World.Threads.ThreadRepository;
 import com.example.World.Threads.Threadlike_;
 import com.example.World.Users.UserRepository;
@@ -16,12 +20,36 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final CommentLikeRepository commentLikeRepository;
     private final ThreadRepository threadRepository;
+    private final NotificationService notificationService;
 
-    public CommentService(UserRepository userRepository, CommentRepository commentRepository, CommentLikeRepository commentLikeRepository, ThreadRepository threadRepository) {
+    public CommentService(UserRepository userRepository, CommentRepository commentRepository, CommentLikeRepository commentLikeRepository, ThreadRepository threadRepository, FollowService followService, NotificationService notificationService) {
         this.userRepository = userRepository;
         this.commentRepository = commentRepository;
         this.commentLikeRepository = commentLikeRepository;
         this.threadRepository = threadRepository;
+        this.notificationService = notificationService;
+    }
+
+    public Comment_ makeComment(CommentDTO comment,Long uid){
+
+        Comment_ newComment = commentRepository.save(new Comment_(null, comment.tid(), uid, comment.parent_cid(),
+                comment.description(),0L, new Date().getTime(),null,null));
+
+        //thread owner
+        Long toID = threadRepository.findById(comment.tid()).orElseThrow().uid();
+
+        User_ threadOwner = userRepository.findById(toID).orElseThrow();
+
+
+
+        NotificationDTO temp = new NotificationDTO(uid, "new_comment", comment.tid(), "thread");
+
+
+        notificationService.registerNotification(threadOwner.fb_notification_token(), "Go check it out!" ,
+                temp, toID);
+
+
+        return newComment;
     }
 
     public List<CommentProfile> getComments(Long userID,Long tid) {
@@ -71,6 +99,20 @@ public class CommentService {
             if(liked) {
                 commentLikeRepository.save(new Commentlike_(null, tid,cid, uid));
                 commentRepository.increment(cid);
+
+                Long coID = commentRepository.findById(cid).orElseThrow().uid();
+
+                if(coID.equals(uid)){return;}
+
+                User_ commentOwner = userRepository.findById(coID).orElseThrow();
+
+
+
+                NotificationDTO temp = new NotificationDTO(uid, "comment_like", tid, "thread");
+
+
+                notificationService.registerNotification(commentOwner.fb_notification_token(), "Go check it out!"  ,
+                        temp, coID);
             }
         }else{
             if(!liked){
