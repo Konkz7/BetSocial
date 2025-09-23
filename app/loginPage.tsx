@@ -5,7 +5,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
-import { requestFBNPermission } from "./Components/FBCloudMessagingService";
+import { removeFBNToken, requestFBNPermission } from "./Components/FBCloudMessagingService";
 import { screenStore } from "./GlobalFlags";
 
 
@@ -34,6 +34,7 @@ const LoginScreen = ({navigation}:any) => {
       screenStore.set("Login");
       console.log("Screen is focused! Perform refresh or action here.");  
       logout();
+      removeFBNToken();
       return () => {
         console.log("Screen is unfocused! Cleanup if needed.");
       };

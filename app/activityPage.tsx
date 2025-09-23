@@ -56,10 +56,9 @@ const ActivityScreen = ({ navigation, route } : any) => {
 
     const getUserById = (actorId: number) => users?.find((user:any) => user.uid === actorId) || console.log("User not found with ID:", actorId);
 
-    const doNothing = (num:number) =>{};
+  
 
-    const action = async (nid:number , func:any , funcTarget: number) => {
-        await func(funcTarget);
+    const remove = async (nid:number ) => { 
         setFilteredData((prevData) => prevData.filter(item => item.nid !== nid));
         removeNotification(nid); 
     };
@@ -87,84 +86,65 @@ const ActivityScreen = ({ navigation, route } : any) => {
 
         removeNotification(nid);
         navigation.navigate("Home", {
-        screen: "Thread_H",
-        params: profile, 
+            screen: "Thread_H",
+            params: profile, 
         });
     
     }
 
-    const notificationComponents = {
-        follow_request: (item : any , user : any) => ( 
-            <View>
-                <View style = {styles.extrasContainer}>
-                    <TouchableOpacity style = {{}} onPress={() => action(item.nid,doNothing,0)}>
-                        <X size = {16} color = {"red"}/>
-                    </TouchableOpacity>
-                </View>
-                <View style = {styles.notificationContainer}>
-                    <View style = {styles.avatar}></View>
-                    <Text style={[styles.itemText, {fontWeight: 'bold' , color: 'green'}]}>{user?.user_name}</Text>
-                    <Text style={styles.itemText}>is following you!</Text>
-                </View>
-                <View style = {styles.extrasContainer}>
-                    <Text style={[styles.itemText, {color: 'gray', fontSize: 12}]}>{timeAgo(item.created_at)}</Text>
-                </View>
-                <View style = {styles.extrasContainer}>
-                    
-                </View>
-            </View>
-        ),
+    async function goToProfileScreen(actor : any , nid : number){
+    
         
-         new_thread: (item : any , user : any) => ( 
-            <TouchableOpacity onPress={() => goToThreadScreen(item.target_id,item.nid)}>
-                <View style = {styles.extrasContainer}>
-                    <TouchableOpacity style = {{}} onPress={() => action(item.nid,doNothing,0)}>
-                        <X size = {16} color = {"red"}/> 
-                    </TouchableOpacity>
-                </View>
-                <View style = {styles.notificationContainer}>
-                    <View style = {styles.avatar}></View>
-                    <Text style={[styles.itemText, {fontWeight: 'bold' , color: 'green'}]}>{user?.user_name}</Text>
-                    <Text style={styles.itemText}>posted a new thread!</Text>
-                </View>
-                <View style = {styles.extrasContainer}>
-                    <Text style={[styles.itemText, {color: 'gray', fontSize: 12}]}>{timeAgo(item.created_at)}</Text>
-                </View>
-                <View style = {styles.extrasContainer}>
-                    
-                </View>
-            </TouchableOpacity>
-        ),
+        removeNotification(nid);
+        navigation.navigate("Search", {
+            screen: "Profile_S",
+            params: actor, 
+        });
+    
+    }
 
-        new_message: (item:any, user: any) => (
-            <TouchableOpacity onPress={() => goToDMScreen(user,item.target_id,item.nid)}>
+    const notificationComponent = (item : any , user : any , description: string , action : () => void) => {
+
+        return(
+            <TouchableOpacity onPress={action}>
                 <View style = {styles.extrasContainer}>
-                    <TouchableOpacity style = {{}} onPress={() => action(item.nid,doNothing,0)}>
+                    <TouchableOpacity style = {{}} onPress={() => remove(item.nid)}>
                         <X size = {16} color = {"red"}/>
                     </TouchableOpacity>
                 </View>
-                <View style = {styles.notificationContainer}>                   
-                    <View style = {styles.avatar}></View> 
-                    <Text style={styles.itemText}>{item.title}</Text>
+                <View style = {styles.notificationContainer}>
+                    <View style = {styles.avatar}></View>
+                    <Text style={[styles.itemText, {fontWeight: 'bold' , color: 'green'}]}>{user?.user_name}</Text>
+                    <Text style={styles.itemText}>{description}</Text>
                 </View>
                 <View style = {styles.extrasContainer}>
                     <Text style={[styles.itemText, {color: 'gray', fontSize: 12}]}>{timeAgo(item.created_at)}</Text>
                 </View>
+                <View style = {styles.extrasContainer}>
+                    
+                </View>
             </TouchableOpacity>
-        ),
-        
+        )
+            
     };
     
     // Default case if notification type is not found
     const renderNotificationItem = (item : any) => {
 
+        const actor = getUserById(item.actor_id);
         //console.log(item.notification_type);
         if(item.notification_type === "follow_request") {
-            return notificationComponents.follow_request(item, getUserById(item.actor_id))    
+            return notificationComponent(item, actor," sent you a follow!", () => goToProfileScreen(actor,item.nid))    
         }else if(item.notification_type === "message") {
-            return notificationComponents.new_message(item, getUserById(item.actor_id))
+            return notificationComponent(item, actor, " sent you a message!", () => goToDMScreen(actor, item.target_id,item.nid))
         }else if(item.notification_type === "new_thread") {
-            return notificationComponents.new_thread(item, getUserById(item.actor_id))
+            return notificationComponent(item, actor, " posted a new thread!",() => goToThreadScreen(item.target_id,item.nid) )
+        }else if(item.notification_type === "new_comment") {
+            return notificationComponent(item, actor, " commented on your post!",() => goToThreadScreen(item.target_id,item.nid) )
+        }else if(item.notification_type === "thread_like") {
+            return notificationComponent(item, actor, " liked your post!",() => goToThreadScreen(item.target_id,item.nid) )
+        }else if(item.notification_type === "comment_like") {
+            return notificationComponent(item, actor, " liked your comment!",() => goToThreadScreen(item.target_id,item.nid) )
         }
         else{ 
             return(

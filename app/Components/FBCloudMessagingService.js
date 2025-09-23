@@ -26,6 +26,10 @@ export const requestFBNPermission = async () => {
   }
 };
 
+export const removeFBNToken = async() =>{
+   await messaging().deleteToken();
+}
+
 export const useNotificationListener = () => {
   const { showBanner } = useContext(BannerContext);
 
@@ -34,11 +38,13 @@ export const useNotificationListener = () => {
       console.log("handleIncomingNotification called!");
       console.log("Notification type: ", remoteMessage.data?.type);
 
+      
+
       if (remoteMessage.data?.type === "message") {
         messageSeenStore.set(false);
       }
 
-      if (screenStore.get() !== 'Activity') {
+      if (screenStore.get() !== 'Activity') {  
         activitySeenStore.set(false);
       }
 

@@ -170,19 +170,19 @@ const ProfileScreen = ({navigation , route}: any) => {
             
             try{
                 await follow(user.uid);
-                Alert.alert("Message:", "Friend request sent to " + user.user_name);
+                //Alert.alert("Message:", "Friend request sent to " + user.user_name);
                 setFollowing(true);    
             }catch (error) {
-                Alert.alert("Error:", "Failed to send friend request");
+                //Alert.alert("Error:", "Failed to send friend request");
             }
 
         } else  {          
             try{
                 await unfollow(user.uid);
-                Alert.alert("Message:", "Friend request cancelled for " + user.user_name);
+                //Alert.alert("Message:", "Friend request cancelled for " + user.user_name);
                 setFollowing(false); 
             }catch (error) {
-                Alert.alert("Error:", "Failed to send friend request");
+                //Alert.alert("Error:", "Failed to send friend request");
             }
         } 
         

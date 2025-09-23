@@ -149,9 +149,9 @@ const HomeScreen = ({navigation,route}:any) => {
 
   const is_Unread_Activity = async () => {
     try {
-      const data = await getActiveNotifications();
       
-      if (!data[0].is_read) {
+      
+      if (!notifications[0].is_read) {
         activitySeenStore.set(false);   
       }
       
@@ -162,10 +162,16 @@ const HomeScreen = ({navigation,route}:any) => {
 
   useEffect(() => {
     (async () => {
-      is_Unread_Activity();
       is_Unread_Conversations();
-    })();
+    })(); 
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      is_Unread_Activity();
+    
+    })(); 
+  }, [notifications]);
 
   useEffect(() => {
     if (!threadData) return;
@@ -181,6 +187,7 @@ const HomeScreen = ({navigation,route}:any) => {
     useCallback(() => {
       console.log("Screen focused → refresh threads" + route.params?.params);
       screenStore.set("Home");
+   
       
       (async () => {
         if (route.params?.refresh) {
