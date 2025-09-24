@@ -49,12 +49,13 @@ public class ThreadService {
 
         for(Follow_ f : followService.getFollowers(uid)) {
 
-            //System.out.println(f.request_id());
             User_ follower = userRepository.findById(f.request_id()).orElseThrow();
 
             if(followService.getFollow(uid, follower.uid()) == null && thread.is_private()){
                 continue;
             }
+
+            //System.out.println(f.request_id());
 
             // get friends and loop
 
@@ -67,6 +68,7 @@ public class ThreadService {
 
 
         }
+
         return newThread;
 
 

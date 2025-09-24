@@ -65,7 +65,8 @@ public class NotificationService {
                 title = "Unknown";
         }
 
-        Optional<Notification_> noti = notificationRepository.findLatestNonDeleted(notificationDTO.notification_type(),
+        //System.out.println("REED RICH: " + recipient_id);
+        Optional<Notification_> noti = notificationRepository.findLatestNonDeleted(notificationDTO.notification_type(),recipient_id,
                 notificationDTO.actor_id(), notificationDTO.target_id());
 
         if(noti.isPresent()){

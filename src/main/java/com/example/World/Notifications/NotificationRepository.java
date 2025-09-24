@@ -18,6 +18,7 @@ public interface NotificationRepository extends ListCrudRepository<Notification_
     @Query("""
     SELECT * FROM Notification_
     WHERE notification_type = :type
+      AND uid = :uid
       AND actor_id = :actorId
       AND target_id = :targetId
       AND is_deleted = false
@@ -25,6 +26,7 @@ public interface NotificationRepository extends ListCrudRepository<Notification_
     """)
     Optional<Notification_> findLatestNonDeleted(
             @Param("type") String type,
+            @Param("uid") Long uid,
             @Param("actorId") Long actorId,
             @Param("targetId") Long targetId
     );
@@ -36,7 +38,7 @@ public interface NotificationRepository extends ListCrudRepository<Notification_
 
     @Modifying
     @Transactional
-    @Query("UPDATE Notification_ SET body = :body , created_at = :now WHERE nid = :id")
+    @Query("UPDATE Notification_ SET body = :body , created_at = :now , is_read = false WHERE nid = :id")
     int changeContent(@Param("id") Long id , @Param("body") String body , @Param("now") Long now);
 
 
