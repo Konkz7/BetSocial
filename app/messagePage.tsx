@@ -41,6 +41,8 @@ const MessageScreen = ({ navigation , route } : any) => {
       }
     }    
 
+
+    console.log(conversations);
     console.log("Message seen status updated:", messageSeenStore.get())
   };
 
@@ -63,7 +65,7 @@ const MessageScreen = ({ navigation , route } : any) => {
   }
 
   useEffect(() => {
-    if (conversations.length > 0) {
+    if (conversations?.length > 0) {
       is_Unread_Conversations();
     }
   }, [conversations]);
@@ -99,7 +101,7 @@ const MessageScreen = ({ navigation , route } : any) => {
         keyExtractor={(item) => item.gid.toString()}
         removeClippedSubviews={false}
         ListEmptyComponent={<View style = {styles.notFound}>
-                    <Smile size={50} color="gray" />
+                    <Smile size={50} color="gray" /> 
                     <Text>Your message list seems empty</Text>
                     </View>}
         renderItem={({ item }) => (   

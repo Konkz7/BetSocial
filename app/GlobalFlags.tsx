@@ -31,3 +31,15 @@ export const messageSeenStore = {
   }
 };
 
+
+let hasLoggedIn: boolean = false;
+ 
+
+export const LoginStore = {
+  get: () => hasLoggedIn, 
+  set: (value:boolean) => {
+    hasLoggedIn = value;
+    console.log("Login status:", value);
+  }
+};
+

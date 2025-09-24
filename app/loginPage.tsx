@@ -6,13 +6,18 @@ import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
 import { removeFBNToken, requestFBNPermission } from "./Components/FBCloudMessagingService";
-import { screenStore } from "./GlobalFlags";
+import { LoginStore, screenStore } from "./GlobalFlags";
+import {useNotificationListener } from "./Components/FBCloudMessagingService";
+
 
 
 
 const LoginScreen = ({navigation}:any) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  useNotificationListener();
+
 
   const logout = async () => {
     try{
@@ -34,7 +39,8 @@ const LoginScreen = ({navigation}:any) => {
       screenStore.set("Login");
       console.log("Screen is focused! Perform refresh or action here.");  
       logout();
-      removeFBNToken();
+      LoginStore.set(false);
+      //removeFBNToken();
       return () => {
         console.log("Screen is unfocused! Cleanup if needed.");
       };
@@ -47,7 +53,7 @@ const LoginScreen = ({navigation}:any) => {
       const response = await axios.post(IP_STRING + "/login?username="+email+"&password="+password);
       await requestFBNPermission();
       console.log("Login request sent!", response.status);
-
+      LoginStore.set(true);
       // Store token for future API calls
       //await AsyncStorage.setItem("authToken", token);
 

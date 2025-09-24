@@ -31,7 +31,6 @@ import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "./Constants";
 import Video from "react-native-video";
-import {useNotificationListener } from "./Components/FBCloudMessagingService";
 import threadList from "./Components/ThreadList";
 import { activitySeenStore, messageSeenStore, screenStore } from "./GlobalFlags";
 
@@ -50,7 +49,7 @@ const HomeScreen = ({navigation,route}:any) => {
   const [threads, setActiveThreads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true); // Show loading indicator
   const [trueThreads , setTrueThreads] = useState<any[]>([]);
-
+ 
   
   // Fetch data using React Query
   // ✅ Fetching profile, circle secret, and wallet using useQuery
@@ -82,7 +81,6 @@ const HomeScreen = ({navigation,route}:any) => {
   const { data: ipAddress, isLoading: ipLoading } = useQuery({ queryKey: ["ipAddress"], queryFn: getIpAddress});
   */
 
-  useNotificationListener();
   
   /*
   const getAllthreads = async () => {
@@ -136,6 +134,9 @@ const HomeScreen = ({navigation,route}:any) => {
   const is_Unread_Conversations = async () => {
     try {
       const data = await getConversations();
+      if(!data){
+        return;
+      }
       if(data.length == 0){
           messageSeenStore.set(true);
       }
@@ -170,7 +171,8 @@ const HomeScreen = ({navigation,route}:any) => {
   useEffect(() => {
     (async () => {
       is_Unread_Activity();
-    
+      is_Unread_Conversations();
+      
     })(); 
   }, [notifications]);
 
@@ -189,9 +191,7 @@ const HomeScreen = ({navigation,route}:any) => {
     useCallback(() => {
       console.log("Screen focused → refresh threads" + route.params?.params);
       screenStore.set("Home");
-   
-      is_Unread_Conversations();
-      
+         
       (async () => {
         if (route.params?.refresh) {
           console.log("Refetching because refetch flag is true");

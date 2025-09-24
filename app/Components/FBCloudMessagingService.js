@@ -2,10 +2,11 @@ import messaging from '@react-native-firebase/messaging';
 import { saveFBN } from "../API";
 import { useEffect, useContext } from 'react';
 import { Alert } from 'react-native';
-import { activitySeenStore, messageSeenStore, screenStore } from '../GlobalFlags';
+import { activitySeenStore, LoginStore, messageSeenStore, screenStore } from '../GlobalFlags';
 import { eventEmitter } from './EventBus';
 import { BannerContext } from './BannerProvider';
 import { useNavigation } from '@react-navigation/native';
+import notifee from '@notifee/react-native';
 
 export const requestFBNPermission = async () => {
   const authStatus = await messaging().requestPermission();
@@ -36,7 +37,7 @@ export const useNotificationListener = () => {
   const navigation = useNavigation();
 
   useEffect(() => {
-    const handleIncomingNotification = (remoteMessage) => {
+    const handleIncomingNotification = async (remoteMessage) => {
       console.log("handleIncomingNotification called!");
       console.log("Notification type: ", remoteMessage.data?.type);
 
@@ -50,12 +51,14 @@ export const useNotificationListener = () => {
         activitySeenStore.set(false);
       }
 
-      // ✅ you can now safely use context here
-      showBanner?.({
-        title: remoteMessage.notification?.title,
-        body: remoteMessage.notification?.body,
-      });
+      if(LoginStore.get()){
+        showBanner?.({
+          title: remoteMessage.notification?.title,
+          body: remoteMessage.notification?.body,
+        });
+      }
 
+      
       if (screenStore.get() === 'Activity') {
         console.log('Refreshing Activity Screen...');
         eventEmitter.emit('notificationReceived', remoteMessage.data);
@@ -67,6 +70,12 @@ export const useNotificationListener = () => {
       } else {
         console.log('Not on chat screen, maybe show push banner');
       }
+
+      await notifee.displayNotification({
+        title: remoteMessage.notification?.title,
+        body: remoteMessage.notification?.body,
+        android: { channelId: 'default' }
+      });
     };
 
     const unsubscribe = messaging().onMessage(async (remoteMessage) => {
@@ -111,8 +120,8 @@ async function goToThreadScreen(tid , navigation){
 const navigateFromNotification = (remoteMessage, navigation) => {
   const type = remoteMessage.data?.type;
   if (type === 'message') {
-    navigation.navigate('Message');
-  } else if (type === 'new_thread') {
+    navigation.navigate('Messages');
+  } else if (type === 'new_thread' || type === "new_comment" || type === "thread_like" || type === "comment_like") {
     goToThreadScreen(remoteMessage.data?.target_id,navigation);
   } else {
     navigation.navigate('Activity');

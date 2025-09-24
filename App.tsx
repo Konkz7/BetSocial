@@ -38,6 +38,7 @@ import SettingsScreen from './app/settingsPage';
 import DMScreen from './app/dmPage';
 import { activitySeenStore, messageSeenStore } from './app/GlobalFlags';
 import { BannerProvider } from './app/Components/BannerProvider';
+import notifee, {AndroidImportance} from '@notifee/react-native';
 
 
 const queryClient = new QueryClient();
@@ -138,6 +139,17 @@ function TabNavigator(){
       setSeenMessages(value); // trigger re-render  
     };
 
+  }, []);
+
+  useEffect(() => {
+    async function setupChannel() {
+      await notifee.createChannel({
+        id: 'default',
+        name: 'Default Channel',
+        importance: AndroidImportance.HIGH,
+      });
+    }
+    setupChannel();
   }, []);
     return(
       <MainTab.Navigator 
