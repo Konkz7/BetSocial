@@ -5,6 +5,7 @@ import { Alert } from 'react-native';
 import { activitySeenStore, messageSeenStore, screenStore } from '../GlobalFlags';
 import { eventEmitter } from './EventBus';
 import { BannerContext } from './BannerProvider';
+import { useNavigation } from '@react-navigation/native';
 
 export const requestFBNPermission = async () => {
   const authStatus = await messaging().requestPermission();
@@ -32,6 +33,7 @@ export const removeFBNToken = async() =>{
 
 export const useNotificationListener = () => {
   const { showBanner } = useContext(BannerContext);
+  const navigation = useNavigation();
 
   useEffect(() => {
     const handleIncomingNotification = (remoteMessage) => {
@@ -72,6 +74,47 @@ export const useNotificationListener = () => {
       handleIncomingNotification(remoteMessage);
     });
 
-    return unsubscribe;
-  }, [showBanner]); // ✅ add showBanner as dependency
+
+    const unsubscribeNotificationOpened = messaging().onNotificationOpenedApp(remoteMessage => {
+      console.log('Notification opened from background state:', remoteMessage);
+      navigateFromNotification(remoteMessage, navigation);
+    });
+
+    // When app is opened from a quit state
+    messaging()
+      .getInitialNotification()
+      .then(remoteMessage => {
+        if (remoteMessage) {
+          console.log('Notification caused app to open from quit state:', remoteMessage);
+          navigateFromNotification(remoteMessage, navigation);
+        }
+      });
+
+    return () => {
+      unsubscribe();
+      unsubscribeNotificationOpened();
+    };
+  }, [showBanner,navigation]);
+};
+
+async function goToThreadScreen(tid , navigation){
+    
+  const profile = await toThreadProfile(tid);
+
+  navigation.navigate("Home", {
+      screen: "Thread_H",
+      params: profile, 
+  });
+
+}
+
+const navigateFromNotification = (remoteMessage, navigation) => {
+  const type = remoteMessage.data?.type;
+  if (type === 'message') {
+    navigation.navigate('Message');
+  } else if (type === 'new_thread') {
+    goToThreadScreen(remoteMessage.data?.target_id,navigation);
+  } else {
+    navigation.navigate('Activity');
+  }
 };

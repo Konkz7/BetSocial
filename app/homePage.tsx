@@ -136,6 +136,9 @@ const HomeScreen = ({navigation,route}:any) => {
   const is_Unread_Conversations = async () => {
     try {
       const data = await getConversations();
+      if(data.length == 0){
+          messageSeenStore.set(true);
+      }
       for (const conversation of data) {
         if (!conversation.lastMessage.is_read) {
           messageSeenStore.set(false);
@@ -149,8 +152,10 @@ const HomeScreen = ({navigation,route}:any) => {
 
   const is_Unread_Activity = async () => {
     try {
-      
-      
+  
+      if(notifications.length == 0){
+          activitySeenStore.set(true);
+      }
       if (!notifications[0].is_read) {
         activitySeenStore.set(false);   
       }
@@ -160,11 +165,7 @@ const HomeScreen = ({navigation,route}:any) => {
     }
   };
 
-  useEffect(() => {
-    (async () => {
-      is_Unread_Conversations();
-    })(); 
-  }, []);
+  
 
   useEffect(() => {
     (async () => {
@@ -183,11 +184,13 @@ const HomeScreen = ({navigation,route}:any) => {
     })();
   }, [threadData]);
 
+ 
   useFocusEffect(
     useCallback(() => {
       console.log("Screen focused → refresh threads" + route.params?.params);
       screenStore.set("Home");
    
+      is_Unread_Conversations();
       
       (async () => {
         if (route.params?.refresh) {

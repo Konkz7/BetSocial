@@ -5,6 +5,7 @@ export const screenStore = {
   get: () => currentScreen,
   set: (name: string | undefined) => {
     currentScreen = name;
+    console.log("Screen:", name);
   }
 };
 
@@ -20,7 +21,7 @@ export const activitySeenStore = {
 };
 
 let seenMessages: boolean = true;
-
+ 
 
 export const messageSeenStore = {
   get: () => seenMessages, 
