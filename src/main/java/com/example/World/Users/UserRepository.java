@@ -59,10 +59,14 @@ public interface UserRepository extends ListCrudRepository<User_, Long> {
     @Query("UPDATE User_ SET profile_picture = :profile_picture WHERE uid = :id AND deleted_at IS NULL")
     int changeProfilePicture(@Param("id") Long id,@Param("profile_picture") String profile_picture);
 
+
     @Modifying
     @Transactional
     @Query("UPDATE User_ SET fb_notification_token = :FBNtoken WHERE uid = :id AND deleted_at IS NULL")
     int saveFBNtoken(@Param("id") Long id,@Param("FBNtoken") String FBNtoken);
+
+    @Query("SELECT * FROM User_ WHERE fb_notification_token = :token AND deleted_at IS NULL")
+    List<User_> findByFBNToken(@Param("token") String token);
 
     @Modifying
     @Transactional

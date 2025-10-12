@@ -3,20 +3,13 @@ package com.example.World.Messages;
 
 
 import com.example.World.Notifications.NotificationService;
-import com.example.World.Threads.ThreadDTO;
-import com.example.World.Threads.Thread_;
-import com.example.World.Users.UserRepository;
-import com.example.World.Users.User_;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.messaging.Message;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -102,6 +95,16 @@ public class MessageController {
     void updatePrevReadReceipts(@PathVariable Long gid, HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
         messageService.updatePrevReadReceipts(uid,gid);
+    }
+
+    @PutMapping("/delete")
+    void softDeleteMessage(@RequestParam Long mid, @RequestParam Long gid){
+
+
+        messageService.deleteMessage(mid);
+
+        simpMessagingTemplate.convertAndSend("/topic/chat/" + gid, new MessageAction("DELETE" , mid , null));
+
     }
 
     @PutMapping("/update-read/{mid}")

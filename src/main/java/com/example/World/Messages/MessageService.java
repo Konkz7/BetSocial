@@ -66,6 +66,10 @@ public class MessageService {
         return message;
     }
 
+    public void deleteMessage(Long mid){
+        messageRepository.softDelete(mid, new Date().getTime());
+    }
+
     public List<Message_> getChatMessages(Long gid) {
         return messageRepository.findMessagesByGidAsc(gid);
     }

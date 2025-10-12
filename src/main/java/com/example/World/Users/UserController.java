@@ -88,7 +88,7 @@ public class UserController {
 
         System.out.println("DONE");
 
-        return userService.saveFBNToken(uid,FBNtoken) ? ResponseEntity.ok().body("FBN changed!") :
+        return userService.uniqueFBNLog(uid,FBNtoken) ? ResponseEntity.ok().body("FBN changed!") :
                 ResponseEntity.badRequest().body("FBN couldnt be saved");
 
     }

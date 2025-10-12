@@ -83,8 +83,16 @@ public class UserService implements UserDetailsService {
         return authService.checkEmailVerified(email);
     }
 
-    public boolean saveFBNToken (Long uid,String token){
+
+
+
+    public boolean uniqueFBNLog(Long uid,String token){
+        for(User_ u : userRepository.findByFBNToken(token)){
+            userRepository.saveFBNtoken(u.uid(),null);
+        }
+
         return userRepository.saveFBNtoken(uid, token) == 1;
+
     }
 
 

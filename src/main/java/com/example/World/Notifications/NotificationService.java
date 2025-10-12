@@ -41,25 +41,27 @@ public class NotificationService {
 
         String title;
         User_ sender = userRepository.findById(notificationDTO.actor_id()).orElseThrow();
+        User_ recipient = userRepository.findById(recipient_id).orElseThrow();
+
 
         switch(notificationDTO.notification_type()){
             case "message":
-                title = "You have received a message from: " + sender.user_name();
+                title = recipient.user_name() + ": You have received a message from " + sender.user_name();
                 break;
             case "new_thread":
-                title = sender.user_name() + " posted a new thread!";
+                title = recipient.user_name() + ": " + sender.user_name() + " posted a new thread!";
                 break;
             case "new_comment":
-                title = sender.user_name() + " commented on your thread!";
+                title = recipient.user_name() + ": " + sender.user_name() + " commented on your thread!";
                 break;
             case "follow_request":
-                title = sender.user_name() + " sent you a follow!";
+                title = recipient.user_name() + ": " + sender.user_name() + " sent you a follow!";
                 break;
             case "thread_like":
-                title = sender.user_name() + " liked your thread!!";
+                title = recipient.user_name() + ": " + sender.user_name() + " liked your thread!!";
                 break;
             case "comment_like":
-                title = sender.user_name() + " liked your comment!";
+                title = recipient.user_name() + ": " + sender.user_name() + " liked your comment!";
                 break;
             default:
                 title = "Unknown";

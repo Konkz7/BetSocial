@@ -1,5 +1,6 @@
 package com.example.World.Security;
 
+import com.example.World.Users.UserService;
 import com.example.World.Users.User_;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,6 +35,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
         session.setAttribute("userId",user.getUserId());
         System.out.println("User " + authentication.getName() + " has logged in.");
+
 
         // Example: Redirect to a specific URL or return a response
         response.setStatus(HttpServletResponse.SC_OK);

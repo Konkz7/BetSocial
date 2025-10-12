@@ -23,6 +23,12 @@ public interface MessageRepository extends ListCrudRepository<Message_,Long> {
     int updateReadReceipt(@Param("mid") Long mid);
 
 
+    @Modifying
+    @Transactional
+    @Query("UPDATE Message_ SET description = 'This message was deleted' , deleted_at = :time , media_type = 0 WHERE mid = :mid")
+    int softDelete(@Param("mid") Long mid,@Param("time") Long time);
+
+
 
 
 }

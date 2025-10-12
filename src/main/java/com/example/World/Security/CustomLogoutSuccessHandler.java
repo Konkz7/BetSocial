@@ -36,7 +36,7 @@ public class CustomLogoutSuccessHandler implements LogoutSuccessHandler {
 
             if (uid != null) {
                 // Clear FCM token in the DB for this user
-                userService.saveFBNToken(uid, null);
+                //userService.saveFBNToken(uid, null);
                 System.out.println("Cleared FCM token for user: " + uid);
             }
 
