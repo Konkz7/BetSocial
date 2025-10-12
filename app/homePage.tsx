@@ -62,7 +62,7 @@ const HomeScreen = ({navigation,route}:any) => {
   });
 
   const { data: threadData, isLoading, refetch: refetchThreads } = useQuery({
-    queryKey: ["threads"],
+    queryKey: ["threads"+ profile?.uid],
     queryFn: getThreads,
     refetchOnMount: false,
     refetchOnWindowFocus: false,

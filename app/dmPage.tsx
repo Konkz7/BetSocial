@@ -8,12 +8,14 @@ import {
   Image,
   StyleSheet,
   SafeAreaView,
+  Pressable,
+  Alert,
 } from 'react-native';
 import { ArrowLeft, Send, Check,ImageUp } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import webSocketService from './Components/WebSocketService';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fillReadMarkers, getChatMessages,updateLastTimestamp } from './API';
+import { deleteMessage, fillReadMarkers, getChatMessages,updateLastTimestamp } from './API';
 import { formatMessageTime, timeAgo } from './Constants';
 import { selectMedia } from './Components/FBStorageService';
 import Video from 'react-native-video';
@@ -27,14 +29,13 @@ type Message = {
   time: string;
   seen: boolean;
   type: number; // 0 for text, 1 for image, 2 for video
-  //TODO Seen will be fully implemented with the live feature , can be tested via postman.
+  deleted: boolean;
 };
 
 
 const DMScreen = ({ navigation ,route }:any) => {
   const [newMessage, setNewMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
-  const [messageIndex, setMessageIndex] = useState(0);
   const [isReading  , setIsReading] = useState(false);
 
 
@@ -45,11 +46,7 @@ const DMScreen = ({ navigation ,route }:any) => {
   const queryClient = useQueryClient();
   const self = queryClient.getQueryData(["user"]) as any;
 
-  const getMIndex = () => {
-    const index = messages.length + 1;
-    setMessageIndex(index);
-    return index;
-  }
+ 
 
   const { data: chatData, refetch: refetchChat, isLoading: chatLoading } = useQuery({ 
       queryKey: ["chat"+chatGid], 
@@ -66,9 +63,17 @@ const DMScreen = ({ navigation ,route }:any) => {
       screenStore.set("Chat"); 
 
       fillReadMarkers(recipient["gid"]);
+      
 
       webSocketService.connect(self.uid, chatGid, (message: any) => {
         
+        if (message.description === undefined && message.type !== undefined) {
+          if(message.type === "DELETE"){
+            setMessages(prev => prev.map(m => m.id === message.mid ? { ...m, text: " This message was deleted", type:0 , deleted: true} : m));
+          }  
+          return; // stop here so we don't mis-treat as chat
+        }
+
         if (message.description === undefined && message.online !== undefined) {
           setIsReading(message.online);
 
@@ -84,12 +89,13 @@ const DMScreen = ({ navigation ,route }:any) => {
         }
 
         const newMessageObj: Message = {
-          id: getMIndex(),
+          id: message.mid,
           text: message.description,
           sent: message.uid == self.uid,
           time: formatMessageTime(Date.now()),
           seen: message.is_read,
           type: message.media_type,
+          deleted: false,
         };
         setMessages(prevMessages => [...prevMessages, newMessageObj ]);
       });
@@ -102,13 +108,14 @@ const DMScreen = ({ navigation ,route }:any) => {
         .then((result) => {
           const backendMessages = result.data;
           if (backendMessages) {
-            const initialMessages: Message[] = backendMessages.map((item: any, idx: number) => ({
-              id: idx + 1,
+            const initialMessages: Message[] = backendMessages.map((item: any) => ({
+              id: item.mid,
               text: item.description,
               sent: item.uid === self.uid,
               time: formatMessageTime(item.created_at),
               seen:  item.is_read,
               type: item.media_type,
+              deleted: item.deleted_at === null ? false : true,
             }));
   
             setMessages(initialMessages);
@@ -126,6 +133,25 @@ const DMScreen = ({ navigation ,route }:any) => {
       };
     }, [self.uid, chatGid, refetchChat])
   );
+
+    const deleteText = (message : any) => {
+
+      if(message.sent === false || message.deleted === true){return;}
+      Alert.alert("Delete Message", "Are you sure you want to delete this message?", [
+          {
+              text: "Cancel",
+              style: "cancel",
+          },
+          {
+              text: "OK",
+              onPress: async () => {
+                  setMessages(prevMessages => prevMessages.map(m => m.id === message.id ? { ...m, text: "This message was deleted", type:0 , deleted: true} : m));
+                  await deleteMessage(message.id,chatGid);
+              },
+          },
+      ]);
+
+    };
   
 
     const sendMessage = () => {
@@ -190,12 +216,13 @@ const DMScreen = ({ navigation ,route }:any) => {
       {/* Messages */}
       <ScrollView style={styles.messagesContainer} contentContainerStyle={styles.messagesContent}>
         {messages.map((message) => (
-          <View
-            key={messages.indexOf(message)}
+          <Pressable
+            key={message.id}
             style={[
               styles.messageWrapper,
               message.sent ? styles.messageSent : styles.messageReceived,
             ]}
+            onLongPress={() => deleteText(message)}
           >
             <View
               style={[
@@ -204,7 +231,7 @@ const DMScreen = ({ navigation ,route }:any) => {
               ]}
             >
              {message.type === 0 && (
-              <Text style={message.sent ? styles.textSent : styles.textReceived}>
+              <Text style={[  message.sent ? styles.textSent : styles.textReceived , message.deleted ? styles.messageDeleted : {}]}>
                 {message.text}
               </Text>
              )} 
@@ -247,7 +274,7 @@ const DMScreen = ({ navigation ,route }:any) => {
                 </View>
               )}
             </View>
-          </View>
+          </Pressable>
         ))}
       </ScrollView>
 
@@ -337,6 +364,10 @@ const styles = StyleSheet.create({
   },
   messageSent: {
     alignSelf: 'flex-end',
+  },
+  messageDeleted:{
+    fontStyle: 'italic',
+    color: 'rgba(2, 19, 114, 1)',
   },
   messageReceived: {
     alignSelf: 'flex-start',

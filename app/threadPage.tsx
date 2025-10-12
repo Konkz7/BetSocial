@@ -191,7 +191,7 @@ const ThreadScreen = ({navigation,route}:any) => {
       "deleted":false,
     }
     
-
+ 
     if (PCID === null) {
       // top-level comment
       setLoadedComments(prevComments => [commentObject, ...prevComments]);

@@ -27,7 +27,6 @@ class WebSocketService {
           const message = JSON.parse(frame.body);
           console.log(message.online);
           
-          if (!message.description?.trim() && message.online === undefined){return} else{console.log ("Message: ", message.description);};
           onMessageReceived(message);
         });
       },
@@ -43,6 +42,7 @@ class WebSocketService {
   }
 
   sendMessage(messageObj) {
+    if (!messageObj.description?.trim()){return} else{console.log ("Message: ", messageObj.description);};
     if (this.stompClient && this.stompClient.connected) {
       this.stompClient.publish({
         destination: `/app/send`,

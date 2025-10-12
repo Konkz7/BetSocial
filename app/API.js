@@ -348,6 +348,15 @@ export const fillReadMarker = async(mid) =>{
   }
 }
 
+export const deleteMessage = async(mid,gid) =>{
+  try {
+      const del = await axios.put(IP_STRING + "/api/messages/delete?mid="+mid+"&gid="+gid);
+      return del.data;
+  } catch (error) {
+    Alert.alert("Error!", "Chat message couldnt be deleted.")
+  }
+}
+
 //MISC
 export const getCircleSecret = async () =>{
     try {
