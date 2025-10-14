@@ -9,10 +9,18 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+@Component
 public class CustomAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
+
+    private final UserService userService;
+
+    public CustomAuthenticationSuccessHandler(UserService userService) {
+        this.userService = userService;
+    }
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
@@ -30,8 +38,8 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         }
 
 
-
-
+        userService.changeStatus(user.getUserId(), true);
+        userService.notifyGroupsOnStatus(user.getUserId(), true);
 
         session.setAttribute("userId",user.getUserId());
         System.out.println("User " + authentication.getName() + " has logged in.");

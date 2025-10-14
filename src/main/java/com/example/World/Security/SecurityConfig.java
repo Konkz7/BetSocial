@@ -28,10 +28,12 @@ public class SecurityConfig {
 
     private final UserService userService;
     private final CustomLogoutSuccessHandler customLogoutSuccessHandler;
+    private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
 
-    SecurityConfig(UserService userService, CustomLogoutSuccessHandler customLogoutSuccessHandler){
+    SecurityConfig(UserService userService, CustomLogoutSuccessHandler customLogoutSuccessHandler, CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler){
         this.userService = userService;
         this.customLogoutSuccessHandler = customLogoutSuccessHandler;
+        this.customAuthenticationSuccessHandler = customAuthenticationSuccessHandler;
     }
 
     @Bean
@@ -68,7 +70,7 @@ public class SecurityConfig {
         })
         .formLogin(httpform -> {
             httpform.loginProcessingUrl("/login")
-                    .successHandler(new CustomAuthenticationSuccessHandler())
+                    .successHandler(customAuthenticationSuccessHandler)
                     .failureHandler(new AuthenticationFailureHandler() {
                         @Override
                         public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {

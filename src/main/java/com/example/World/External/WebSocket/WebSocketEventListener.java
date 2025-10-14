@@ -36,7 +36,7 @@ public class WebSocketEventListener {
             System.out.println("User " + id + " disconnected from chat " + gid);
             userRepository.changeStatus(id,"online");
 
-            GroupStatus gp = new GroupStatus(id, gid, false);
+            GroupStatus gp = new GroupStatus(id, gid, false , true);
             messageOperations.convertAndSend("/topic/chat/" + gid, gp);
         }
     }
@@ -61,7 +61,7 @@ public class WebSocketEventListener {
             System.out.println("User " + id + " connected to chat " + gid);
             userRepository.changeStatus(id,"online/chat/" + gid);
 
-            GroupStatus gp = new GroupStatus(id, gid, true);
+            GroupStatus gp = new GroupStatus(id, gid, true , true);
             messageOperations.convertAndSend("/topic/chat/" + gid, gp);
         }
     }

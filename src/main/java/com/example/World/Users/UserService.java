@@ -1,6 +1,10 @@
 package com.example.World.Users;
 
 import com.example.World.External.Firebase.AuthService;
+import com.example.World.Groups.GroupService;
+import com.example.World.Groups.GroupUserRepository;
+import com.example.World.Groups.Groupuser_;
+import com.example.World.Messages.GroupStatus;
 import com.example.World.Security.CustomUserDetails;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
@@ -8,6 +12,7 @@ import com.google.firebase.auth.FirebaseToken;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -29,12 +34,16 @@ public class UserService implements UserDetailsService {
 
     private  final AuthService authService;
     private final UserRepository userRepository;
+    private final GroupService groupService;
+    private final SimpMessageSendingOperations messageOperations;
 
 
-    UserService(AuthService authService, UserRepository userRepository){
+    UserService(AuthService authService, UserRepository userRepository, GroupService groupService, SimpMessageSendingOperations messageOperations){
 
         this.authService = authService;
         this.userRepository = userRepository;
+        this.groupService = groupService;
+        this.messageOperations = messageOperations;
     }
 
     @Override
@@ -93,6 +102,22 @@ public class UserService implements UserDetailsService {
 
         return userRepository.saveFBNtoken(uid, token) == 1;
 
+    }
+
+    public void changeStatus(Long uid,boolean online){
+        if(online){
+            userRepository.changeStatus(uid,"online");
+        }else{
+            userRepository.changeStatus(uid,"offline");
+        }
+    }
+
+    public void notifyGroupsOnStatus(Long uid, boolean online){
+        List<Groupuser_> groupuserList = groupService.getGroupProfiles(uid);
+        for(Groupuser_ gu : groupuserList){
+            GroupStatus gp = new GroupStatus(uid, gu.gid(), online, false);
+            messageOperations.convertAndSend("/topic/chat/" + gu.gid(), gp);
+        }
     }
 
 

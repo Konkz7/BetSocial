@@ -4,6 +4,7 @@ public record GroupStatus(
 
         Long uid,
         Long gid,
-        boolean online
+        boolean online,
+        boolean chatOnline
 ) {
 }
