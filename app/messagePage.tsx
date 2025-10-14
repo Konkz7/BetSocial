@@ -3,7 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet,SafeAreaView 
 import { ArrowLeft, Smile } from 'lucide-react-native';
 import {DMCheck, fillReadMarkers, getConversations, getUser, makePrivateGroup} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
-import { timeAgo } from './Constants';
+import { getProfilePictureUrl, timeAgo } from './Constants';
 import { useQueryClient } from '@tanstack/react-query';
 import { eventEmitter } from './Components/EventBus';
 import { messageSeenStore, screenStore } from './GlobalFlags';
@@ -108,7 +108,10 @@ const MessageScreen = ({ navigation , route } : any) => {
           
             <TouchableOpacity style={styles.conversationItem} onPress={() => goToDMScreen(item.uid, item.gid)}> 
             <View style={styles.avatarContainer}>
-              <Image source={{ uri: item.avatar}} style={styles.avatar} />
+              <Image
+                  source={getProfilePictureUrl(item?.avatar)}
+                  style={styles.avatar}
+              /> 
               {item.online && <View style={styles.onlineIndicator} />}
             </View>
             <View style={styles.messageInfo}>

@@ -4,7 +4,7 @@ import { TextInput, Button, Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
-import { errorHandler, IP_STRING } from "./Constants";
+import { errorHandler, getProfilePictureUrl, IP_STRING } from "./Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SquarePlus, ArrowLeft,HandCoins, ShieldCheck, CircleX, ImageUp, X } from "lucide-react-native";
 import Card from "./Components/Card"; 
@@ -253,9 +253,9 @@ const AddThreadScreen = ({navigation}:any) => {
 
                 <View style = {{flexDirection: "row", alignItems: "center"}}>
                   <Image
-                    source = {{ uri : data.profile_picture}}
-                    style = {styles.avatar}
-                  />
+                      source={getProfilePictureUrl(data?.profile_picture)}
+                      style={styles.avatar}
+                  /> 
                   <Text style={styles.userName}>{data == null? "404 >:( ":data.user_name}</Text>
                 </View>
 
@@ -467,6 +467,7 @@ const styles = StyleSheet.create({
     width:380,
     backgroundColor: "white",
   },categoryTitle:{
+    marginTop: 4,
     fontSize: 16,
     color:"green",
     alignSelf: "center",

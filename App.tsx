@@ -66,6 +66,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="Thread_H" component={ThreadScreen} />
       <HomeStack.Screen name="Wallet_H" component={WalletStackNavigator} />
       <HomeStack.Screen name="SelfProfile_H" component={SelfProfileStackNavigator} />
+
     </HomeStack.Navigator>
   );
 };

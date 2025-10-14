@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView, Image } from 'react-native';
 import { useQuery } from "@tanstack/react-query";
 import { fillReadMarkers, getActiveNotifications, getUser, getUsers, readNotifications, removeNotification, toThreadProfile} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
-import { timeAgo } from './Constants';
+import { getProfilePictureUrl, timeAgo } from './Constants';
 import { activitySeenStore, screenStore } from './GlobalFlags';
 import { eventEmitter } from './Components/EventBus';
 import { X } from 'lucide-react-native';
@@ -113,7 +113,10 @@ const ActivityScreen = ({ navigation, route } : any) => {
                     </TouchableOpacity>
                 </View>
                 <View style = {styles.notificationContainer}>
-                    <View style = {styles.avatar}></View>
+                    <Image
+                        source={getProfilePictureUrl(user?.profile_picture)}
+                        style={styles.avatar}
+                    /> 
                     <Text style={[styles.itemText, {fontWeight: 'bold' , color: 'green'}]}>{user?.user_name}</Text>
                     <Text style={styles.itemText}>{description}</Text>
                 </View>

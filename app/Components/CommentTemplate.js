@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { View, Text, Image, TouchableOpacity, Pressable, Alert } from "react-native";
 import { Heart, Reply, X } from "lucide-react-native"; // install lucide-react-native
-import { timeAgo } from "../Constants";
-import { registerCommentLike,deleteComment } from "../API";
+import { timeAgo, getProfilePictureUrl } from "../Constants";
+import { registerCommentLike,deleteComment, getUser } from "../API";
 
-const Comment = ({ comment, onReply, replyNum , handleDelete}) => {
+
+const Comment = ({ comment, onReply, replyNum , handleDelete , navigation , uid }) => {
   const [showReplies, setShowReplies] = useState(false);
   const [isLiked, setIsLiked] = useState(comment.liked);
   const [likes, setLikes] = useState(comment.likes);
@@ -24,7 +25,16 @@ const Comment = ({ comment, onReply, replyNum , handleDelete}) => {
     registerCommentLike(comment.cid,comment.tid ,!isLiked);
   };
 
-  
+  const goToProfilePage = async (uid) => {
+    
+    const user = await getUser(uid);
+    
+    navigation.navigate("Search", {
+            screen: "Profile_S",
+            params: user, 
+        });
+
+  };
 
   //console.log(comment.cid);
 
@@ -32,10 +42,12 @@ const Comment = ({ comment, onReply, replyNum , handleDelete}) => {
     <Pressable style={{ marginVertical: 6, padding: 8, borderRadius:20, backgroundColor: isReplying ? "#f0f8ff" : null }} onLongPress = {() => handleDelete(comment)}>
       {/* Header: Avatar + Username */}
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
-        <Image source={{ uri: comment.profile_picture }} style={{ width: 36, height: 36, borderRadius: 18, marginRight: 8 }} />
+        <Pressable onPress={comment.uid !== uid ? () => goToProfilePage(comment.uid) : null}>
+          <Image source={getProfilePictureUrl(comment.profile_picture)} style={{ width: 36, height: 36, borderRadius: 18, marginRight: 8 }} />
+        </Pressable>
         <View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Text style={{ fontWeight: "600", fontSize: 14 }}>{comment.user_name}</Text>
+              <Text onPress={comment.uid !== uid ? () => goToProfilePage(comment.uid) : null} style={{ fontWeight: "600", fontSize: 14 }}>{comment.user_name}</Text>
               <Text style={{ fontWeight: "600", fontSize: 11 , color: "gray", marginLeft: 6 , alignSelf: "flex-start" }}>{timeAgo(comment.created_at)}</Text>
             </View>
             {/* Body: Comment text */}
@@ -109,7 +121,7 @@ const Comment = ({ comment, onReply, replyNum , handleDelete}) => {
     </Pressable>
   );
 };
-export function CommentList({ loadedComments, setLoadedComments ,replyNum ,setReplyNum , uid ,}) {
+export function CommentList({ loadedComments, setLoadedComments ,replyNum ,setReplyNum , uid , navigation}) {
 
 
   const removeCommentRecursive = (comments, cidToRemove) => {
@@ -175,6 +187,8 @@ export function CommentList({ loadedComments, setLoadedComments ,replyNum ,setRe
           onReply={handleReply} 
           replyNum={replyNum}
           handleDelete={deleteCommentAction}
+          navigation={navigation}
+          uid = {uid}
         />
       ))}
     </View>

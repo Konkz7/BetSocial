@@ -16,7 +16,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import webSocketService from './Components/WebSocketService';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { deleteMessage, fillReadMarkers, getChatMessages,updateLastTimestamp } from './API';
-import { formatMessageTime, timeAgo } from './Constants';
+import { formatMessageTime, getProfilePictureUrl, timeAgo } from './Constants';
 import { selectMedia } from './Components/FBStorageService';
 import Video from 'react-native-video';
 import { screenStore } from './GlobalFlags';
@@ -37,6 +37,7 @@ const DMScreen = ({ navigation ,route }:any) => {
   const [newMessage, setNewMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isReading  , setIsReading] = useState(false);
+  const [isOnline  , setIsOnline] = useState(false);
 
 
   const recipient = route.params;
@@ -63,6 +64,8 @@ const DMScreen = ({ navigation ,route }:any) => {
       screenStore.set("Chat"); 
 
       fillReadMarkers(recipient["gid"]);
+
+      setIsOnline(user?.status === "offline" ? false : true);
       
 
       webSocketService.connect(self.uid, chatGid, (message: any) => {
@@ -75,16 +78,22 @@ const DMScreen = ({ navigation ,route }:any) => {
         }
 
         if (message.description === undefined && message.online !== undefined) {
-          setIsReading(message.online);
 
-          // Optional: mark all my sent messages as seen when the recipient is reading
-          if (message.online) {
-            setMessages(prev =>
-              prev.map(m =>
-                m.sent ? { ...m, seen: true } : m
-              )
-            );
+          if(message.chatOnline){
+            setIsReading(message.online);
+
+            // Optional: mark all my sent messages as seen when the recipient is reading
+            if (message.online) {
+              setMessages(prev =>
+                prev.map(m =>
+                  m.sent ? { ...m, seen: true } : m
+                )
+              );
+            }
+          }else{
+            setIsOnline(message.online);
           }
+          
           return; // stop here so we don't mis-treat as chat
         }
 
@@ -196,21 +205,21 @@ const DMScreen = ({ navigation ,route }:any) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ArrowLeft size={24} color="#10B981" />
         </TouchableOpacity>
-        <View style={styles.profileContainer}>
+        <Pressable onPress = { () => navigation.navigate("Search", {screen: "Profile_S",params: user})} style={styles.profileContainer}>
           <View style={styles.profileImageContainer}>
             <Image
-              source={{
-                uri: user.profile_picture, 
-              }}
-              style={styles.profileImage}
+                source={getProfilePictureUrl(user?.profile_picture)}
+                style={styles.profileImage}
             /> 
-            <View style={styles.onlineIndicator} />
+            { !isOnline ? <View style={[styles.onlineIndicator, {backgroundColor : "red"}]}></View> 
+            : <View style={styles.onlineIndicator} />} 
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{user.user_name}</Text>
-            <Text style={styles.profileStatus}>Online</Text>
+            <Text style={styles.profileName}>{user?.user_name}</Text>      
+            { !isOnline ? <Text style={[styles.profileStatus, {color : "red"}]}>Offline</Text> 
+            : <Text style={styles.profileStatus}>Online</Text>}
           </View>
-        </View>
+        </Pressable>
       </View>
 
       {/* Messages */}

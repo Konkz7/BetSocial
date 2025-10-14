@@ -1,10 +1,10 @@
 import React, { useState, useCallback,useEffect } from "react";
-import { View, StyleSheet,Alert, TouchableOpacity,ScrollView , ActivityIndicator, FlatList} from "react-native";
+import { View, StyleSheet,Alert, TouchableOpacity,ScrollView , ActivityIndicator, FlatList, Image} from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
-import { IP_STRING } from "./Constants";
+import { getProfilePictureUrl, IP_STRING } from "./Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Bold, DollarSign, Frown, Heart, MessageCircle, Users } from "lucide-react-native";
 import { 
@@ -37,7 +37,7 @@ const ProfileScreen = ({navigation , route}: any) => {
 
     const queryClient = useQueryClient();
     const profile = queryClient.getQueryData(["user"]) as any;
-    const groupProfiles = queryClient.getQueryData(["groupProfiles"]) as any;
+  
 
     var user = route.params;
    
@@ -228,9 +228,10 @@ const ProfileScreen = ({navigation , route}: any) => {
                 
                     
                     <TouchableOpacity >
-                        <View style = {styles.profilePicture}>
-
-                        </View>
+                        <Image
+                            source={getProfilePictureUrl(user?.profile_picture)}
+                            style={styles.profilePicture}
+                        /> 
                     </TouchableOpacity>
 
                     <View style = {styles.statBlock}>

@@ -4,7 +4,7 @@ import { TextInput, Button, Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
-import { IP_STRING, timeAgo } from "./Constants";
+import { getProfilePictureUrl, IP_STRING, timeAgo } from "./Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Settings2, DollarSign, Frown, Heart, MessageCircle, Users, Trash2, Pencil } from "lucide-react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -173,9 +173,9 @@ const SelfProfileScreen = ({navigation , route}: any) => {
 
                     <TouchableOpacity style = {styles.profilePicture} onPress={()=> changeProfilePicture()}>
                         <Image
-                            source={{ uri: pfp }}
-                            style={{ width: '100%', height: '100%', borderTopRightRadius: 20 , borderBottomRightRadius: 20 }}
-                        />
+                            source={getProfilePictureUrl(user?.profile_picture)}
+                            style={styles.profilePicture}
+                        /> 
                     </TouchableOpacity>
                     
                     <View style = {styles.statBlock}>

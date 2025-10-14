@@ -23,7 +23,8 @@ import Video from "react-native-video";
 
  
 import { removeThread, registerThreadLike} from "../API";
-import { timeAgo } from "../Constants";
+import { timeAgo, getProfilePictureUrl } from "../Constants";
+
 
 
 const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,page) =>  {
@@ -74,7 +75,7 @@ const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,p
             <Frown size={50} color="gray" />
             <Text>No threads available</Text>
             </View>}
-            keyExtractor={(item) => item.tid.toString()}
+            keyExtractor={(item) => item?.tid}
             removeClippedSubviews={false}
             onRefresh={getthreads} // Enable pull-to-refresh
             refreshing={loading} // Show loading state during refresh
@@ -88,9 +89,9 @@ const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,p
                                 {/* Left side (avatar + name + timestamp) */}
                                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                                     <Image
-                                        source={{ uri: item.user.profile_picture }}
+                                        source={getProfilePictureUrl(item.user?.profile_picture)}
                                         style={styles.avatar}
-                                    />
+                                    />  
                                     <View>
                                         <Text style={styles.userName}>{item.user.user_name}</Text>
                                         <Text style={styles.timestamp}>{timeAgo(item.created_at)}</Text>

@@ -1,9 +1,9 @@
 import React, { useState, useCallback,useEffect } from "react";
-import { TextInput,View, StyleSheet,Alert, TouchableOpacity,ScrollView , ActivityIndicator, Image} from "react-native";
+import { TextInput,View, StyleSheet,Alert, TouchableOpacity,ScrollView , ActivityIndicator, Image, Pressable} from "react-native";
 import {  Text } from "react-native-paper";
 import { useFocusEffect } from "@react-navigation/native";
 import axios, {  } from "axios";
-import { IP_STRING } from "./Constants";
+import { getProfilePictureUrl, IP_STRING } from "./Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
@@ -266,13 +266,14 @@ const ThreadScreen = ({navigation,route}:any) => {
           <View style = { styles.threadShadow }>
             <View style = {styles.postHeader}>
 
-                <View style = {{flexDirection: "row", alignItems: "center"}}>
+                <Pressable onPress = {self?.uid !== threadObject.user.uid && self !== undefined ? 
+                  () => navigation.navigate("Search", {screen: "Profile_S",params: threadObject.user}) : null} style = {{flexDirection: "row", alignItems: "center"}}>
                   <Image
-                    source = {{ uri : threadObject.user.profile_picture}}
-                    style = {styles.avatar}
-                  />
+                      source={getProfilePictureUrl(threadObject.user.profile_picture)}
+                      style={styles.avatar}
+                  /> 
                   <Text style={styles.userName}>{threadObject.user.user_name}</Text>
-                </View>
+                </Pressable>
 
                 <View style = {{ marginRight:10}}>
                   <View style = {{}}>
@@ -481,7 +482,7 @@ const ThreadScreen = ({navigation,route}:any) => {
 
 
           {loadedComments.length > 0 && (
-            <CommentList loadedComments={loadedComments} setLoadedComments={setLoadedComments} setReplyNum = {setReplyNum} replyNum={replyNum} uid = {self.uid} />
+            <CommentList loadedComments={loadedComments} setLoadedComments={setLoadedComments} setReplyNum = {setReplyNum} replyNum={replyNum} uid = {self?.uid} navigation={navigation} />
           )}
 
         </View>

@@ -29,7 +29,7 @@ import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient 
 import {getBalance, getCircleSecret,getIpAddress,getProfile,getWallet,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads, getActiveNotifications, getConversations} from "./API";
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
-import { IP_STRING } from "./Constants";
+import { getProfilePictureUrl, IP_STRING } from "./Constants";
 import Video from "react-native-video";
 import threadList from "./Components/ThreadList";
 import { activitySeenStore, messageSeenStore, screenStore } from "./GlobalFlags";
@@ -237,9 +237,9 @@ const HomeScreen = ({navigation,route}:any) => {
 
             <TouchableOpacity onPress={() => navigation.navigate("SelfProfile_H")}>
               <Image
-                source={{ uri: profile?.profile_picture }}
-                style={styles.avatar}
-              />
+                  source={getProfilePictureUrl(profile?.profile_picture)}
+                  style={styles.avatar}
+              /> 
             </TouchableOpacity>
           </View>
         </View>

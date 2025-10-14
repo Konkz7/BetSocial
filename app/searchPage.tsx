@@ -7,6 +7,7 @@ import {getThreadLikes, getThreads, getUsers} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
 import threadList from './Components/ThreadList';
 import { screenStore } from './GlobalFlags';
+import { getProfilePictureUrl } from './Constants';
 
 
 const SearchScreen = ({ navigation} : any) => {
@@ -108,6 +109,10 @@ const SearchScreen = ({ navigation} : any) => {
           renderItem={( {item }) => (
 
             <TouchableOpacity style={styles.item} onPress={() => navigation.navigate("Profile_S",item)}>
+              <Image
+                  source={getProfilePictureUrl(item?.profile_picture)}
+                  style={styles.avatar}
+              /> 
               <Text style={styles.itemText}>{item.user_name}</Text>
             </TouchableOpacity>
           )}
@@ -166,6 +171,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },item: {
     padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
     /*
     backgroundColor: '#fff',
     marginBottom: 8,
@@ -184,6 +191,12 @@ const styles = StyleSheet.create({
       color: 'gray',
       marginTop: 50,
   },
+  avatar: {
+    width: 40,
+    height: 40,
+    backgroundColor: "lightgreen",
+    borderRadius: 20,
+  }
   
 });
 
