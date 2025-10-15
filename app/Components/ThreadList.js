@@ -18,6 +18,7 @@ import {
   Users,
   Trash2,
   Frown,
+  Lock,
 } from "lucide-react-native";
 import Video from "react-native-video";
 
@@ -143,6 +144,11 @@ const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,p
                                     <MessageCircle size={18} color="gray" style = {{marginRight:5}} />
                                     <Text>{item.commentCount}</Text>
                                 </TouchableOpacity>
+                                {item.is_private ? 
+                                <View style={styles.actionButton}>
+                                    <Lock size={18} color="green" />
+                                </View>
+                                : null}
                             </View>
                         <View style={styles.actionsRight}>
                             <View style={styles.actionButton}>

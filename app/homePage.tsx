@@ -26,7 +26,7 @@ import {
   Frown,
 } from "lucide-react-native";
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {getBalance, getCircleSecret,getIpAddress,getProfile,getWallet,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads, getActiveNotifications, getConversations} from "./API";
+import {getBalance, getCircleSecret,getIpAddress,getProfile,getWallet,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads, getActiveNotifications, getConversations, getFollows} from "./API";
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { getProfilePictureUrl, IP_STRING } from "./Constants";
@@ -36,11 +36,12 @@ import { activitySeenStore, messageSeenStore, screenStore } from "./GlobalFlags"
 
 const categories = [
   "All",
+  "People I Follow",
   "Sports",
   "Politics",
   "Entertainment",
   "Tech",
-  "Gaming",
+  "Gaming"
 ];
 
 
@@ -59,6 +60,11 @@ const HomeScreen = ({navigation,route}:any) => {
   const { data: notifications, isLoading: notificationsLoading } = useQuery({
     queryKey: ["activeNotifications"],
     queryFn: getActiveNotifications
+  });
+
+  const { data: follows, isLoading: followsLoading ,refetch: refetchFollows } = useQuery({
+    queryKey: ["follows"],
+    queryFn: getFollows
   });
 
   const { data: threadData, isLoading, refetch: refetchThreads } = useQuery({
@@ -106,6 +112,12 @@ const HomeScreen = ({navigation,route}:any) => {
     if (category === "All") {
       setActiveThreads(threads);
     } else {
+      if(category === "People I Follow"){
+        
+        threads = threads.filter(thread => follows?.some((follow: any) => follow.receive_id === thread.user.uid));
+        setActiveThreads(threads);
+        return;
+      }
       setActiveThreads(threads.filter(thread => thread.category === category));
     }  
 
@@ -166,6 +178,12 @@ const HomeScreen = ({navigation,route}:any) => {
     }
   };
 
+  useEffect(() => {
+    (async () => {
+      refetchFollows();
+      console.log(follows);
+    })(); 
+  }, [follows]);
   
 
   useEffect(() => {

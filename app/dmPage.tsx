@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,10 @@ const DMScreen = ({ navigation ,route }:any) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isReading  , setIsReading] = useState(false);
   const [isOnline  , setIsOnline] = useState(false);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+
 
 
   const recipient = route.params;
@@ -55,8 +59,63 @@ const DMScreen = ({ navigation ,route }:any) => {
       enabled: false,
   });
 
+  const handleScroll = (event: any) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const isAtBottom =
+      contentOffset.y + layoutMeasurement.height >= contentSize.height - 20;
+    setIsUserScrolling(!isAtBottom);
+  };
 
- // console.log("Chat Data",chatData);
+ 
+  const deleteText = (message : any) => {
+
+    if(message.sent === false || message.deleted === true){return;}
+    Alert.alert("Delete Message", "Are you sure you want to delete this message?", [
+        {
+            text: "Cancel",
+            style: "cancel",
+        },
+        {
+            text: "OK",
+            onPress: async () => {
+                setMessages(prevMessages => prevMessages.map(m => m.id === message.id ? { ...m, text: "This message was deleted", type:0 , deleted: true} : m));
+                await deleteMessage(message.id,chatGid);
+            },
+        },
+    ]);
+
+  };
+
+  const sendMessage = () => {
+
+    const messageObj = {
+      gid: chatGid,
+      recipient_id: user.uid,
+      description: newMessage,
+      media_type: 0, 
+    };
+    webSocketService.sendMessage(messageObj);
+    console.log("IS READING:", isReading);
+
+    setNewMessage('');
+
+  };
+
+  const sendMedia = async () => {
+
+    const { mediaUri, media_type } = await selectMedia();
+    const type = media_type === 'image' ? 1 : 2;
+
+    const messageObj = {
+      gid: chatGid,
+      recipient_id: user.uid,
+      description: mediaUri,
+      media_type: type,
+    };
+    webSocketService.sendMessage(messageObj);
+
+    setNewMessage('');
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -143,60 +202,7 @@ const DMScreen = ({ navigation ,route }:any) => {
     }, [self.uid, chatGid, refetchChat])
   );
 
-    const deleteText = (message : any) => {
-
-      if(message.sent === false || message.deleted === true){return;}
-      Alert.alert("Delete Message", "Are you sure you want to delete this message?", [
-          {
-              text: "Cancel",
-              style: "cancel",
-          },
-          {
-              text: "OK",
-              onPress: async () => {
-                  setMessages(prevMessages => prevMessages.map(m => m.id === message.id ? { ...m, text: "This message was deleted", type:0 , deleted: true} : m));
-                  await deleteMessage(message.id,chatGid);
-              },
-          },
-      ]);
-
-    };
-  
-
-    const sendMessage = () => {
-
-      
-      const messageObj = {
-        gid: chatGid,
-        recipient_id: user.uid,
-        description: newMessage,
-        media_type: 0, 
-      };
-      webSocketService.sendMessage(messageObj);
-      console.log("IS READING:", isReading);
-
-      setNewMessage('');
-
-
-    };
-
-    const sendMedia = async () => {
-  
-      const { mediaUri, media_type } = await selectMedia();
-      const type = media_type === 'image' ? 1 : 2;
-
-      const messageObj = {
-        gid: chatGid,
-        recipient_id: user.uid,
-        description: mediaUri,
-        media_type: type,
-      };
-      webSocketService.sendMessage(messageObj);
-
-      setNewMessage('');
-
-
-    };
+   
 
   return (
     <SafeAreaView style={styles.container}>
@@ -223,7 +229,21 @@ const DMScreen = ({ navigation ,route }:any) => {
       </View>
 
       {/* Messages */}
-      <ScrollView style={styles.messagesContainer} contentContainerStyle={styles.messagesContent}>
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.messagesContainer}
+        contentContainerStyle={styles.messagesContent}
+        onContentSizeChange={() => {
+          if (!isUserScrolling) {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }
+        }}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        overScrollMode="never"
+        keyboardShouldPersistTaps="handled"
+      >
         {messages.map((message) => (
           <Pressable
             key={message.id}
