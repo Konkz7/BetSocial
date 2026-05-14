@@ -203,9 +203,9 @@ npm start
 
 # 📸 Screenshots
 
-```markdown
-![Home Page](screenshots/homepage.png)
-```
+<p align="center">
+  <img src="screenshots/betSocial-trailer.png"/>
+</p>
 
 ---
 
