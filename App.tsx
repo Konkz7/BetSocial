@@ -16,11 +16,11 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
-import LoginScreen from './app/loginPage';
-import RegisterScreen from './app/registrationPage';
+import LoginScreen from './app/Starter/loginPage';
+import RegisterScreen from './app/Starter/registrationPage';
 import { NavigationContainer } from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import OtpScreen from './app/otpPage';
+import OtpScreen from './app/Starter/otpPage';
 import HomeScreen from './app/homePage';
 import AddThreadScreen from './app/addThreadPage';
 import ThreadScreen from './app/threadPage';
@@ -31,9 +31,9 @@ import WalletScreen from './app/walletPage';
 import AddCardScreen from './app/addCardPage';
 import MessageScreen from './app/messagePage';
 import SearchScreen from './app/searchPage';
-import ProfileScreen from './app/profilePage';
+import ProfileScreen from './app/Profile/profilePage';
 import ActivityScreen from './app/activityPage';
-import SelfProfileScreen from './app/selfProfilePage';
+import SelfProfileScreen from './app/Profile/selfProfilePage';
 import SettingsScreen from './app/settingsPage';
 import DMScreen from './app/dmPage';
 import { activitySeenStore, messageSeenStore } from './app/GlobalFlags';

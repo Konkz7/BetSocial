@@ -4,9 +4,9 @@ import { TextInput, Button, Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import axios, { Axios, AxiosError } from "axios";
 import auth from '@react-native-firebase/auth';
-import { IP_STRING } from "./Constants";
+import { IP_STRING } from "../Constants";
 import { useFocusEffect } from "@react-navigation/native";
-import { screenStore } from "./GlobalFlags";
+import { screenStore } from "../GlobalFlags";
 
 
 

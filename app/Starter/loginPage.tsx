@@ -4,10 +4,10 @@ import { TextInput, Button, Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
-import { IP_STRING } from "./Constants";
-import { removeFBNToken, requestFBNPermission } from "./Components/FBCloudMessagingService";
-import { LoginStore, screenStore } from "./GlobalFlags";
-import {useNotificationListener } from "./Components/FBCloudMessagingService";
+import { IP_STRING } from "../Constants";
+import { removeFBNToken, requestFBNPermission } from "../Components/FBCloudMessagingService";
+import { LoginStore, screenStore } from "../GlobalFlags";
+import {useNotificationListener } from "../Components/FBCloudMessagingService";
 
 
 

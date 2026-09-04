@@ -1,86 +1,135 @@
 import React, { useState, useCallback,useEffect } from "react";
-import { View, StyleSheet,Alert, TouchableOpacity,ScrollView , ActivityIndicator, FlatList,Image} from "react-native";
+import { View, StyleSheet,Alert, TouchableOpacity,ScrollView , ActivityIndicator, FlatList, Image} from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
-import { getProfilePictureUrl, IP_STRING, timeAgo } from "./Constants";
+import { getProfilePictureUrl, IP_STRING } from "../Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowLeft, Settings2, DollarSign, Frown, Heart, MessageCircle, Users, Trash2, Pencil } from "lucide-react-native";
+import { ArrowLeft, Bold, DollarSign, Frown, Heart, MessageCircle, Users } from "lucide-react-native";
+import { 
+    UserRoundCheck,
+    UserRoundPlus,
+    UserRoundCog,
+    Send,
+    CircleAlert,
+  } 
+    from "lucide-react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { changeBio, getUserThreads, removeThread, changePfp, registerThreadLike, getThreads, getThreadLikes, getFollows, getFollowers } from "./API";
+import { getFollow, getUserThreads, follow, unfollow , DMCheck , makePrivateGroup, fillReadMarkers, 
+    getThreadLikes, registerThreadLike, getOtherFollow, getFollowsByID, getFollowersByID} from "../API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
-import Video from 'react-native-video';
-import { selectImage} from "./Components/FBStorageService";
-import threadList from "./Components/ThreadList";
-import { screenStore } from "./GlobalFlags";
+import threadList from "../Components/ThreadList";
+import { screenStore } from "../GlobalFlags";
 
 
 
 
-
-const SelfProfileScreen = ({navigation , route}: any) => { 
+const ProfileScreen = ({navigation , route}: any) => {
 
     const [currentTab,setCurrentTab] = useState('Threads');
     const [threads, setThreads] = useState<any[]>([]);
-    const [bioMode,setBioMode] = useState(false);
-    const [bioText, setBioText] = useState("");
-    const [loading, setLoading] = useState(true); // Show loading indicator
+    const [threadsLoading, setThreadsLoading] = useState(true); // Show loading indicator
+    const [following, setFollowing] = useState(false);
+    const [followed , setFollowed] = useState(false);
 
     const[follows , setFollows] = useState(0);
     const[followers , setFollowers] = useState(0);
 
-   
-    const [uploading, setUploading] = useState(false);
-   
     const queryClient = useQueryClient();
-    const user = queryClient.getQueryData(["user"]) as any;
-    const [pfp , setPfp] = useState(user.profile_picture);
+    const profile = queryClient.getQueryData(["user"]) as any;
+  
 
-
-
-
-    const { data: threadData, isLoading: threadsLoading, refetch: refetchThreads } = useQuery({
+    var user = route.params;
+   
+    const { data: threadData, isLoading: threadDataLoading, refetch: refetchThreads } = useQuery({
         queryKey: ["userThreads" + user.uid],
         queryFn: () => getUserThreads(user.uid),
         refetchOnMount: false,
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
     });
+       
+    const { data: followData, refetch: refetchFollow, isLoading: followLoading } = useQuery({ 
+        queryKey: ["follow"], 
+        queryFn: () => getFollow(user.uid),
+    });
+
+    const { data: otherFollowData, refetch: refetchOtherFollow, isLoading: otherFollowLoading } = useQuery({ 
+        queryKey: ["otherFollow"], 
+        queryFn: () => getOtherFollow(user.uid),
+    });
 
     const { data: followsData, refetch: refetchFollows, isLoading: followsLoading } = useQuery({ 
-        queryKey: ["follows"], 
-        queryFn: () => getFollows(),
+        queryKey: ["follows" + user.uid], 
+        queryFn: () => getFollowsByID(user.uid),
     });
 
     const { data: followersData, refetch: refetchFollowers, isLoading: followersLoading } = useQuery({ 
-        queryKey: ["followers"], 
-        queryFn: () => getFollowers(),
+        queryKey: ["followers" + user.uid], 
+        queryFn: () => getFollowersByID(user.uid),
     });
-   
-   
 
 
+   
     const getAllthreads = async () => {
         try {
-            refetchFollowers();
-            refetchFollows();
             const threadResponse = await refetchThreads(); // use react-query’s refetch
-            if (!threadResponse.data) return; 
+            if (!threadResponse.data) return;
+
+            
             setThreads(threadResponse.data);
 
         } catch (error) {
             Alert.alert("Error:", "Failed to fetch threads");
         } finally {
-            setLoading(false);
+            setThreadsLoading(false);
         }
     };
+    
+     
+    useFocusEffect(
+        useCallback(() => {
+            console.log("Screen is focused! Refetching threads and friendship...");
+            screenStore.set("Profile");
+            refetchThreads();
+            refetchFollow(); // Ensure this refetches correctly
+            refetchOtherFollow();
+            refetchFollowers();
+            refetchFollows();
+             
+            console.log("Friendship data:", followData);
 
+            return async () => {
+
+                console.log("Screen is unfocused! Cleanup if needed.");       
+            };
+        }, []) 
+    );
+    
+    
+    useEffect(() => {
+            getAllthreads();
+    }, []);
 
     useEffect(() => {
-        getAllthreads();
-    }, []);
-     
+        if (followData) {
+            console.log("Friendship data:", followData);
+            setFollowing(true)
+        }else{
+            setFollowing(false);
+        }
+    }, [followData]);
+
+    useEffect(() => {
+        if (otherFollowData) {
+            console.log("Other Friendship data:", otherFollowData);
+            setFollowed(true)
+        }else{
+            setFollowed(false);
+        }
+    }, [otherFollowData]);
+
     useEffect(() => {
         if (followsData) {
             setFollows(followsData.length)
@@ -92,63 +141,56 @@ const SelfProfileScreen = ({navigation , route}: any) => {
             setFollowers(followersData.length)
         }
     }, [followersData]);
+
+
+
+
+    async function goToDMScreen(){
+
+        // could be optimized by caching group data and checking against that
+        const recipient : any = {};
+        recipient["user"] = user;
+        const gid = await DMCheck(user.uid);
+        console.log("Gid:" + gid);
+
+        if( gid === undefined || gid === null || gid === ""){
+            const newGroup = await makePrivateGroup(user.uid);
+            recipient["gid"] = newGroup.gid;
+            console.log("New group" + newGroup);
+        }else{ 
+            recipient["gid"] = gid;
+        }
+
+        //fillReadMarkers(recipient["gid"]);
+
+        navigation.navigate("DMScreen_S",recipient); 
+    }
     
-    useFocusEffect(
-        useCallback(() => {
-            console.log("Screen is focused! Refetching threads and friendship...");
-            screenStore.set("SelfProfile");
-            console.log(user.profile_picture);
-
-            setPfp(user.profile_picture);
+    async function handleFollow() {
+        if (!following) {
             
-            console.log(user);
+            try{
+                await follow(user.uid);
+                //Alert.alert("Message:", "Friend request sent to " + user.user_name);
+                setFollowing(true);    
+            }catch (error) {
+                //Alert.alert("Error:", "Failed to send friend request");
+            }
 
-            user.bio !== "undefined" ? setBioText(user.bio) : setBioText(""); 
-            
-            return async () => {
-                queryClient.invalidateQueries({queryKey: ["user"]});
-                console.log("Screen is unfocused! Cleanup if needed.");       
-            };
-        }, []) 
-    );
-
-
-
-    const test = (text : string) => {
-        setBioText(text);
-        console.log(text);
-        console.log(bioText);
+        } else  {          
+            try{
+                await unfollow(user.uid);
+                //Alert.alert("Message:", "Friend request cancelled for " + user.user_name);
+                setFollowing(false); 
+            }catch (error) {
+                //Alert.alert("Error:", "Failed to send friend request");
+            }
+        } 
+        
+        queryClient.invalidateQueries({queryKey: ["follow"]});
+        
     }
 
-    const handleEditMode = async () => {
-        await changeBio(bioText);
-        setBioMode(!bioMode);
-    }
-
-    
-    
-    useEffect(() => {
-        if (threadData) {
-          setThreads(threadData);
-        }
-    }, [threadData]);
-
-   
-   
-    const changeProfilePicture = async () => {
-        try {
-            setUploading(true);
-            const url = await selectImage(user.uid); 
-            await changePfp(encodeURIComponent(url));
-            setPfp(url);          
-        } catch (error) {
-            console.error("Media selection/upload failed:", error);
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    
 
     return (
 
@@ -161,23 +203,38 @@ const SelfProfileScreen = ({navigation , route}: any) => {
                         <ArrowLeft size={36} color={"#10B981"} />   
                     </TouchableOpacity>
 
-                    <View style = {styles.nameContainer}>
-                        <Text style = {styles.name}> {user.user_name} </Text> 
-                    </View>
-                    <TouchableOpacity style = {styles.button} onPress={() => navigation.navigate("Settings_SP")}>
-                        <Settings2 size={32} color={"#10B981"} />
+                    <Text style = {[styles.name , followed ? {color: "blue"} : null]}> {user.user_name} </Text>
+            
+                    {followLoading ? 
+                    <ActivityIndicator size = "small" color = " green"/>
+                    :
+                    <TouchableOpacity style = {styles.button} onPress={() => handleFollow()}> 
+                        {
+                        following === false ? <UserRoundPlus color={"green"}></UserRoundPlus> :
+                        <UserRoundCheck color={"green"}></UserRoundCheck> 
+                        }
+                    </TouchableOpacity>
+                    }
+
+                    <TouchableOpacity style = {styles.button} onPress={() => goToDMScreen()}>
+                        <Send color={"green"}></Send>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style = {styles.button}>
+                        <CircleAlert color={"red"}></CircleAlert>
                     </TouchableOpacity>
 
                 </View>
                 <View style = {{flexDirection: "row"}}>
-
-                    <TouchableOpacity style = {styles.profilePicture} onPress={()=> changeProfilePicture()}>
+                
+                    
+                    <TouchableOpacity >
                         <Image
                             source={getProfilePictureUrl(user?.profile_picture)}
                             style={styles.profilePicture}
                         /> 
                     </TouchableOpacity>
-                    
+
                     <View style = {styles.statBlock}>
                         <Text style = {styles.stat}>Followers</Text>
                         <Text style = {styles.number}>{followers}</Text>
@@ -187,24 +244,9 @@ const SelfProfileScreen = ({navigation , route}: any) => {
                         <Text style = {styles.number}>{threadsLoading? 0 : threadData?.length}</Text>
                     </View>
                 </View>
-         
-        <TouchableOpacity style = {{flexDirection: 'row-reverse', marginRight: 20}} onPress={() => handleEditMode()}>
-                    <Pencil size = {20} color={ bioMode ?  "lightgreen" : "black"  } ></Pencil>
-                </TouchableOpacity>
                 <View style = {{padding: 20, maxHeight: 115}}>
                     <Text style = {styles.bio}>
-                        {bioMode?  
-                            <TextInput
-                            placeholder="Write about who you are!"
-                            underlineColor="transparent"
-                            activeUnderlineColor="transparent"
-                            value={bioText}
-                            onChangeText={test}
-                            style={{ backgroundColor: "white", height: 50 }}
-                            />
-                            : 
-                            bioText 
-                        }
+                        {user.bio}
                     </Text>
                 </View>
             </View>
@@ -237,8 +279,9 @@ const SelfProfileScreen = ({navigation , route}: any) => {
                 </View>
             
             </View>
-            
-                {threadList(threads, refetchThreads, loading, navigation, "Thread_H",setThreads,"self")}
+
+            {threadList(threads, refetchThreads, threadsLoading, navigation, "Thread_S", setThreads,"non")}
+
             </ScrollView>
         </SafeAreaView>
     );
@@ -262,7 +305,7 @@ const styles = StyleSheet.create({
 
         height: 240,
         width: 220,
-        
+        backgroundColor: "black",
         borderBottomRightRadius: 20,
         borderTopRightRadius: 20,
         shadowColor: '#000',
@@ -274,11 +317,9 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: "bold",
         textAlign: "left",   
-    },nameContainer:{
         marginBottom: 15,
         marginLeft: 5,
-        width: 300,
-        flexDirection: "row",   
+        width: 215,
     },statBlock:{
         marginLeft: 55,
         marginTop: 20,
@@ -297,7 +338,7 @@ const styles = StyleSheet.create({
     },bio:{
         fontSize: 15,
         textAlign: 'center',
-        fontWeight: 'bold', 
+        fontWeight: 'bold',
     },tabContainer:{
         flexDirection: 'row',
         justifyContent:'space-evenly',
@@ -325,7 +366,6 @@ const styles = StyleSheet.create({
       postHeader: {
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
         marginBottom: 8,
       },
       avatar: {
@@ -378,4 +418,4 @@ const styles = StyleSheet.create({
 
 })
 
-export default SelfProfileScreen;
+export default ProfileScreen;
