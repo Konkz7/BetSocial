@@ -72,3 +72,30 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# =========================
+# Spring Boot / Java backend
+# =========================
+
+BetSocial/target/
+BetSocial/.idea/
+BetSocial/.vscode/
+
+# Spring configuration / secrets
+BetSocial/src/main/resources/application.yml
+BetSocial/src/main/resources/application.yaml
+BetSocial/src/main/resources/firebaseAPI.json
+
+
+# Environment / secrets
+BetSocial/.env
+BetSocial/*.env
+
+# Java / Maven
+*.class
+*.log
+
+
+# IntelliJ
+**/.idea/
+*.iml
