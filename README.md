@@ -112,7 +112,20 @@ An existing database that already contains the tables is adopted automatically
 npm install
 ```
 
-### 2. Point the app at your backend
+### 2. Provide the Firebase client config
+
+`app/Secrets.js` is gitignored. Copy the template and fill in the values from
+the Firebase console (*Project settings → General → Your apps*):
+
+```bash
+cp app/Secrets.example.js app/Secrets.js
+```
+
+The `firebaseConfig` export name must stay as-is — `app/Constants.js` imports it
+by name, and a missing or unexported value makes every screen fail with
+`app/no-options` followed by `Cannot read property 'IP_STRING' of undefined`.
+
+### 3. Point the app at your backend
 
 The API base URL is `IP_STRING` in `app/Constants.js`. A device or emulator
 cannot reach `localhost` on your machine, so set it to your machine's LAN IP:
@@ -121,7 +134,7 @@ cannot reach `localhost` on your machine, so set it to your machine's LAN IP:
 export const IP_STRING = "http://192.168.1.53:8080";
 ```
 
-### 3. Start Metro, then the app
+### 4. Start Metro, then the app
 
 ```bash
 npm start
@@ -171,6 +184,12 @@ them in both places.
 
 **Flyway reports a checksum mismatch** — an already-applied migration was edited.
 Revert the edit and add a new versioned migration instead.
+
+**`app/no-options` and/or `Cannot read property 'IP_STRING' of undefined`** —
+you have not created `app/Secrets.js`, or it declares `firebaseConfig` without
+exporting it. These two errors always appear together: `initializeApp` throws at
+module scope, which aborts `Constants.js` evaluation, so every module importing
+`IP_STRING` from it sees `undefined`. Fix the export and both clear.
 
 **Metro cannot connect / network request failed** — `IP_STRING` still points at
 `localhost`, or your phone is on a different network than your machine.
