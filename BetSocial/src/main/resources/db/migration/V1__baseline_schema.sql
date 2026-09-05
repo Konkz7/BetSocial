@@ -8,8 +8,10 @@
 -- NOTE: pre-existing databases are baselined at this version via
 -- spring.flyway.baseline-on-migrate=true, so V1 is NOT re-run against them.
 
-CREATE SCHEMA public;
-COMMENT ON SCHEMA public IS 'standard public schema';
+-- pg_dump emits CREATE SCHEMA public / COMMENT ON SCHEMA here. Both are
+-- omitted: PostgreSQL creates the public schema with every new database, so
+-- CREATE SCHEMA fails with 42P06 on a fresh database, and the comment
+-- requires ownership of the schema.
 CREATE TABLE public.bet_ (
     bid bigint NOT NULL,
     tid bigint NOT NULL,

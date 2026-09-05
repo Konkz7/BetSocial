@@ -86,7 +86,10 @@ BetSocial/.vscode/
 # Spring configuration / secrets
 BetSocial/src/main/resources/application.yml
 BetSocial/src/main/resources/application.yaml
-BetSocial/src/main/resources/firebaseAPI.json
+# Firebase service-account credentials - never commit.
+# Glob covers backups/renames (e.g. .bak, .orig) that would otherwise slip through.
+BetSocial/src/main/resources/firebaseAPI.json*
+**/firebaseAPI.json*
 
 
 # Environment / secrets
