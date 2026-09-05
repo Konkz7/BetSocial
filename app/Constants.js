@@ -1,5 +1,8 @@
 
+import axios from "axios";
+import { Alert } from "react-native";
 import { initializeApp } from "firebase/app";
+import {firebaseConfig} from "./Secrets";
 
 export const IP_STRING = "http://192.168.1.53:8080"; 
 
