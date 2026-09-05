@@ -52,12 +52,6 @@ public class BetController {
     }
 
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping("/create")
-    void create(@Valid @RequestBody Bet_ bet){
-        betRepository.save(bet);
-    }
-
-    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/make")
     void makeBet(@Valid @RequestBody BetDTO bet, HttpSession session){
 
@@ -75,8 +69,11 @@ public class BetController {
                 bet.profit_mode(),bet.max_amount(),bet.min_amount(), null));
     }
 
+    // uid comes from the session, not a request parameter: previously any user
+    // could toggle another user's saved bets by passing their uid.
     @PostMapping("set-bet")
-    void setBet(@RequestParam Long bid, @RequestParam Long uid){
+    void setBet(@RequestParam Long bid, HttpSession session){
+        Long uid = requireUserId(session);
         Betsave_ temp = betSaveRepository.findByBetAndUser(bid,uid);
         if(temp == null){
             betSaveRepository.save(new Betsave_(null,bid,uid));
@@ -86,8 +83,16 @@ public class BetController {
     }
 
     @GetMapping("saved")
-    Betsave_ getBetSave(@RequestParam Long bid, @RequestParam Long uid){
-        return betSaveRepository.findByBetAndUser(bid,uid);
+    Betsave_ getBetSave(@RequestParam Long bid, HttpSession session){
+        return betSaveRepository.findByBetAndUser(bid, requireUserId(session));
+    }
+
+    private static Long requireUserId(HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        if(uid == null){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not logged in");
+        }
+        return uid;
     }
 
     @PostMapping("/decide")
@@ -155,9 +160,6 @@ public class BetController {
     }
 
  */
-
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @DeleteMapping("/delete/{bid}")
     void delete(@PathVariable Long bid){
         betRepository.delete(betRepository.findById(bid).get());
     }

@@ -123,6 +123,11 @@ public class GroupService {
         return groupUserRepository.findByUid(uid);
     }
 
+    /** True when the user belongs to the group - used to gate access to its messages. */
+    public boolean isMember(Long gid, Long uid) {
+        return groupUserRepository.findByGidandUid(gid, uid).isPresent();
+    }
+
 
     public Long sameGroupCheck(Long uid1, Long uid2){
         Set<Long> gid1 = new HashSet<>(groupUserRepository.findByUid(uid1).stream().map(Groupuser_::gid).toList());

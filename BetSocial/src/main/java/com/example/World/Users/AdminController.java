@@ -33,12 +33,6 @@ public class AdminController {
         }
         return user.get();
     }
-
-    @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping("/create")
-    void create(@Valid @RequestBody User_ user){
-        userRepository.save(user);
-    }
 /*
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping("/update/{uid}")

@@ -68,12 +68,6 @@ public class ThreadController {
     }
 
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping("/create")
-    void create(@Valid @RequestBody Thread_ thread){
-        threadRepository.save(thread);
-    }
-
-    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/make")
     ResponseEntity<String> makeThread(@Valid @RequestBody ThreadDTO thread, HttpSession session , BindingResult result){
 
@@ -105,9 +99,6 @@ public class ThreadController {
         threadService.removeThread(tid,userId);
 
     }
-
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @DeleteMapping("/delete/{tid}")
     void delete(@PathVariable Long tid){
         threadRepository.delete(threadRepository.findById(tid).get());
     }

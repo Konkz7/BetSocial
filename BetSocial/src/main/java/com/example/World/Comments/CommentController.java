@@ -42,12 +42,6 @@ public class CommentController {
     }
 
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping("/create")
-    void create(@Valid @RequestBody Comment_ comment){
-        commentRepository.save(comment);
-    }
-
-    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/make")
     Comment_ makeComment(@Valid @RequestBody CommentDTO comment, HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
@@ -76,11 +70,21 @@ public class CommentController {
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping("/delete/{cid}")
-    void deleteComment(@PathVariable Long cid){
-        try {
-            commentService.deleteComment(cid);
-        }catch (Exception e){
+    void deleteComment(@PathVariable Long cid, HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        if(uid == null){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not logged in");
         }
+
+        Comment_ comment = commentRepository.findById(cid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found"));
+
+        // Previously unchecked: any authenticated user could delete any comment.
+        if(!comment.uid().equals(uid)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not the owner of this comment");
+        }
+
+        commentService.deleteComment(cid);
     }
 /*
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -90,9 +94,6 @@ public class CommentController {
     }
 
  */
-
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @DeleteMapping("/delete/{cid}")
     void delete(@PathVariable Long cid){
         commentRepository.delete(commentRepository.findById(cid).get());
     }

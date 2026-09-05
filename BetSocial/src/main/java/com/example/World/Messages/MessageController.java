@@ -34,11 +34,6 @@ public class MessageController {
         this.notificationService = notificationService;
     }
 
-    @GetMapping("/all")
-    List<Message_> findAll(){
-        return messageRepository.findAll();
-    }
-
     @GetMapping("/{mid}")
     Message_ findById(@PathVariable Long mid){
         Optional<Message_> message = messageRepository.findById(mid);
@@ -78,9 +73,10 @@ public class MessageController {
     
      */
 
+    // Previously unchecked: any authenticated user could read any conversation.
     @GetMapping("/group/{gid}")
-    List<Message_> getGroupMessages(@PathVariable Long gid){
-        return messageService.getChatMessages(gid);
+    List<Message_> getGroupMessages(@PathVariable Long gid, HttpSession session){
+        return messageService.getChatMessages(gid, requireUserId(session));
     }
 
     @GetMapping("/conversations")
@@ -93,35 +89,31 @@ public class MessageController {
 
     @PutMapping("/update-reads/{gid}")
     void updatePrevReadReceipts(@PathVariable Long gid, HttpSession session){
-        Long uid = (Long) session.getAttribute("userId");
+        Long uid = requireUserId(session);
+        messageService.requireMembership(gid, uid);
         messageService.updatePrevReadReceipts(uid,gid);
     }
 
+    // Previously unchecked: any authenticated user could delete anyone's message.
     @PutMapping("/delete")
-    void softDeleteMessage(@RequestParam Long mid, @RequestParam Long gid){
-
-
-        messageService.deleteMessage(mid);
+    void softDeleteMessage(@RequestParam Long mid, @RequestParam Long gid, HttpSession session){
+        messageService.deleteMessage(mid, requireUserId(session));
 
         simpMessagingTemplate.convertAndSend("/topic/chat/" + gid, new MessageAction("DELETE" , mid , null));
+    }
 
+    private static Long requireUserId(HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        if(uid == null){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not logged in");
+        }
+        return uid;
     }
 
     @PutMapping("/update-read/{mid}")
     void updateReadReceipt(@PathVariable Long mid){
         messageRepository.updateReadReceipt(mid);
     }
-
-    //unnecessary****************
-    @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping("/create")
-    void create(@Valid @RequestBody Message_ message){
-        messageRepository.save(message);
-    }
-
-
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @DeleteMapping("/delete/{mid}")
     void delete(@PathVariable Long mid){
         messageRepository.delete(messageRepository.findById(mid).get());
     }
