@@ -3,6 +3,7 @@ package com.example.World.Messages;
 
 
 import com.example.World.Notifications.NotificationService;
+import com.example.World.Security.WebSocketPrincipal;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -46,14 +47,14 @@ public class MessageController {
     @MessageMapping("/send")
     public Message_ sendMessage(@Payload MessageDTO message, SimpMessageHeaderAccessor headerAccessor) {
 
-        Object uidObj = headerAccessor.getSessionAttributes().get("userId");
-        if (uidObj == null) {
-            throw new IllegalStateException("User ID not found in session");
-        }
-
-        Long uid = (Long) uidObj;
+        // The sender is the authenticated principal from the handshake, never a
+        // value supplied by the client.
+        Long uid = WebSocketPrincipal.requireUserId(headerAccessor.getUser());
         Long gid = message.gid();
-        System.out.println("MESSAGE: " + message.description());
+
+        // A member check here as well as on CONNECT: a client may publish to any
+        // gid it likes once connected, regardless of what it declared at connect.
+        messageService.requireMembership(gid, uid);
 
         Message_ result = messageService.sendMessage(gid, uid, message.recipient_id(), message.description(), message.media_type());
 
