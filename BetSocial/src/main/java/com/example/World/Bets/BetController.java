@@ -151,16 +151,4 @@ public class BetController {
         betRepository.updateStatus(bid, Status.CANCELLED.toInt());
     }
 
-
-/*
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PutMapping("/update/{bid}")
-    void update(@Valid @RequestBody Bet_ bet, @PathVariable Integer bid){
-        betRepository.updateBet(bid, bet.outcome(), bet.amount(), bet.status());
-    }
-
- */
-    void delete(@PathVariable Long bid){
-        betRepository.delete(betRepository.findById(bid).get());
-    }
 }

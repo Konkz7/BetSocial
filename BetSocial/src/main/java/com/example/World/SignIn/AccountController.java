@@ -32,8 +32,6 @@ public class AccountController {
     private  final EmailService emailService;
 
 
-    //private final OtpService otpService;
-
     public AccountController(PasswordEncoder passwordEncoder, UserRepository userRepository, AuthService authService, EmailService emailService) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;

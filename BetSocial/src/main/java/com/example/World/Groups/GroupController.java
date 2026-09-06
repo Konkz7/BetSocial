@@ -82,15 +82,4 @@ public class GroupController {
         Long uid = (Long) session.getAttribute("userId");
         groupService.updateLastReadTimestamp(gid,uid);
     }
-/*
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PutMapping("/update/{gid}")
-    void update(@Valid @RequestBody Group group, @PathVariable Integer gid){
-        groupRepository.updateGroup(gid, group.result(), group.amount(), group.status());
-    }
-
- */
-    void delete(@PathVariable Long gid){
-        groupRepository.delete(groupRepository.findById(gid).get());
-    }
 }

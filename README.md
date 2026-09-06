@@ -172,8 +172,13 @@ is no other setup, and no need for a local database.
 | Suite | Covers |
 |---|---|
 | `MigrationTest` | Flyway migrations apply to an empty database; tables, unique constraints and foreign keys are all present |
+| `SecurityRegressionTest` | authorization rules, response projections, removed endpoints, conversation membership, empty-collection responses |
 | `PredictionRepositoryTest` | removing a prediction soft-deletes the prediction, not a bet |
-| `SecurityRegressionTest` | authorization rules, response projections, removed endpoints, conversation membership |
+| `ConversationListTest` | a conversation with no messages does not break the list; each row is paired with its own membership |
+| `NotificationDedupeTest` | duplicate notifications collapse instead of failing the lookup |
+| `ThreadProfileViewerTest` | the liked flag reflects the viewer, not the thread's author |
+| `FeedVisibilityTest` | private threads need a mutual follow; authors always see their own; liked flag and comment count are per viewer |
+| `FeedQueryCountTest` | the feed's query count does not grow with the number of threads |
 
 A container is started once and shared across the suite; the first run pulls
 `postgres:17-alpine`, so expect it to take a little longer.

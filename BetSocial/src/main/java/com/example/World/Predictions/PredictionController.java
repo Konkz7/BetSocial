@@ -147,16 +147,5 @@ public class PredictionController {
 
 
 
-/*
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PutMapping("/update/{pid}")
-    void update(@Valid @RequestBody Prediction_ prediction, @PathVariable Integer pid){
-        predictionRepository.updatePrediction(pid, prediction.prediction(), prediction.amount());
-    }
-
- */
-    void delete(@PathVariable Long pid){
-        predictionRepository.delete(predictionRepository.findById(pid).get());
-    }
 }
 

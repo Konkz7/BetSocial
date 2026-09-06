@@ -1,6 +1,5 @@
 package com.example.World.Comments;
 
-import com.example.World.Follows.FollowService;
 import com.example.World.Follows.Follow_;
 import com.example.World.Notifications.NotificationDTO;
 import com.example.World.Notifications.NotificationService;
@@ -22,7 +21,7 @@ public class CommentService {
     private final ThreadRepository threadRepository;
     private final NotificationService notificationService;
 
-    public CommentService(UserRepository userRepository, CommentRepository commentRepository, CommentLikeRepository commentLikeRepository, ThreadRepository threadRepository, FollowService followService, NotificationService notificationService) {
+    public CommentService(UserRepository userRepository, CommentRepository commentRepository, CommentLikeRepository commentLikeRepository, ThreadRepository threadRepository, NotificationService notificationService) {
         this.userRepository = userRepository;
         this.commentRepository = commentRepository;
         this.commentLikeRepository = commentLikeRepository;

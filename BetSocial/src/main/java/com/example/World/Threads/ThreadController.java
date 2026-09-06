@@ -100,9 +100,6 @@ public class ThreadController {
         threadService.removeThread(tid,userId);
 
     }
-    void delete(@PathVariable Long tid){
-        threadRepository.delete(threadRepository.findById(tid).get());
-    }
 
 
 }

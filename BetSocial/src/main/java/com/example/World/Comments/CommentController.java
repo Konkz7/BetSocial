@@ -86,15 +86,4 @@ public class CommentController {
 
         commentService.deleteComment(cid);
     }
-/*
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PutMapping("/update/{cid}")
-    void update(@Valid @RequestBody Conversation conversation, @PathVariable Integer cid){
-        conversationRepository.updateConversation(cid, conversation.result(), conversation.amount(), conversation.status());
-    }
-
- */
-    void delete(@PathVariable Long cid){
-        commentRepository.delete(commentRepository.findById(cid).get());
-    }
 }
