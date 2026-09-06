@@ -70,6 +70,12 @@ class PredictionRepositoryTest extends AbstractIntegrationTest {
                     """, collidingBid, thread.tid(), Status.ACTIVE.toInt(), now, now + 86_400_000L);
         }
 
+        // The suite shares one database, so a bet may already sit at this id and may
+        // already be soft-deleted by an earlier test. Compare against its state now
+        // rather than assuming it starts undeleted.
+        Long collidingDeletedAtBefore = jdbc.queryForObject(
+                "SELECT deleted_at FROM bet_ WHERE bid = ?", Long.class, collidingBid);
+
         // Delete strictly after creation. The entities override created_at() to throw
         // when created_at >= deleted_at, so a same-millisecond soft delete makes the
         // row permanently unserializable - see the note on this in the PR.
@@ -83,8 +89,8 @@ class PredictionRepositoryTest extends AbstractIntegrationTest {
 
         assertThat(jdbc.queryForObject(
                 "SELECT deleted_at FROM bet_ WHERE bid = ?", Long.class, collidingBid))
-                .as("the bet at bid == pid must survive - this is the corruption the fix prevents")
-                .isNull();
+                .as("the bet at bid == pid must be untouched - this is the corruption the fix prevents")
+                .isEqualTo(collidingDeletedAtBefore);
     }
 
     private Bet_ newBet(Long tid, long now) {
