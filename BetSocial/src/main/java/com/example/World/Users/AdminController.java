@@ -33,14 +33,6 @@ public class AdminController {
         }
         return UserView.from(user.get());
     }
-/*
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PutMapping("/update/{uid}")
-    void update(@Valid @RequestBody User user, @PathVariable Integer uid){
-        UserRepository.updateUser(uid, User.User(), User.amount());
-    }
-
- */
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/delete/{uid}")

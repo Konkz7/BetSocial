@@ -97,15 +97,6 @@ public class SuperUserController {
 
     }
 
-/*
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PutMapping("/update/{uid}")
-    void update(@Valid @RequestBody User user, @PathVariable Integer uid){
-        UserRepository.updateUser(uid, User.User(), User.amount());
-    }
-
- */
-
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/delete")
     void delete(HttpSession session){
