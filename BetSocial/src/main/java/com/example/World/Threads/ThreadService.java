@@ -17,8 +17,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class ThreadService {
@@ -120,42 +124,67 @@ public class ThreadService {
     }
 
     public List<ThreadProfile> threadProfileList(Long uid){
-
-        List<ThreadProfile> result = new ArrayList<>();
-        List<Thread_> threads = threadRepository.findAllActiveThreads();
-
-
-        for(Thread_ t : threads){
-            User_ user = userRepository.findById(t.uid()).orElseThrow();
-            if((followService.getFollow(uid,user.uid()) == null || followService.getFollow(user.uid(),uid) == null) && t.is_private()
-            && !t.uid().equals(uid)){
-                continue;
-            }
-            result.add(new ThreadProfile(t.tid(),UserView.from(user),t.title(),t.media(),t.media_type(),t.category(),t.likes()
-                    ,isThreadLike(uid,t.tid()),(long) commentRepository.findByThread(t.tid()).size(),t.created_at(), t.is_private()));
-        }
-
-
-        return result;
+        return assemble(threadRepository.findAllActiveThreads(), uid);
     }
 
     public List<ThreadProfile> threadProfileList(Long user_uid,Long target_uid){
+        return assemble(threadRepository.findAllUserThreads(target_uid), user_uid);
+    }
 
-        List<ThreadProfile> result = new ArrayList<>();
-        List<Thread_> threads = threadRepository.findAllUserThreads(target_uid);
-        User_ user = userRepository.findById(target_uid).orElseThrow();
-
-
-
-        for(Thread_ t : threads){
-            if((followService.getFollow(user_uid,target_uid) == null || followService.getFollow(target_uid,user_uid) == null) && t.is_private()
-                    && !t.uid().equals(user_uid)){
-                continue;
-            }
-            result.add(new ThreadProfile(t.tid(),UserView.from(user),t.title(),t.media(),t.media_type(),t.category(),t.likes(),
-                    isThreadLike(user_uid,t.tid()),(long) commentRepository.findByThread(t.tid()).size(), t.created_at(),t.is_private()));
+    /**
+     * Builds thread profiles for a feed using a fixed number of queries instead of
+     * a handful per thread.
+     *
+     * Each thread previously triggered its own author lookup, follow lookups, like
+     * lookup, and a full fetch of every comment row purely to call size() on it, so
+     * cost grew linearly with the number of threads on screen. Everything the loop
+     * needs is now fetched once up front and matched in memory.
+     *
+     * Visibility, ordering and comment counting are unchanged - including that the
+     * count still includes soft-deleted comments, exactly as findByThread did.
+     */
+    private List<ThreadProfile> assemble(List<Thread_> threads, Long viewerUid){
+        if(threads.isEmpty()){
+            return List.of();
         }
 
+        Map<Long, User_> authors = new HashMap<>();
+        userRepository.findAllById(threads.stream().map(Thread_::uid).distinct().toList())
+                .forEach(u -> authors.put(u.uid(), u));
+
+        // Who the viewer follows, and who follows the viewer: two queries covering
+        // every thread, rather than up to two per thread.
+        Set<Long> viewerFollows = followService.getFollows(viewerUid).stream()
+                .map(Follow_::receive_id).collect(Collectors.toSet());
+        Set<Long> followsViewer = followService.getFollowers(viewerUid).stream()
+                .map(Follow_::request_id).collect(Collectors.toSet());
+
+        Set<Long> likedThreads = threadLikeRepository.findByUser(viewerUid).stream()
+                .map(Threadlike_::tid).collect(Collectors.toSet());
+
+        Map<Long, Long> commentCounts = new HashMap<>();
+        commentRepository.countByThreadIds(threads.stream().map(Thread_::tid).toList())
+                .forEach(c -> commentCounts.put(c.tid(), c.comment_count()));
+
+        List<ThreadProfile> result = new ArrayList<>();
+        for(Thread_ t : threads){
+            User_ author = authors.get(t.uid());
+            if(author == null){
+                continue;
+            }
+
+            boolean mutualFollow = viewerFollows.contains(author.uid())
+                    && followsViewer.contains(author.uid());
+            if(!mutualFollow && t.is_private() && !t.uid().equals(viewerUid)){
+                continue;
+            }
+
+            result.add(new ThreadProfile(t.tid(), UserView.from(author), t.title(), t.media(),
+                    t.media_type(), t.category(), t.likes(),
+                    likedThreads.contains(t.tid()),
+                    commentCounts.getOrDefault(t.tid(), 0L),
+                    t.created_at(), t.is_private()));
+        }
 
         return result;
     }

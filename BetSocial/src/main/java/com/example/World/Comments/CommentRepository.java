@@ -8,6 +8,7 @@ import org.springframework.data.repository.ListCrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 
 
@@ -20,6 +21,19 @@ public interface CommentRepository extends ListCrudRepository<Comment_,Long> {
     @Query("SELECT * FROM Comment_ WHERE tid = :tid ")
     List<Comment_> findByThread(
             @Param("tid") Long tid);
+
+    /**
+     * Comment counts for several threads at once, so building a feed does not need
+     * one query per thread.
+     *
+     * Deliberately does not filter on deleted_at, matching findByThread above -
+     * the feed's comment count has always included soft-deleted comments, and this
+     * is a performance change, not a behavioural one.
+     *
+     * Threads with no comments are simply absent from the result.
+     */
+    @Query("SELECT tid, count(*) AS comment_count FROM Comment_ WHERE tid IN (:tids) GROUP BY tid")
+    List<ThreadCommentCount> countByThreadIds(@Param("tids") Collection<Long> tids);
 
 
     @Modifying
