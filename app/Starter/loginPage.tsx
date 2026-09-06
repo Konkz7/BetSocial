@@ -50,7 +50,18 @@ const LoginScreen = ({navigation}:any) => {
 
   const handleLogin = async () => {
     try {
-      const response = await axios.post(IP_STRING + "/login?username="+email+"&password="+password);
+      // Credentials go in a form-encoded body, never the URL: query strings are
+      // recorded in server access logs, proxy logs and crash reports. Values are
+      // percent-encoded so passwords containing "&", "+" or "#" survive intact -
+      // string concatenation into a URL truncated them at "&" and turned "+"
+      // into a space.
+      const body =
+        `username=${encodeURIComponent(email)}` +
+        `&password=${encodeURIComponent(password)}`;
+
+      const response = await axios.post(IP_STRING + "/login", body, {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      });
       await requestFBNPermission();
       console.log("Login request sent!", response.status);
       LoginStore.set(true);
