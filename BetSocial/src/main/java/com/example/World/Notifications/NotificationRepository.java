@@ -15,6 +15,15 @@ public interface NotificationRepository extends ListCrudRepository<Notification_
     List<Notification_> getActiveNotifications(@Param("uid") Long uid );
 
 
+    /**
+     * The most recent matching notification, used to collapse repeats instead of
+     * stacking duplicates.
+     *
+     * LIMIT 1 is required, not cosmetic: without it Postgres returns every match
+     * and Spring Data throws IncorrectResultSizeDataAccessException on the second
+     * one - so de-duplication failed precisely when there was something to
+     * de-duplicate.
+     */
     @Query("""
     SELECT * FROM Notification_
     WHERE notification_type = :type
@@ -23,6 +32,7 @@ public interface NotificationRepository extends ListCrudRepository<Notification_
       AND target_id = :targetId
       AND is_deleted = false
     ORDER BY created_at DESC
+    LIMIT 1
     """)
     Optional<Notification_> findLatestNonDeleted(
             @Param("type") String type,

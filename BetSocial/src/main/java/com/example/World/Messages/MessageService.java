@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class MessageService {
@@ -110,41 +112,57 @@ public class MessageService {
     }
 
     public List<ConversationDTO> getConversations( Long uid ){
+        // The caller's own membership row for each group, keyed by gid. This used to
+        // be zipped against the group list by position, which only held while both
+        // queries returned the same number of rows in the same order - a group row
+        // missing for any reason shifted every later pairing or ran off the end.
+        Map<Long, Groupuser_> membershipByGid = groupService.getGroupProfiles(uid).stream()
+                .collect(Collectors.toMap(Groupuser_::gid, gu -> gu, (first, second) -> first));
+
         List<ConversationDTO> convoList = new ArrayList<>();
 
-        List<Group_> groups =  groupService.getUserGroups(uid)
-                .stream()
-                .sorted(Comparator.comparingLong(Group_::gid))
-                .toList();
-        List<Groupuser_> gu =  groupService.getGroupProfiles(uid)
-                .stream()
-                .sorted(Comparator.comparingLong(Groupuser_::gid))
-                .toList();
-
-        for (int i = 0; i < gu.size(); i++) {
-            Group_ group = groups.get(i);
-            Groupuser_ gUser = gu.get(i);
-            User_ other = userRepository.findById(gUser.other_uid()).orElseThrow();
-            Message_ lastMessage = messageRepository.findById(group.last_mid()).orElseThrow();
-
-
-            if(group.sort() == 0) {
-                ConversationDTO temp = new ConversationDTO(other.user_name(), other.uid(),
-                        lastMessage,lastMessage.is_read(),other.profile_picture(), group.gid()); // TODO replace unread (useless)
-
-                convoList.add(temp);
-            }else{
-                ConversationDTO temp = new ConversationDTO(group.group_name(), other.uid(),
-                        lastMessage,lastMessage.is_read(),other.profile_picture(),group.gid()); // TODO replace unread (useless)
-
-                convoList.add(temp);
+        for (Group_ group : groupService.getUserGroups(uid)) {
+            Groupuser_ gUser = membershipByGid.get(group.gid());
+            if (gUser == null) {
+                continue;
             }
+
+            // A conversation with no messages yet has last_mid null - exactly what
+            // createDMGroup produces. Dereferencing it threw "Id must not be null"
+            // and took down the caller's entire conversation list, not just this row.
+            if (group.last_mid() == null) {
+                continue;
+            }
+
+            Message_ lastMessage = messageRepository.findById(group.last_mid()).orElse(null);
+            if (lastMessage == null) {
+                continue;
+            }
+
+            // other_uid identifies the counterparty in a direct message. Group chats
+            // have no single counterparty, so it is null there and only the group's
+            // own name is available.
+            User_ other = gUser.other_uid() == null
+                    ? null
+                    : userRepository.findById(gUser.other_uid()).orElse(null);
+
+            boolean isDirectMessage = group.sort() == 0;
+            if (isDirectMessage && other == null) {
+                continue;
+            }
+
+            convoList.add(new ConversationDTO(
+                    isDirectMessage ? other.user_name() : group.group_name(),
+                    other == null ? null : other.uid(),
+                    lastMessage,
+                    lastMessage.is_read(),
+                    other == null ? null : other.profile_picture(),
+                    group.gid()));
         }
 
-
-        return convoList.stream().sorted(Comparator.comparingLong(c -> c.lastMessage().created_at()))
-                .toList()
-                .reversed();
+        return convoList.stream()
+                .sorted(Comparator.comparingLong((ConversationDTO c) -> c.lastMessage().created_at()).reversed())
+                .toList();
     }
 
 

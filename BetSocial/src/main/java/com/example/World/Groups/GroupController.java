@@ -38,24 +38,19 @@ public class GroupController {
         return group.get();
     }
 
+    // Returns an empty list rather than 404 when the user has no conversations.
+    // "No results" is not an error, and the client surfaced the 404 as a
+    // "Groups couldnt be found." alert to every user who had not started a chat.
     @GetMapping("/group-users")
     List<Groupuser_> findAllGroupUsers(HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
-        List<Groupuser_> members = groupUserRepository.findByUid(uid);
-        if(members.isEmpty()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No groups found");
-        }
-        return members;
+        return groupUserRepository.findByUid(uid);
     }
 
     @GetMapping("/user-groups")
     List<Group_> findAllUsersGroups(HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
-        List<Group_> groups = groupService.getUserGroups(uid);
-        if(groups.isEmpty()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No groups found");
-        }
-        return groups;
+        return groupService.getUserGroups(uid);
     }
 
     @GetMapping("/dm-check/{otherUid}")

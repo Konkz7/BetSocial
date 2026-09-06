@@ -63,8 +63,9 @@ public class ThreadController {
     }
 
     @GetMapping("thread-profile/{tid}")
-    ThreadProfile toThreadProfile(@PathVariable Long tid){
-        return threadService.toThreadProfile(tid);
+    ThreadProfile toThreadProfile(@PathVariable Long tid, HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        return threadService.toThreadProfile(tid, uid);
     }
 
     @ResponseStatus(HttpStatus.CREATED)
