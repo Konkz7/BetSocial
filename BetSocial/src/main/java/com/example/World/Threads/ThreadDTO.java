@@ -1,6 +1,5 @@
 package com.example.World.Threads;
 
-import com.example.World.Users.User_;
 import jakarta.validation.constraints.NotEmpty;
 import org.springframework.lang.NonNull;
 

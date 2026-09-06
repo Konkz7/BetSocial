@@ -26,18 +26,18 @@ public class UserController {
     }
 
     @GetMapping("/all")
-    List<User_> findAll(HttpSession session){
+    List<UserView> findAll(HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
-        return userRepository.findAllActiveUsers(uid);
+        return userRepository.findAllActiveUsers(uid).stream().map(UserView::from).toList();
     }
 
     @GetMapping("/{uid}")
-    User_ findById(@PathVariable Long uid){
+    UserView findById(@PathVariable Long uid){
         Optional<User_> user = userRepository.findById(uid);
         if(user.isEmpty()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
-        return user.get();
+        return UserView.from(user.get());
     }
 
     @PutMapping("/change-bio")

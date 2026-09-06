@@ -21,17 +21,17 @@ public class AdminController {
     }
 
     @GetMapping("/all")
-    List<User_> findAll(){
-        return userRepository.findAll();
+    List<UserView> findAll(){
+        return userRepository.findAll().stream().map(UserView::from).toList();
     }
 
     @GetMapping("/{uid}")
-    User_ findById(@PathVariable Long uid){
+    UserView findById(@PathVariable Long uid){
         Optional<User_> user = userRepository.findById(uid);
         if(user.isEmpty()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
-        return user.get();
+        return UserView.from(user.get());
     }
 /*
     @ResponseStatus(HttpStatus.NO_CONTENT)
