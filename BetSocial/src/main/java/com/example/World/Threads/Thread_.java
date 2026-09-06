@@ -30,15 +30,4 @@ public record Thread_(
         @Version
         Integer t_version
 ) {
-        @Override
-        @NonNull
-        public Long created_at() {
-                if(deleted_at() != null){
-                        if (created_at >= deleted_at){
-                                throw new IllegalStateException("created_at cannot be after deleted_at");
-                        }
-                }
-
-                return created_at;
-        }
 }
