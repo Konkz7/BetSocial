@@ -105,12 +105,18 @@ public class ThreadService {
         return threadLikeRepository.findByUser(uid);
     }
 
-    public ThreadProfile toThreadProfile(Long tid){
+    /**
+     * @param viewerUid the user asking. The liked flag previously used the thread
+     *                  author's id, so this endpoint reported whether the author
+     *                  had liked their own thread rather than whether the caller
+     *                  had - the list variants below already used the viewer.
+     */
+    public ThreadProfile toThreadProfile(Long tid, Long viewerUid){
         Thread_ t = threadRepository.findById(tid).orElseThrow();
         User_ user = userRepository.findById(t.uid()).orElseThrow();
 
         return new ThreadProfile(t.tid(),UserView.from(user),t.title(),t.media(),t.media_type(),t.category(),t.likes()
-                ,isThreadLike(user.uid(),t.tid()),(long) commentRepository.findByThread(t.tid()).size(),t.created_at(), t.is_private());
+                ,isThreadLike(viewerUid,t.tid()),(long) commentRepository.findByThread(t.tid()).size(),t.created_at(), t.is_private());
     }
 
     public List<ThreadProfile> threadProfileList(Long uid){

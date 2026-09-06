@@ -125,6 +125,27 @@ class SecurityRegressionTest extends AbstractIntegrationTest {
         assertThat(response.getStatusCode()).isNotEqualTo(HttpStatus.OK);
     }
 
+    // --- empty collections ------------------------------------------------
+
+    @Test
+    @DisplayName("a user with no conversations gets an empty list, not a 404")
+    void emptyConversationListIsNotAnError() {
+        // These threw 404 when the user had no groups, and the client turned that
+        // into a "Groups couldnt be found." alert for anyone who had not yet
+        // started a chat. No results is not an error.
+        String session = login("jane", "password");
+
+        for (String path : new String[]{"/api/groups/user-groups", "/api/groups/group-users"}) {
+            ResponseEntity<String> response = get(path, session);
+            assertThat(response.getStatusCode())
+                    .as("%s should return 200 for a user with no conversations", path)
+                    .isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody())
+                    .as("%s should return an empty JSON array", path)
+                    .isEqualTo("[]");
+        }
+    }
+
     // --- login ------------------------------------------------------------
 
     @Test
