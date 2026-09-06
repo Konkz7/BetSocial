@@ -87,6 +87,28 @@
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!--
+		  Testcontainers: integration tests run against a real PostgreSQL container.
+		  H2 is not viable here - the Flyway baseline is pg_dump output (sequences,
+		  EXTRACT(epoch ...), CREATE SEQUENCE ... OWNED BY) and the repositories use
+		  native Postgres SQL, so an H2 run would test a database we do not ship.
+		-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>com.google.firebase</groupId>
 			<artifactId>firebase-admin</artifactId>
