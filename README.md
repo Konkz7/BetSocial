@@ -165,8 +165,21 @@ cd BetSocial
 npm test
 ```
 
-Backend coverage is currently minimal — `contextLoads` only — and the test
-requires a reachable database.
+The backend suite is a set of integration tests that run against a real
+PostgreSQL container via Testcontainers, so **Docker must be running** — there
+is no other setup, and no need for a local database.
+
+| Suite | Covers |
+|---|---|
+| `MigrationTest` | Flyway migrations apply to an empty database; tables, unique constraints and foreign keys are all present |
+| `PredictionRepositoryTest` | removing a prediction soft-deletes the prediction, not a bet |
+| `SecurityRegressionTest` | authorization rules, response projections, removed endpoints, conversation membership |
+
+A container is started once and shared across the suite; the first run pulls
+`postgres:17-alpine`, so expect it to take a little longer.
+
+CI runs the same command on every pull request touching `BetSocial/` — see
+`.github/workflows/backend-tests.yml`.
 
 ---
 
@@ -190,6 +203,13 @@ you have not created `app/Secrets.js`, or it declares `firebaseConfig` without
 exporting it. These two errors always appear together: `initializeApp` throws at
 module scope, which aborts `Constants.js` evaluation, so every module importing
 `IP_STRING` from it sees `undefined`. Fix the export and both clear.
+
+**`Could not find a valid Docker environment` when running the backend tests** —
+Docker is not running, or its Engine API is newer than the Testcontainers
+version can negotiate. Docker Engine 29 dropped API versions below 1.44; the
+`testcontainers.version` property in `BetSocial/pom.xml` overrides the Spring
+Boot default for exactly this reason. Check `docker version` and raise that
+property if the daemon's minimum API has moved again.
 
 **Metro cannot connect / network request failed** — `IP_STRING` still points at
 `localhost`, or your phone is on a different network than your machine.

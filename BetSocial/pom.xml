@@ -28,6 +28,12 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<!--
+		  Override the Testcontainers version from the Spring Boot BOM (1.20.4).
+		  Docker Engine 29 dropped API versions below 1.44; the docker-java shipped
+		  with 1.20.4 negotiates an older one and the daemon answers 400.
+		-->
+		<testcontainers.version>1.21.4</testcontainers.version>
 	</properties>
 	<dependencies>
 		<dependency>

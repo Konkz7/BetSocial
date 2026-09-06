@@ -70,12 +70,16 @@ class PredictionRepositoryTest extends AbstractIntegrationTest {
                     """, collidingBid, thread.tid(), Status.ACTIVE.toInt(), now, now + 86_400_000L);
         }
 
-        predictions.remove(prediction.pid(), now);
+        // Delete strictly after creation. The entities override created_at() to throw
+        // when created_at >= deleted_at, so a same-millisecond soft delete makes the
+        // row permanently unserializable - see the note on this in the PR.
+        long deletedAt = now + 1_000L;
+        predictions.remove(prediction.pid(), deletedAt);
 
         assertThat(jdbc.queryForObject(
                 "SELECT deleted_at FROM prediction_ WHERE pid = ?", Long.class, prediction.pid()))
                 .as("the prediction itself should be soft-deleted")
-                .isNotNull();
+                .isEqualTo(deletedAt);
 
         assertThat(jdbc.queryForObject(
                 "SELECT deleted_at FROM bet_ WHERE bid = ?", Long.class, collidingBid))
