@@ -65,7 +65,12 @@ public class MessageService {
                     mediaType == 0 ? content : mediaType == 1 ? "Photo was sent" : "Video was sent", temp, recipientId);
 
         }
-        return message;
+        // Return the saved row, not the pre-save object: `message` was built with
+        // mid = null and only `msg` carries the generated id. MessageController
+        // broadcasts this over /topic/chat/{gid}, so every live message reached
+        // clients with mid = null - which collided as duplicate React keys and
+        // left live messages unmatchable for delete and read-receipt calls.
+        return msg;
     }
 
     /** Soft-deletes a message. Only its sender may do so. */
