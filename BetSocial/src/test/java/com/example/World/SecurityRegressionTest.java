@@ -177,6 +177,29 @@ class SecurityRegressionTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("refuses a second login on the same session with 403, not 500")
+    void secondLoginOnSameSessionIsRefused() {
+        // The handler used to throw from onAuthenticationSuccess after setting 403,
+        // which handed control to the container and turned it into a 500.
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("username", "mike");
+        form.add("password", "password");
+
+        ResponseEntity<String> first =
+                rest.postForEntity("/login", new HttpEntity<>(form, headers), String.class);
+        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // Same session cookie, login again.
+        headers.add(HttpHeaders.COOKIE, first.getHeaders().getFirst(HttpHeaders.SET_COOKIE).split(";")[0]);
+        ResponseEntity<String> second =
+                rest.postForEntity("/login", new HttpEntity<>(form, headers), String.class);
+
+        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
     @DisplayName("login accepts credentials in a form body, not just the URL")
     void loginAcceptsFormBody() {
         // Slice E moved credentials out of the query string; this proves the
