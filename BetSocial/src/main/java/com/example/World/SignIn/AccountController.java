@@ -129,7 +129,7 @@ public class AccountController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<User_> getProfile(HttpSession session) {
+    public ResponseEntity<UserView> getProfile(HttpSession session) {
         Long userId = (Long) session.getAttribute("userId");
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not logged in");
@@ -138,7 +138,7 @@ public class AccountController {
         User_ user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(UserView.from(user));
     }
 
 

@@ -1,6 +1,6 @@
 package com.example.World.Threads;
 
-import com.example.World.Users.User_;
+import com.example.World.Users.UserView;
 import jakarta.validation.constraints.NotEmpty;
 import org.springframework.data.annotation.Id;
 import org.springframework.lang.NonNull;
@@ -9,7 +9,7 @@ public record ThreadProfile(
         @Id
         Long tid,
         @NonNull
-        User_ user,
+        UserView user,
         @NotEmpty
         String title ,
         String media ,

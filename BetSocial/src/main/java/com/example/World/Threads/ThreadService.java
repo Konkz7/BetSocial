@@ -9,6 +9,7 @@ import com.example.World.Follows.Follow_;
 import com.example.World.Notifications.NotificationDTO;
 import com.example.World.Notifications.NotificationService;
 import com.example.World.Users.UserRepository;
+import com.example.World.Users.UserView;
 import com.example.World.Users.User_;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -108,7 +109,7 @@ public class ThreadService {
         Thread_ t = threadRepository.findById(tid).orElseThrow();
         User_ user = userRepository.findById(t.uid()).orElseThrow();
 
-        return new ThreadProfile(t.tid(),user,t.title(),t.media(),t.media_type(),t.category(),t.likes()
+        return new ThreadProfile(t.tid(),UserView.from(user),t.title(),t.media(),t.media_type(),t.category(),t.likes()
                 ,isThreadLike(user.uid(),t.tid()),(long) commentRepository.findByThread(t.tid()).size(),t.created_at(), t.is_private());
     }
 
@@ -124,7 +125,7 @@ public class ThreadService {
             && !t.uid().equals(uid)){
                 continue;
             }
-            result.add(new ThreadProfile(t.tid(),user,t.title(),t.media(),t.media_type(),t.category(),t.likes()
+            result.add(new ThreadProfile(t.tid(),UserView.from(user),t.title(),t.media(),t.media_type(),t.category(),t.likes()
                     ,isThreadLike(uid,t.tid()),(long) commentRepository.findByThread(t.tid()).size(),t.created_at(), t.is_private()));
         }
 
@@ -145,7 +146,7 @@ public class ThreadService {
                     && !t.uid().equals(user_uid)){
                 continue;
             }
-            result.add(new ThreadProfile(t.tid(),user,t.title(),t.media(),t.media_type(),t.category(),t.likes(),
+            result.add(new ThreadProfile(t.tid(),UserView.from(user),t.title(),t.media(),t.media_type(),t.category(),t.likes(),
                     isThreadLike(user_uid,t.tid()),(long) commentRepository.findByThread(t.tid()).size(), t.created_at(),t.is_private()));
         }
 
