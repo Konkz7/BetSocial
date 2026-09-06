@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Guards the Flyway migrations.
@@ -25,7 +26,7 @@ class MigrationTest extends AbstractIntegrationTest {
                 "SELECT version FROM flyway_schema_history WHERE success = true ORDER BY installed_rank",
                 String.class);
 
-        assertThat(applied).containsExactly("1", "2");
+        assertThat(applied).containsExactly("1", "2", "3");
     }
 
     @Test
@@ -56,6 +57,32 @@ class MigrationTest extends AbstractIntegrationTest {
                 """, String.class);
 
         assertThat(constrained).contains("email", "phone_number", "user_name");
+    }
+
+    @Test
+    @DisplayName("enforce that a row cannot be deleted before it was created")
+    void softDeleteTimestampChecks() {
+        List<String> checks = jdbc.queryForList(
+                "SELECT conname FROM pg_constraint WHERE contype = 'c' AND conname LIKE 'chk_%_deleted_after_created'",
+                String.class);
+
+        assertThat(checks).hasSize(7);
+    }
+
+    @Test
+    @DisplayName("reject a row deleted before it was created")
+    void softDeleteCheckActuallyRejects() {
+        // Existence is not enough - prove the constraint bites.
+        Long uid = jdbc.queryForObject("SELECT uid FROM user_ LIMIT 1", Long.class);
+        Long now = System.currentTimeMillis();
+
+        assertThatThrownBy(() -> jdbc.update("""
+                INSERT INTO thread_ (uid, title, media_type, category, likes,
+                                     created_at, deleted_at, is_private, t_version)
+                VALUES (?, 'backwards timestamps', 0, 'test', 0, ?, ?, false, 0)
+                """, uid, now, now - 1_000))
+                .as("deleted_at before created_at must be refused by the database")
+                .hasMessageContaining("chk_thread_deleted_after_created");
     }
 
     @Test

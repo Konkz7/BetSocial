@@ -21,15 +21,4 @@ public record Group_(
         @Version
         Integer g_version // Version number for optimistic locking
 ) {
-        @Override
-        @NonNull
-        public Long created_at() {
-                if(deleted_at() != null){
-                        if (created_at >= deleted_at){
-                                throw new IllegalStateException("created_at cannot be after deleted_at");
-                        }
-                }
-
-                return created_at;
-        }
 }

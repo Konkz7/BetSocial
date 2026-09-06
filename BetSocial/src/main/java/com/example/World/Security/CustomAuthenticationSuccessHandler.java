@@ -1,6 +1,7 @@
 package com.example.World.Security;
 
 import com.example.World.Users.UserService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.World.Users.User_;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,15 +12,21 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import org.springframework.http.MediaType;
+
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 @Component
 public class CustomAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
     private final UserService userService;
+    private final ObjectMapper objectMapper;
 
-    public CustomAuthenticationSuccessHandler(UserService userService) {
+    public CustomAuthenticationSuccessHandler(UserService userService, ObjectMapper objectMapper) {
         this.userService = userService;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -45,10 +52,16 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         System.out.println("User " + authentication.getName() + " has logged in.");
 
 
-        // Example: Redirect to a specific URL or return a response
+        // One JSON object, written through Jackson. This used to be two separate
+        // write() calls, which concatenated into
+        //     {"message":"Login successful!"}{"userId":"2"}
+        // - not valid JSON, so any client that tried to parse the body failed.
+        // The response also never declared its content type.
         response.setStatus(HttpServletResponse.SC_OK);
-        response.getWriter().write("{\"message\":\"Login successful!\"}");
-        response.getWriter().write("{\"userId\":\"" + user.getUserId() + "\"}");
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        objectMapper.writeValue(response.getWriter(),
+                Map.of("message", "Login successful!", "userId", user.getUserId()));
         response.getWriter().flush();
     }
 

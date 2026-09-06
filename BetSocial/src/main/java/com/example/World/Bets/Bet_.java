@@ -42,19 +42,4 @@ public record Bet_(
         Integer b_version
 
 ) {
-        @Override
-        @NonNull
-        public Long created_at() {
-                if(deleted_at() != null){
-                        if (created_at >= deleted_at){
-                                throw new IllegalStateException("created_at cannot be after deleted_at");
-                        }else if (deleted_at <= ends_at){
-                                throw new IllegalStateException("cannot be ended after bet has been deleted");
-                        }
-                }else if (created_at >= ends_at){
-                        throw new IllegalStateException("created_at cannot be after ends_at");
-                }
-
-                return created_at;
-        }
 }

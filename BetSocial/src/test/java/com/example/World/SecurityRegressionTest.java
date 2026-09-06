@@ -2,6 +2,8 @@ package com.example.World;
 
 import com.example.World.support.AbstractIntegrationTest;
 import org.junit.jupiter.api.DisplayName;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -147,6 +149,32 @@ class SecurityRegressionTest extends AbstractIntegrationTest {
     }
 
     // --- login ------------------------------------------------------------
+
+    @Test
+    @DisplayName("returns a single parseable JSON object")
+    void loginResponseIsValidJson() throws Exception {
+        // The handler used to make two write() calls, producing
+        //     {"message":"Login successful!"}{"userId":"2"}
+        // which is not valid JSON and which no client could parse.
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("username", "jane");
+        form.add("password", "password");
+
+        ResponseEntity<String> response =
+                rest.postForEntity("/login", new HttpEntity<>(form, headers), String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getContentType())
+                .as("the response should declare that it is JSON")
+                .isNotNull();
+        assertThat(response.getHeaders().getContentType().includes(MediaType.APPLICATION_JSON)).isTrue();
+
+        JsonNode body = new ObjectMapper().readTree(response.getBody());
+        assertThat(body.get("message").asText()).isEqualTo("Login successful!");
+        assertThat(body.get("userId").asLong()).isPositive();
+    }
 
     @Test
     @DisplayName("login accepts credentials in a form body, not just the URL")
