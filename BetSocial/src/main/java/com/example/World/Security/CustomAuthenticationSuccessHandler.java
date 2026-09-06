@@ -39,9 +39,18 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
 
 
+        // Write the 403 and stop, rather than throwing. Throwing from a success
+        // handler hands control to the container's error handling, which replaced
+        // the status just set with a 500 - so an already-logged-in caller got a
+        // server error instead of the intended refusal.
         if(session.getAttribute("userId") != null){
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            throw new RuntimeException("User is already logged in.");
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            objectMapper.writeValue(response.getWriter(),
+                    Map.of("error", "User is already logged in."));
+            response.getWriter().flush();
+            return;
         }
 
 
