@@ -60,7 +60,9 @@ public class SecurityConfig {
         .csrf(AbstractHttpConfigurer::disable)
         .authorizeHttpRequests(registry -> {
             registry.requestMatchers("/req/**").permitAll();
-            registry.requestMatchers("/ws/**").permitAll();
+            // The STOMP handshake must carry the session cookie: WebSocket identity
+            // is now derived from the authenticated principal, not a client header.
+            registry.requestMatchers("/ws/**").authenticated();
             // ROLE_SUPERUSER / ROLE_ADMIN are the only elevated roles UserService grants
             // (see getGrantedAuthorities). "IMAGE" and "TEXT" were never issued to anyone,
             // so these rules denied every user - including admins - and made the bets and
