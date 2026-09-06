@@ -74,16 +74,6 @@ public class GroupController {
         return check;
     }
 
-
-
-
-
-    @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping("/create")
-    void create(@Valid @RequestBody Group_ group){
-        groupRepository.save(group);
-    }
-
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/make/{otherUid}")
     Group_ makeDMGroup(@PathVariable Long otherUid, HttpSession session) {
@@ -105,9 +95,6 @@ public class GroupController {
     }
 
  */
-
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @DeleteMapping("/delete/{gid}")
     void delete(@PathVariable Long gid){
         groupRepository.delete(groupRepository.findById(gid).get());
     }

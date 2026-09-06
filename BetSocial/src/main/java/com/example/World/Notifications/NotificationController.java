@@ -1,6 +1,8 @@
 package com.example.World.Notifications;
 
 import jakarta.servlet.http.HttpSession;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,7 +27,20 @@ public class NotificationController {
     }
 
     @PutMapping("/delete/{nid}")
-    public int deleteNotifications(@PathVariable Long nid){
+    public int deleteNotifications(@PathVariable Long nid, HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        if(uid == null){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not logged in");
+        }
+
+        Notification_ notification = notificationRepository.findById(nid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Notification not found"));
+
+        // Previously unchecked: any authenticated user could dismiss anyone's notifications.
+        if(!notification.uid().equals(uid)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not the owner of this notification");
+        }
+
         return notificationRepository.remove(nid);
     }
 

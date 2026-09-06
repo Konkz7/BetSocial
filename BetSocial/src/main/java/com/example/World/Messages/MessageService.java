@@ -6,7 +6,9 @@ import com.example.World.Notifications.NotificationService;
 import com.example.World.Notifications.Notification_;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.User_;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 
 import java.util.ArrayList;
@@ -66,12 +68,28 @@ public class MessageService {
         return message;
     }
 
-    public void deleteMessage(Long mid){
+    /** Soft-deletes a message. Only its sender may do so. */
+    public void deleteMessage(Long mid, Long uid){
+        Message_ message = messageRepository.findById(mid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Message not found"));
+
+        if(!message.uid().equals(uid)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not the sender of this message");
+        }
+
         messageRepository.softDelete(mid, new Date().getTime());
     }
 
-    public List<Message_> getChatMessages(Long gid) {
+    /** Returns a conversation's messages, provided the caller is a member of it. */
+    public List<Message_> getChatMessages(Long gid, Long uid) {
+        requireMembership(gid, uid);
         return messageRepository.findMessagesByGidAsc(gid);
+    }
+
+    public void requireMembership(Long gid, Long uid) {
+        if(!groupService.isMember(gid, uid)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this conversation");
+        }
     }
 
 

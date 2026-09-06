@@ -90,7 +90,7 @@ export const getUsers = async() =>{
   //GROUPS
   export const getGroupProfiles = async(uid) =>{
     try {
-        const groupUsers = await axios.get(IP_STRING + "/api/groups/groups-users");
+        const groupUsers = await axios.get(IP_STRING + "/api/groups/group-users");
         return groupUsers.data;
     } catch (error) {
       Alert.alert("Error!", "Groups couldnt be found.")

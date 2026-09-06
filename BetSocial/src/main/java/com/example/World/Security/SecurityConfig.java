@@ -61,10 +61,14 @@ public class SecurityConfig {
         .authorizeHttpRequests(registry -> {
             registry.requestMatchers("/req/**").permitAll();
             registry.requestMatchers("/ws/**").permitAll();
-            registry.requestMatchers("/superusers/**").hasAnyRole("IMAGE","ADMIN");
+            // ROLE_SUPERUSER / ROLE_ADMIN are the only elevated roles UserService grants
+            // (see getGrantedAuthorities). "IMAGE" and "TEXT" were never issued to anyone,
+            // so these rules denied every user - including admins - and made the bets and
+            // predictions APIs unreachable.
+            registry.requestMatchers("/superusers/**").hasAnyRole("SUPERUSER","ADMIN");
             registry.requestMatchers("/admin/**").hasRole("ADMIN");
-            registry.requestMatchers("/api/bets/**").hasRole("TEXT");
-            registry.requestMatchers("/api/predictions/**").hasRole("TEXT");
+            registry.requestMatchers("/api/bets/**").authenticated();
+            registry.requestMatchers("/api/predictions/**").authenticated();
 
             registry.anyRequest().authenticated();
         })

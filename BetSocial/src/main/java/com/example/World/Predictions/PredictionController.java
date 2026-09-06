@@ -46,12 +46,6 @@ public class PredictionController {
     }
 
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping("/create")
-    void create(@Valid @RequestBody Prediction_ prediction){
-        predictionRepository.save(prediction);
-    }
-
-    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/make")
     void makePrediction(@Valid @RequestBody PredictionDTO prediction, HttpSession session){
 
@@ -161,9 +155,6 @@ public class PredictionController {
     }
 
  */
-
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @DeleteMapping("/delete/{pid}")
     void delete(@PathVariable Long pid){
         predictionRepository.delete(predictionRepository.findById(pid).get());
     }

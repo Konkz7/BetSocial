@@ -50,9 +50,17 @@ public interface PredictionRepository extends ListCrudRepository<Prediction_,Lon
                         @Param("amount") Float amount);
 
 
+    /**
+     * Soft-deletes a prediction.
+     *
+     * This previously read "UPDATE Bet_ ... WHERE bid = :id" - copy-pasted from
+     * BetRepository.remove - so removing a prediction soft-deleted the unrelated
+     * bet whose bid happened to equal the prediction's pid, and left the
+     * prediction itself in place.
+     */
     @Modifying
     @Transactional
-    @Query("UPDATE Bet_ SET  deleted_at = :deleted_at WHERE bid = :id AND deleted_at IS NULL")
+    @Query("UPDATE Prediction_ SET  deleted_at = :deleted_at WHERE pid = :id AND deleted_at IS NULL")
     int remove(
             @Param("id") Long id,
             @Param("deleted_at") Long deleted_at);
