@@ -1,0 +1,39 @@
+name: Backend tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'BetSocial/**'
+      - '.github/workflows/backend-tests.yml'
+
+jobs:
+  test:
+    name: mvn test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      # No services block: Testcontainers starts PostgreSQL itself, and Docker is
+      # already available on GitHub-hosted runners. That keeps the container image
+      # defined in one place - the test code - rather than duplicated here.
+      - name: Run tests
+        working-directory: BetSocial
+        run: ./mvnw --batch-mode test
+
+      - name: Publish test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: BetSocial/target/surefire-reports/
+          retention-days: 7

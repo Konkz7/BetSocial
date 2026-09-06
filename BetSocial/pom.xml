@@ -28,6 +28,12 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<!--
+		  Override the Testcontainers version from the Spring Boot BOM (1.20.4).
+		  Docker Engine 29 dropped API versions below 1.44; the docker-java shipped
+		  with 1.20.4 negotiates an older one and the daemon answers 400.
+		-->
+		<testcontainers.version>1.21.4</testcontainers.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -85,6 +91,28 @@
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!--
+		  Testcontainers: integration tests run against a real PostgreSQL container.
+		  H2 is not viable here - the Flyway baseline is pg_dump output (sequences,
+		  EXTRACT(epoch ...), CREATE SEQUENCE ... OWNED BY) and the repositories use
+		  native Postgres SQL, so an H2 run would test a database we do not ship.
+		-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
