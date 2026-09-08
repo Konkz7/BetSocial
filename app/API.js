@@ -418,14 +418,9 @@ export const updateLastTimestamp = async(gid) =>{
   }
 }
 
-export const fillReadMarker = async(mid) =>{
-  try {
-      const fill = await axios.put(IP_STRING + "/api/messages/update-read/"+mid);
-      return fill.data;
-  } catch (error) {
-    Alert.alert("Error!", "Chat message couldnt be read.")
-  }
-}
+// fillReadMarker is gone. It marked one message read, which is the per-message
+// read state that groupuser_.last_read_timestamp replaced - the endpoint behind
+// it no longer exists, and nothing had imported this since before it went.
 
 export const deleteMessage = async(mid,gid) =>{
   try {
@@ -436,44 +431,52 @@ export const deleteMessage = async(mid,gid) =>{
   }
 }
 
-//MISC
-export const getCircleSecret = async () =>{
-    try {
-      const response = await axios.get(IP_STRING + "/circle/get-secret");
-      return response.data;
-    } catch (error) {
-      Alert.alert("Error!", "Circle services are not secure/available: "+ error.message);
-    }
-  }
+//WALLET
+// Every /circle/* call is gone. They reached CircleService, which was deleted
+// with the crypto attempt long before this - get-secret, get-user-wallet,
+// get-balance and create-card have all been 404ing ever since. getIpAddress went
+// with them; it asked ipify where the phone was, for a card form that no longer
+// exists.
 
-  export const getWallet = async () =>{
-    try {
-      const response = await axios.get(IP_STRING + "/circle/get-user-wallet");
-      return response.data;
-    } catch (error) {
-      console.log("Error!", "Unable to find user wallet: "+ error.message);
-    }
+// Balance and the movements that add up to it. Reading this also collects the
+// daily top-up if one is due, which is why there is no button for that.
+export const getWallet = async () =>{
+  try {
+    const wallet = await axios.get(IP_STRING + "/api/wallet");
+    return wallet.data;
+  } catch (error) {
+    Alert.alert("Error!", "Your wallet couldnt be loaded.");
   }
+}
 
-  export const getBalance = async () =>{
-    try {
-      const response = await axios.get(IP_STRING + "/circle/get-balance");
-      return response.data;
-    } catch (error) {
-      console.log("Error!", "Unable to find users' balance: "+ error.message);
-    }
+//PREDICTIONS
+// Places a stake. The coins leave immediately and cannot be taken back, so the
+// server's refusal - too little in the wallet, outside the bet's limits, already
+// predicted - is passed on rather than replaced.
+export const makePrediction = async (bid, prediction, amount_bet) =>{
+  try {
+    await axios.post(IP_STRING + "/api/predictions/make", { bid, prediction, amount_bet });
+    return true;
+  } catch (error) {
+    Alert.alert("Couldnt place that bet", error.response?.data?.message ?? error.message);
+    return false;
   }
+}
 
-  export const getIpAddress = async () =>{
-    try {
-      const response = await axios.get('https://api.ipify.org?format=json');
-      return response.data;
-    } catch (error) {
-      console.log("Error!", "Unable to find users' IP: "+ error.message);
-    }
+// The caller's own predictions, in one request rather than one per bet. A stake
+// cannot be changed once placed, so this is what decides whether a bet is still
+// open to this person.
+export const getMyPredictions = async () =>{
+  try {
+    const mine = await axios.get(IP_STRING + "/api/predictions/mine");
+    return mine.data;
+  } catch (error) {
+    console.log("Error!", "Couldnt load your predictions: " + error.message);
+    return [];
   }
+}
 
-  
+
 //ADMIN
 // The approval queue: bets whose owner has declared an outcome and which are
 // waiting on somebody without a stake in them.

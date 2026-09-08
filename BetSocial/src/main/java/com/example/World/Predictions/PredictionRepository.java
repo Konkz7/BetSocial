@@ -31,6 +31,10 @@ public interface PredictionRepository extends ListCrudRepository<Prediction_,Lon
 
     );
 
+    /** Everything one person has staked on, newest first. */
+    @Query("SELECT * FROM Prediction_ WHERE uid = :uid AND deleted_at IS NULL ORDER BY created_at DESC")
+    List<Prediction_> findByUid(@Param("uid") Long uid);
+
     @Modifying
     @Transactional
     @Query("UPDATE Prediction_ SET  amount_won = :amount WHERE pid = :id AND deleted_at IS NULL")
