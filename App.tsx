@@ -39,6 +39,7 @@ import DMScreen from './app/dmPage';
 import GroupChatScreen from './app/groupChatPage';
 import CreateGroupScreen from './app/createGroupPage';
 import GroupMembersScreen from './app/groupMembersPage';
+import AdminScreen from './app/adminPage';
 import { activitySeenStore, messageSeenStore } from './app/GlobalFlags';
 import { BannerProvider } from './app/Components/BannerProvider';
 import notifee, {AndroidImportance} from '@notifee/react-native';
@@ -218,6 +219,10 @@ function App(): React.JSX.Element {
           <LoginStack.Screen name="Register" component={RegisterScreen} />
           <LoginStack.Screen name="OTP" component={OtpScreen} />
           <LoginStack.Screen name="MainApp" component={TabNavigator} />
+          {/* Privileged accounts land here instead of the tabs: signing off
+              outcomes is one job done repeatedly, and the social interface only
+              gets in its way. */}
+          <LoginStack.Screen name="AdminApp" component={AdminScreen} />
         </LoginStack.Navigator>  
        </QueryClientProvider>
       </NavigationContainer>

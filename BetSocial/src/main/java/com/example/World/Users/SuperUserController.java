@@ -4,9 +4,12 @@ package com.example.World.Users;
 import com.example.World.Bets.BetRepository;
 import com.example.World.Bets.Bet_;
 import com.example.World.Bets.DecisionDTO;
+import com.example.World.Bets.PendingBetView;
 import com.example.World.Bets.Status;
 import com.example.World.Predictions.PredictionRepository;
 import com.example.World.Predictions.Prediction_;
+import com.example.World.Threads.ThreadRepository;
+import com.example.World.Threads.Thread_;
 import com.example.World.Users.User_;
 import com.example.World.Users.UserRepository;
 import com.example.World.Wallet.LedgerReason;
@@ -39,13 +42,16 @@ public class SuperUserController {
     private final BetRepository betRepository;
     private final PredictionRepository predictionRepository;
     private final LedgerService ledgerService;
+    private final ThreadRepository threadRepository;
 
     public SuperUserController(UserRepository userRepository, BetRepository betRepository,
-                               PredictionRepository predictionRepository, LedgerService ledgerService) {
+                               PredictionRepository predictionRepository, LedgerService ledgerService,
+                               ThreadRepository threadRepository) {
         this.userRepository = userRepository;
         this.betRepository = betRepository;
         this.predictionRepository = predictionRepository;
         this.ledgerService = ledgerService;
+        this.threadRepository = threadRepository;
     }
 
     @GetMapping("/all")
@@ -65,6 +71,41 @@ public class SuperUserController {
     @GetMapping("/bets")
     List<Bet_> findAllBets(){
         return betRepository.findAll();
+    }
+
+    /**
+     * The approval queue: bets whose owner has declared an outcome and which are
+     * waiting on somebody without a stake in them to sign it off.
+     *
+     * Everything needed to decide comes back in one response. Fetching the bet,
+     * then its thread for a title, then its predictions to count them would be
+     * three round trips per row on a screen whose whole point is getting through a
+     * list quickly.
+     */
+    @GetMapping("/bets/pending")
+    List<PendingBetView> pendingApprovals(){
+        List<Bet_> awaiting = betRepository.findAwaitingApproval(Status.PENDING.toInt());
+
+        return awaiting.stream().map(bet -> {
+            List<Prediction_> predictions = predictionRepository.findByBid(bet.bid());
+
+            long staked = predictions.stream().mapToLong(Prediction_::amount_bet).sum();
+
+            String title = threadRepository.findById(bet.tid())
+                    .map(Thread_::title)
+                    .orElse("(thread removed)");
+
+            return new PendingBetView(
+                    bet.bid(),
+                    bet.description(),
+                    title,
+                    bet.outcome(),
+                    bet.amount_for(),
+                    bet.amount_against(),
+                    predictions.size(),
+                    staked,
+                    bet.ends_at());
+        }).toList();
     }
 
     @Transactional

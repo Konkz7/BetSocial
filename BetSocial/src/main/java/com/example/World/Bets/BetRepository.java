@@ -18,6 +18,20 @@ public interface BetRepository extends ListCrudRepository<Bet_,Long> {
         List<Bet_> findByStatus(
                       @Param("status") Integer status);
 
+        /**
+         * Bets whose owner has declared an outcome and which are waiting on an
+         * approver. Exactly the set /superusers/approval will accept, so the queue
+         * cannot show something that would be refused on arrival.
+         *
+         * Oldest first: whoever has been waiting longest gets paid first.
+         */
+        @Query("""
+        SELECT * FROM Bet_
+        WHERE status = :status AND outcome IS NOT NULL AND deleted_at IS NULL
+        ORDER BY ends_at ASC
+        """)
+        List<Bet_> findAwaitingApproval(@Param("status") Integer status);
+
 
         @Query("SELECT * FROM Bet_ WHERE tid = :tid AND deleted_at IS NULL")
         List<Bet_> findByThread(

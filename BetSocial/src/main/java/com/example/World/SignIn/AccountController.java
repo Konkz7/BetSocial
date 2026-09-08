@@ -134,8 +134,16 @@ public class AccountController {
         return ResponseEntity.ok("User registered successfully!");
     }
 
+    /**
+     * The caller's own profile.
+     *
+     * Returns ProfileView rather than UserView, which is the same fields plus the
+     * caller's role. The client needs it to decide which interface to open after
+     * signing in, and it stays off UserView so that which accounts are privileged
+     * is not handed out with every profile, comment and member list.
+     */
     @GetMapping("/profile")
-    public ResponseEntity<UserView> getProfile(HttpSession session) {
+    public ResponseEntity<ProfileView> getProfile(HttpSession session) {
         Long userId = (Long) session.getAttribute("userId");
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not logged in");
@@ -144,7 +152,7 @@ public class AccountController {
         User_ user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        return ResponseEntity.ok(UserView.from(user));
+        return ResponseEntity.ok(ProfileView.from(user));
     }
 
 
