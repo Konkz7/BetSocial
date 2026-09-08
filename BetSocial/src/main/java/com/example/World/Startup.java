@@ -3,6 +3,7 @@ package com.example.World;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.UserRole;
 import com.example.World.Users.User_;
+import com.example.World.Wallet.LedgerService;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,10 +18,13 @@ public class Startup {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final LedgerService ledgerService;
 
-    public Startup(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public Startup(UserRepository userRepository, PasswordEncoder passwordEncoder,
+                   LedgerService ledgerService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.ledgerService = ledgerService;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -68,6 +72,11 @@ public class Startup {
                 null            // Retain the version for optimistic locking
         );
 
-        userRepository.save(userWithHashedPassword);
+        User_ saved = userRepository.save(userWithHashedPassword);
+
+        // Seeded accounts get the same opening grant as a real registration, so a
+        // fresh development database is usable rather than eleven people with
+        // nothing to stake.
+        ledgerService.grantOpeningBalance(saved.uid());
     }
 }

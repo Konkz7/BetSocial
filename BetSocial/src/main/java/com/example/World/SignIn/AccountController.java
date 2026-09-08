@@ -3,6 +3,7 @@ package com.example.World.SignIn;
 import com.example.World.External.Emails.EmailService;
 import com.example.World.External.Firebase.AuthService;
 import com.example.World.Users.*;
+import com.example.World.Wallet.LedgerService;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
@@ -30,13 +31,15 @@ public class AccountController {
     private final UserRepository userRepository;
     private  final AuthService authService;
     private  final EmailService emailService;
+    private final LedgerService ledgerService;
 
 
-    public AccountController(PasswordEncoder passwordEncoder, UserRepository userRepository, AuthService authService, EmailService emailService) {
+    public AccountController(PasswordEncoder passwordEncoder, UserRepository userRepository, AuthService authService, EmailService emailService, LedgerService ledgerService) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.authService = authService;
         this.emailService = emailService;
+        this.ledgerService = ledgerService;
     }
 
 
@@ -122,7 +125,12 @@ public class AccountController {
         );
 
         emailService.sendVerificationEmail(userWithHashedPassword.email(), token);
-        userRepository.save(userWithHashedPassword);
+        User_ saved = userRepository.save(userWithHashedPassword);
+
+        // The opening grant, without which a new account cannot stake anything and
+        // has no way to earn its first coin either.
+        ledgerService.grantOpeningBalance(saved.uid());
+
         return ResponseEntity.ok("User registered successfully!");
     }
 
