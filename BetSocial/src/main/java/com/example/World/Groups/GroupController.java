@@ -133,6 +133,23 @@ public class GroupController {
         return groupService.renameGroup(gid, requireUserId(session), request.group_name());
     }
 
+    /**
+     * Deletes a conversation and everything in it. Administrators only, and never
+     * automatic - an abandoned group stays so that the people who were in it keep
+     * their record of having been there.
+     */
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DeleteMapping("/delete/{gid}")
+    void deleteGroup(@PathVariable Long gid, HttpSession session) {
+        groupService.deleteGroup(gid, requireUserId(session));
+    }
+
+    /** The conversations the caller used to be in, whether they left or were removed. */
+    @GetMapping("/past-groups")
+    List<Groupuser_> pastGroups(HttpSession session) {
+        return groupService.getPastMemberships(requireUserId(session));
+    }
+
     private static Long requireUserId(HttpSession session) {
         Long uid = (Long) session.getAttribute("userId");
         if (uid == null) {

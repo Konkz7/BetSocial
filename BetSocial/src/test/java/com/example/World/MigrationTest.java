@@ -26,7 +26,7 @@ class MigrationTest extends AbstractIntegrationTest {
                 "SELECT version FROM flyway_schema_history WHERE success = true ORDER BY installed_rank",
                 String.class);
 
-        assertThat(applied).containsExactly("1", "2", "3");
+        assertThat(applied).containsExactly("1", "2", "3", "4");
     }
 
     @Test
@@ -66,7 +66,18 @@ class MigrationTest extends AbstractIntegrationTest {
                 "SELECT conname FROM pg_constraint WHERE contype = 'c' AND conname LIKE 'chk_%_deleted_after_created'",
                 String.class);
 
-        assertThat(checks).hasSize(7);
+        // Named rather than counted: a bare size told you the number had moved but
+        // not which table had gained or lost its guarantee, and it needed editing
+        // every time a table became soft-deletable.
+        assertThat(checks).containsExactlyInAnyOrder(
+                "chk_thread_deleted_after_created",
+                "chk_comment_deleted_after_created",
+                "chk_bet_deleted_after_created",
+                "chk_message_deleted_after_created",
+                "chk_prediction_deleted_after_created",
+                "chk_user_deleted_after_created",
+                "chk_group_deleted_after_created",
+                "chk_groupuser_deleted_after_created");
     }
 
     @Test
