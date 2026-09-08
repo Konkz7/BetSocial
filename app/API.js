@@ -115,6 +115,29 @@ export const getUsers = async() =>{
     }
   }
 
+  // Creates a named group. The creator is taken from the session and becomes its
+  // first administrator, so they are not listed in members.
+  export const createGroup = async(group_name, members) =>{
+    try {
+        const group = await axios.post(IP_STRING + "/api/groups/create", { group_name, members });
+        return group.data;
+    } catch (error) {
+      // The server explains why - too many members, a name already rejected, a
+      // user that does not exist - and that is more use than a fixed sentence.
+      Alert.alert("Group couldnt be made", error.response?.data?.message ?? error.message);
+    }
+  }
+
+  // Members with the name, picture and administrator flag needed to draw them.
+  export const getGroupMembers = async(gid) =>{
+    try {
+        const members = await axios.get(IP_STRING + "/api/groups/members/"+gid);
+        return members.data;
+    } catch (error) {
+      Alert.alert("Error!", "Members couldnt be found.")
+    }
+  }
+
   //PROFILE
   export const changeBio = async(text) =>{
     try {
