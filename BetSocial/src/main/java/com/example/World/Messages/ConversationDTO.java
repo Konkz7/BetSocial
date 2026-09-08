@@ -6,7 +6,7 @@ public record ConversationDTO(
         @NotEmpty
         String name,
         Long uid,
-        Message_ lastMessage,
+        MessageView lastMessage,
         boolean unread,
         String avatar,
         Long gid

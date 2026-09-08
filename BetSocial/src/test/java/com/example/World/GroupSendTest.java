@@ -4,7 +4,7 @@ import com.example.World.Groups.GroupService;
 import com.example.World.Groups.Group_;
 import com.example.World.Messages.MessageRepository;
 import com.example.World.Messages.MessageService;
-import com.example.World.Messages.Message_;
+import com.example.World.Messages.MessageView;
 import com.example.World.Notifications.NotificationRepository;
 import com.example.World.Notifications.Notification_;
 import com.example.World.Users.UserRepository;
@@ -54,12 +54,12 @@ class GroupSendTest extends AbstractIntegrationTest {
 
         // Previously threw here: recipient_id is null in a group, and the single
         // recipient was resolved with findById(...).orElseThrow().
-        Message_ sent = messages.sendMessage(group.gid(), creator.uid(), "hello all", 0);
+        MessageView sent = messages.sendMessage(group.gid(), creator.uid(), "hello all", 0);
 
         assertThat(sent.mid()).as("the message should have been persisted").isNotNull();
-        assertThat(messageRepository.findMessagesByGidAsc(group.gid()))
+        assertThat(messages.getChatMessages(group.gid(), second.uid()))
                 .as("and should be readable back from the conversation")
-                .extracting(Message_::description)
+                .extracting(MessageView::description)
                 .containsExactly("hello all");
 
         assertThat(notificationsFor(second.uid()))
@@ -82,7 +82,7 @@ class GroupSendTest extends AbstractIntegrationTest {
 
         Group_ direct = groups.openDirectConversation(sender.uid(), peer.uid());
 
-        Message_ sent = messages.sendMessage(direct.gid(), sender.uid(), "just us", 0);
+        MessageView sent = messages.sendMessage(direct.gid(), sender.uid(), "just us", 0);
 
         assertThat(sent.mid()).isNotNull();
         // Delivery is the membership rows and nothing else. There is no recipient

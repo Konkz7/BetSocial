@@ -14,13 +14,9 @@ public interface MessageRepository extends ListCrudRepository<Message_,Long> {
     @Query("SELECT * FROM Message_ WHERE gid = :gid ORDER BY created_at ASC")
     List<Message_> findMessagesByGidAsc(@Param("gid") Long gid);
 
-    @Query("SELECT * FROM Message_ WHERE gid = :gid AND is_read = false ORDER BY created_at ASC")
-    List<Message_> findMessagesByGidAscAndRead(@Param("gid") Long gid);
-
-    @Modifying
-    @Transactional
-    @Query("UPDATE Message_ SET is_read = true WHERE mid = :mid")
-    int updateReadReceipt(@Param("mid") Long mid);
+    // No read-state queries here any more. Reading is something a person does to a
+    // conversation, recorded once on their membership row as last_read_timestamp -
+    // not a column flipped on every message they have seen.
 
 
     @Modifying

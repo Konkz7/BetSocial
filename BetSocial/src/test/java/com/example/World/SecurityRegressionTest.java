@@ -238,20 +238,30 @@ class SecurityRegressionTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("a non-member cannot mark a message read")
-    void readReceiptRequiresMembership() {
-        // PUT /api/messages/update-read/{mid} took no HttpSession parameter at
-        // all - it was reachable by any authenticated caller for any message.
+    @DisplayName("the per-message read endpoint is gone, and marking a conversation read needs membership")
+    void readStateRequiresMembership() {
+        // PUT /api/messages/update-read/{mid} took no HttpSession parameter at all
+        // and was reachable by any authenticated caller for any message. It has
+        // since been removed outright rather than guarded: per-message read state
+        // was replaced by a timestamp on the reader's own membership row, so there
+        // is nothing left for it to mark.
         Conversation convo = conversation();
 
         assertThat(exchange(HttpMethod.PUT, "/api/messages/update-read/" + convo.mid(),
+                loginAs(convo.member())).getStatusCode())
+                .as("the endpoint should no longer exist")
+                .isNotEqualTo(HttpStatus.OK);
+
+        // What replaced it still has to be guarded: it writes to the caller's
+        // membership row, so a non-member has nothing to write.
+        assertThat(exchange(HttpMethod.PUT, "/api/messages/update-reads/" + convo.gid(),
                 loginAs(convo.outsider())).getStatusCode())
-                .as("a non-member should not be able to mark it read")
+                .as("a non-member cannot mark a conversation read")
                 .isIn(HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND);
 
-        assertThat(exchange(HttpMethod.PUT, "/api/messages/update-read/" + convo.mid(),
+        assertThat(exchange(HttpMethod.PUT, "/api/messages/update-reads/" + convo.gid(),
                 loginAs(convo.member())).getStatusCode())
-                .as("the recipient should still be able to mark it read")
+                .as("a member still can")
                 .isEqualTo(HttpStatus.OK);
     }
 
@@ -312,7 +322,7 @@ class SecurityRegressionTest extends AbstractIntegrationTest {
         // this fixture to that method's signature for no benefit.
         Message_ message = messages.save(new Message_(
                 null, peer.uid(), "private", 0,
-                new Date().getTime(), null, group.gid(), false, null));
+                new Date().getTime(), null, group.gid(), null));
 
         return new Conversation(member, peer, outsider, group.gid(), message.mid());
     }

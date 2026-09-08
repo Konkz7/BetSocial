@@ -37,17 +37,12 @@ public class MessageController {
     // Previously unchecked: any authenticated user could read any message by
     // walking mids, which sidestepped the membership check on /group/{gid}.
     @GetMapping("/{mid}")
-    Message_ findById(@PathVariable Long mid, HttpSession session){
-        Message_ message = messageRepository.findById(mid)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "message not found"));
-
-        messageService.requireMembership(message.gid(), requireUserId(session));
-
-        return message;
+    MessageView findById(@PathVariable Long mid, HttpSession session){
+        return messageService.getMessage(mid, requireUserId(session));
     }
 
     @MessageMapping("/send")
-    public Message_ sendMessage(@Payload MessageDTO message, SimpMessageHeaderAccessor headerAccessor) {
+    public MessageView sendMessage(@Payload MessageDTO message, SimpMessageHeaderAccessor headerAccessor) {
 
         // The sender is the authenticated principal from the handshake, never a
         // value supplied by the client.
@@ -60,7 +55,7 @@ public class MessageController {
 
         // message.recipient_id() is deliberately not passed on: the recipient is
         // derived from the conversation's membership rows inside sendMessage.
-        Message_ result = messageService.sendMessage(gid, uid, message.description(), message.media_type());
+        MessageView result = messageService.sendMessage(gid, uid, message.description(), message.media_type());
 
         simpMessagingTemplate.convertAndSend("/topic/chat/" + gid, result);
 
@@ -80,7 +75,7 @@ public class MessageController {
 
     // Previously unchecked: any authenticated user could read any conversation.
     @GetMapping("/group/{gid}")
-    List<Message_> getGroupMessages(@PathVariable Long gid, HttpSession session){
+    List<MessageView> getGroupMessages(@PathVariable Long gid, HttpSession session){
         return messageService.getChatMessages(gid, requireUserId(session));
     }
 
@@ -92,6 +87,13 @@ public class MessageController {
     }
 
 
+    /**
+     * Marks this conversation read by the caller, up to now.
+     *
+     * The client calls this on opening a conversation and /api/groups/update-timestamp
+     * on leaving it. Both record the same thing and both are wanted: the first
+     * clears the backlog, the second covers whatever arrived while it was open.
+     */
     @PutMapping("/update-reads/{gid}")
     void updatePrevReadReceipts(@PathVariable Long gid, HttpSession session){
         Long uid = requireUserId(session);
@@ -115,17 +117,7 @@ public class MessageController {
         return uid;
     }
 
-    // Previously took no session at all: any caller could mark any message read.
-    @PutMapping("/update-read/{mid}")
-    void updateReadReceipt(@PathVariable Long mid, HttpSession session){
-        Message_ message = messageRepository.findById(mid)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "message not found"));
-
-        messageService.requireMembership(message.gid(), requireUserId(session));
-
-        messageRepository.updateReadReceipt(mid);
-    }
-    void delete(@PathVariable Long mid){
-        messageRepository.delete(messageRepository.findById(mid).get());
-    }
+    // PUT /update-read/{mid} is deliberately absent. Marking one message read was
+    // the per-message read state this change retires - reading is something you do
+    // to a conversation, not to each message in it separately. Use /update-reads/{gid}.
 }
