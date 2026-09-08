@@ -1,18 +1,29 @@
 package com.example.World;
 
+import com.example.World.Groups.GroupService;
+import com.example.World.Groups.Group_;
+import com.example.World.Messages.MessageRepository;
+import com.example.World.Messages.Message_;
+import com.example.World.Users.UserRepository;
+import com.example.World.Users.User_;
 import com.example.World.support.AbstractIntegrationTest;
 import org.junit.jupiter.api.DisplayName;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+
+import java.util.Date;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -207,7 +218,116 @@ class SecurityRegressionTest extends AbstractIntegrationTest {
         assertThat(login("john", "password")).isNotBlank();
     }
 
+    // --- messaging authorization ------------------------------------------
+
+    @Test
+    @DisplayName("a message is only readable by the members of its conversation")
+    void messageByIdRequiresMembership() {
+        // GET /api/messages/{mid} took no session and checked nothing, so the
+        // membership rule on /api/messages/group/{gid} could be sidestepped
+        // entirely by walking mids one at a time.
+        Conversation convo = conversation();
+
+        assertThat(get("/api/messages/" + convo.mid(), loginAs(convo.member())).getStatusCode())
+                .as("a member should still be able to read the message")
+                .isEqualTo(HttpStatus.OK);
+
+        assertThat(get("/api/messages/" + convo.mid(), loginAs(convo.outsider())).getStatusCode())
+                .as("a non-member should not be able to read it by id")
+                .isIn(HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("a non-member cannot mark a message read")
+    void readReceiptRequiresMembership() {
+        // PUT /api/messages/update-read/{mid} took no HttpSession parameter at
+        // all - it was reachable by any authenticated caller for any message.
+        Conversation convo = conversation();
+
+        assertThat(exchange(HttpMethod.PUT, "/api/messages/update-read/" + convo.mid(),
+                loginAs(convo.outsider())).getStatusCode())
+                .as("a non-member should not be able to mark it read")
+                .isIn(HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND);
+
+        assertThat(exchange(HttpMethod.PUT, "/api/messages/update-read/" + convo.mid(),
+                loginAs(convo.member())).getStatusCode())
+                .as("the recipient should still be able to mark it read")
+                .isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("a group is only readable by its members")
+    void groupByIdRequiresMembership() {
+        Conversation convo = conversation();
+
+        assertThat(get("/api/groups/" + convo.gid(), loginAs(convo.member())).getStatusCode())
+                .as("a member should still be able to read the group")
+                .isEqualTo(HttpStatus.OK);
+
+        assertThat(get("/api/groups/" + convo.gid(), loginAs(convo.outsider())).getStatusCode())
+                .as("a non-member should not be able to read it")
+                .isIn(HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("the bulk group dump is gone")
+    void bulkGroupDumpRemoved() {
+        // GET /api/groups/all returned every group row in the database, which
+        // includes the names of conversations the caller has nothing to do with.
+        assertThat(get("/api/groups/all", login("john", "password")).getStatusCode())
+                .isNotEqualTo(HttpStatus.OK);
+    }
+
     // --- helpers ----------------------------------------------------------
+
+    @Autowired UserRepository users;
+    @Autowired GroupService groups;
+    @Autowired MessageRepository messages;
+    @Autowired PasswordEncoder passwordEncoder;
+
+    // phone_number is globally unique and the suite shares one database, so each
+    // test class seeds from its own block. Taken so far: 2_340 (predictions),
+    // 2_344 (soft delete), 2_345 (feed visibility), 2_346 (feed query count),
+    // 2_347 (thread profile), 2_348 (notifications), 2_349 (conversations).
+    private static final AtomicLong AUTHZ_SEQ = new AtomicLong(2_341_000_000_000L);
+
+    /** A DM between two users, one message in it, and an unrelated third user. */
+    private record Conversation(User_ member, User_ peer, User_ outsider, Long gid, Long mid) {}
+
+    /**
+     * Builds the fixture from fresh users rather than the seeded john/jane, so
+     * that it cannot disturb tests which assume a seeded user has no
+     * conversations - emptyConversationListIsNotAnError being one of them.
+     */
+    private Conversation conversation() {
+        User_ member = users.save(authzUser());
+        User_ peer = users.save(authzUser());
+        User_ outsider = users.save(authzUser());
+
+        Group_ group = groups.createDMGroup(member.uid() + "" + peer.uid(), member.uid(), peer.uid());
+
+        // The row is written straight through the repository rather than through
+        // MessageService.sendMessage. What is under test here is who may read a
+        // message, not how one is sent, and going via the service would couple
+        // this fixture to that method's signature for no benefit.
+        Message_ message = messages.save(new Message_(
+                null, peer.uid(), member.uid(), "private", 0,
+                new Date().getTime(), null, group.gid(), false, null));
+
+        return new Conversation(member, peer, outsider, group.gid(), message.mid());
+    }
+
+    private User_ authzUser() {
+        long seq = AUTHZ_SEQ.incrementAndGet();
+        String name = "authz-" + seq;
+        return new User_(null, name, name + "@example.test", passwordEncoder.encode("password"),
+                "+" + seq, null, true, "", null, new Date().getTime(), null,
+                0, null, "offline", null, 0.0, null);
+    }
+
+    private String loginAs(User_ user) {
+        return login(user.user_name(), "password");
+    }
 
     /** Logs in with a form-encoded body and returns the session cookie. */
     private String login(String username, String password) {

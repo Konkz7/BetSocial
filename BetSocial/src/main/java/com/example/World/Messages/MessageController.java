@@ -16,7 +16,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 
 import java.util.List;
-import java.util.Optional;
 
 @RequestMapping("/api/messages")
 @RestController
@@ -35,13 +34,16 @@ public class MessageController {
         this.notificationService = notificationService;
     }
 
+    // Previously unchecked: any authenticated user could read any message by
+    // walking mids, which sidestepped the membership check on /group/{gid}.
     @GetMapping("/{mid}")
-    Message_ findById(@PathVariable Long mid){
-        Optional<Message_> message = messageRepository.findById(mid);
-        if(message.isEmpty()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "message not found");
-        }
-        return message.get();
+    Message_ findById(@PathVariable Long mid, HttpSession session){
+        Message_ message = messageRepository.findById(mid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "message not found"));
+
+        messageService.requireMembership(message.gid(), requireUserId(session));
+
+        return message;
     }
 
     @MessageMapping("/send")
@@ -111,8 +113,14 @@ public class MessageController {
         return uid;
     }
 
+    // Previously took no session at all: any caller could mark any message read.
     @PutMapping("/update-read/{mid}")
-    void updateReadReceipt(@PathVariable Long mid){
+    void updateReadReceipt(@PathVariable Long mid, HttpSession session){
+        Message_ message = messageRepository.findById(mid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "message not found"));
+
+        messageService.requireMembership(message.gid(), requireUserId(session));
+
         messageRepository.updateReadReceipt(mid);
     }
     void delete(@PathVariable Long mid){
