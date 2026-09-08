@@ -55,6 +55,48 @@ class ConversationListTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("marks a conversation unread for the person who did not send the last message")
+    void unreadIsPerViewer() {
+        User_ sender = users.save(user("unread-sender"));
+        User_ reader = users.save(user("unread-reader"));
+
+        Group_ direct = groups.openDirectConversation(sender.uid(), reader.uid());
+        messages.sendMessage(direct.gid(), sender.uid(), "did you see this", 0);
+
+        assertThat(conversationFor(reader, direct).unread())
+                .as("the recipient has not read it, so it is unread for them")
+                .isTrue();
+
+        assertThat(conversationFor(sender, direct).unread())
+                .as("your own message is never unread for you")
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("sends the unread flag to the client under that name")
+    void unreadIsSerialised() throws Exception {
+        User_ sender = users.save(user("unread-json-a"));
+        User_ reader = users.save(user("unread-json-b"));
+
+        Group_ direct = groups.openDirectConversation(sender.uid(), reader.uid());
+        messages.sendMessage(direct.gid(), sender.uid(), "bold me", 0);
+
+        // The client styles the row from this field, so the name it arrives under
+        // matters as much as the value.
+        String json = new com.fasterxml.jackson.databind.ObjectMapper()
+                .writeValueAsString(conversationFor(reader, direct));
+
+        assertThat(json).contains("\"unread\":true");
+    }
+
+    private ConversationDTO conversationFor(User_ viewer, Group_ group) {
+        return messages.getConversations(viewer.uid()).stream()
+                .filter(c -> c.gid().equals(group.gid()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("conversation missing from the list"));
+    }
+
+    @Test
     @DisplayName("pairs each conversation with its own membership row")
     void pairsGroupsWithTheRightMembership() {
         User_ a = users.save(user("phase5-c"));

@@ -55,13 +55,17 @@ const MessageScreen = ({ navigation , route } : any) => {
     recipient["user"] = await getUser(uid);
     recipient["gid"] = gid;
 
+    // Clear the row's unread styling straight away rather than waiting for the
+    // list to be refetched. This used to set lastMessage.is_read, which is what
+    // the row was styled from at the time; the row reads `unread` now, so setting
+    // is_read alone left it bold after you had opened and read the conversation.
     setConversations((prevConversations) =>
       prevConversations.map((conv) => {
         if (conv.gid === gid) {
-          return { ...conv, lastMessage: { ...conv.lastMessage, is_read: true } };
+          return { ...conv, unread: false };
         }
         return conv;
-    }));  
+    }));
     navigation.navigate("DMScreen_M",recipient);
     
   }
