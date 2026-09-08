@@ -90,23 +90,25 @@ public class MessageService {
 
         String body = mediaType == 0 ? content : mediaType == 1 ? "Photo was sent" : "Video was sent";
 
-        // target_id is the conversation, so registerNotification's existing
-        // de-duplication collapses a burst of messages into one notification per
-        // recipient rather than one per message.
-        NotificationDTO notification = new NotificationDTO(senderId, "message", gid, "user");
+        // Skip only the people who are already looking at this conversation. This
+        // used to compare the sender's status to the recipient's, which happens to
+        // be equal when both are watching the same chat - but also when both are
+        // merely offline, so an offline recipient was silently denied the push that
+        // was the whole point of the notification.
+        List<User_> toNotify = recipients.stream()
+                .filter(recipient -> !recipient.status().equals(watchingChat(gid)))
+                .toList();
 
-        for (User_ recipient : recipients) {
-            // Skip only the people who are already looking at this conversation.
-            // This used to compare the sender's status to the recipient's, which
-            // happens to be equal when both are watching the same chat - but also
-            // when both are merely offline, so an offline recipient was silently
-            // denied the push that was the whole point of the notification.
-            if (recipient.status().equals(watchingChat(gid))) {
-                continue;
-            }
-
-            notificationService.registerNotification(recipient.fb_notification_token(),
-                    body, notification, recipient.uid());
+        if (!toNotify.isEmpty()) {
+            // Handed over whole rather than one call per member: the fan-out is a
+            // single multicast now instead of a blocking Firebase call each, all of
+            // which ran before the message reached the topic.
+            notificationService.notifyConversation(
+                    userRepository.findById(senderId).orElseThrow(),
+                    gid,
+                    groupService.conversationNameOf(gid),
+                    toNotify,
+                    body);
         }
         // Return the saved row, not the pre-save object: `message` was built with
         // mid = null and only `msg` carries the generated id. MessageController
