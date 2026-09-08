@@ -474,3 +474,25 @@ export const getCircleSecret = async () =>{
   }
 
   
+//ADMIN
+// The approval queue: bets whose owner has declared an outcome and which are
+// waiting on somebody without a stake in them.
+export const getPendingApprovals = async() =>{
+  try {
+      const pending = await axios.get(IP_STRING + "/superusers/bets/pending");
+      return pending.data;
+  } catch (error) {
+    Alert.alert("Error!", "The approval queue couldnt be loaded.")
+  }
+}
+
+// Approving pays the winners; rejecting returns every stake. Both are final.
+export const approveBet = async(bid, decision, reason) =>{
+  try {
+      await axios.post(IP_STRING + "/superusers/approval", { bid, decision, reason });
+      return true;
+  } catch (error) {
+    Alert.alert("Couldnt settle the bet", error.response?.data?.message ?? error.message);
+    return false;
+  }
+}

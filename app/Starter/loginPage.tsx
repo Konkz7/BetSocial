@@ -8,6 +8,8 @@ import { IP_STRING } from "../Constants";
 import { removeFBNToken, requestFBNPermission } from "../Components/FBCloudMessagingService";
 import { LoginStore, screenStore } from "../GlobalFlags";
 import {useNotificationListener } from "../Components/FBCloudMessagingService";
+import { getProfile } from "../API";
+import { isPrivileged } from "../Roles";
 
 
 
@@ -68,10 +70,12 @@ const LoginScreen = ({navigation}:any) => {
       // Store token for future API calls
       //await AsyncStorage.setItem("authToken", token);
 
-     
-        
-      // Navigate to Home screen
-      navigation.navigate("MainApp");
+      // Which interface to open depends on who signed in. The role comes from the
+      // profile rather than the login response, so a session restored later lands
+      // in the same place as a fresh sign-in.
+      const profile = await getProfile();
+
+      navigation.navigate(isPrivileged(profile) ? "AdminApp" : "MainApp");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error("Axios error:", error.response?.data);
