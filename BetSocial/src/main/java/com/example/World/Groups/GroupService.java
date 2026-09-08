@@ -70,12 +70,11 @@ public class GroupService {
 
         Long time = new Date().getTime();
         Group_ group = new Group_(
-            null,
-            groupName,
-            null,
-            time,
-   null,
-    null
+                null,
+                groupName,
+                null,
+                time,
+                null
         );
 
 

@@ -50,7 +50,9 @@ public interface GroupRepository extends ListCrudRepository<Group_,Long> {
 
     @Modifying
     @Transactional
-    @Query("UPDATE Group_ SET group_name = :name WHERE gid = :gid AND deleted_at IS NULL")
+    // No deleted_at guard: a conversation is only ever hard-deleted, so a row that
+    // is still here is live by definition.
+    @Query("UPDATE Group_ SET group_name = :name WHERE gid = :gid")
     int updateName(@Param("gid") Long gid, @Param("name") String name);
 
     // No soft delete here on purpose. A group is only ever hard-deleted, via

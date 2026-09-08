@@ -26,7 +26,7 @@ class MigrationTest extends AbstractIntegrationTest {
                 "SELECT version FROM flyway_schema_history WHERE success = true ORDER BY installed_rank",
                 String.class);
 
-        assertThat(applied).containsExactly("1", "2", "3", "4", "5", "6", "7");
+        assertThat(applied).containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
     }
 
     @Test
@@ -99,7 +99,6 @@ class MigrationTest extends AbstractIntegrationTest {
                 "chk_message_deleted_after_created",
                 "chk_prediction_deleted_after_created",
                 "chk_user_deleted_after_created",
-                "chk_group_deleted_after_created",
                 "chk_groupuser_deleted_after_created");
     }
 
@@ -120,12 +119,45 @@ class MigrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("drop the columns the group work superseded")
+    void supersededColumnsAreGone() {
+        // Each of these encoded something the membership rows already held, or held
+        // one person's answer to a question about several. They were left in place
+        // change by change so the replacements could be used for real first.
+        assertThat(columnsOf("group_"))
+                .doesNotContain("sort", "deleted_at")
+                .as("a conversation is still named and still tracks its last message")
+                .contains("group_name", "last_mid");
+
+        assertThat(columnsOf("groupuser_"))
+                .doesNotContain("other_uid")
+                .as("read state and membership's own soft delete stay")
+                .contains("last_read_timestamp", "deleted_at", "administrator");
+
+        assertThat(columnsOf("message_"))
+                .doesNotContain("recipient_id", "is_read")
+                .as("a message still belongs to a conversation and can still be soft-deleted")
+                .contains("gid", "uid", "deleted_at");
+
+        // A different table's is_read, still written and still read.
+        assertThat(columnsOf("notification_")).contains("is_read");
+    }
+
+    private List<String> columnsOf(String table) {
+        return jdbc.queryForList(
+                "SELECT column_name FROM information_schema.columns "
+                        + "WHERE table_schema = 'public' AND table_name = ?",
+                String.class, table);
+    }
+
+    @Test
     @DisplayName("keep foreign keys intact")
     void foreignKeysExist() {
         Integer fks = jdbc.queryForObject(
                 "SELECT count(*) FROM pg_constraint WHERE contype = 'f'", Integer.class);
 
-        // 24 from the V1 baseline plus 2 added with decision_log in V2.
-        assertThat(fks).isGreaterThanOrEqualTo(26);
+        // 24 from the V1 baseline plus 2 added with decision_log in V2, less
+        // fk_recipient_id, which V8 dropped along with message_.recipient_id.
+        assertThat(fks).isGreaterThanOrEqualTo(25);
     }
 }

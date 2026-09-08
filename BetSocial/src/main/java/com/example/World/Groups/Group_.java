@@ -26,7 +26,9 @@ public record Group_(
         Long last_mid,
         @NonNull
         Long created_at, // Timestamp of conversation creation
-        Long deleted_at,
+        // No deleted_at. A conversation is only ever hard-deleted, so its absence
+        // is the whole signal; it is membership that soft-deletes, which is what
+        // keeps a record of who used to be here.
         @Version
         Integer g_version // Version number for optimistic locking
 ) {
