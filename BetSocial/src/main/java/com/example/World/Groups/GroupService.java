@@ -1,6 +1,7 @@
 package com.example.World.Groups;
 
 import com.example.World.Users.UserRepository;
+import com.example.World.Users.User_;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -240,10 +241,41 @@ public class GroupService {
         return groupRepository.findById(gid).orElseThrow();
     }
 
-    /** The membership rows of a conversation the caller belongs to. */
-    public List<Groupuser_> getMembers(Long gid, Long callerUid) {
+    /**
+     * The members of a conversation the caller belongs to, ready to draw.
+     *
+     * This used to hand back the raw membership rows, which carry a uid and
+     * nothing else - enough to decide who may do what, but not enough to put
+     * anybody on screen. A group needs names and pictures in two places: beside
+     * each message, since with more than two people you cannot tell who is
+     * speaking, and in the member list itself.
+     *
+     * The users are fetched in one query rather than one per member.
+     */
+    public List<GroupMemberView> getMembers(Long gid, Long callerUid) {
         requireMembership(gid, callerUid);
-        return groupUserRepository.findByGid(gid);
+
+        List<Groupuser_> memberships = groupUserRepository.findByGid(gid);
+
+        Map<Long, User_> users = userRepository.findAllById(
+                        memberships.stream().map(Groupuser_::uid).distinct().toList())
+                .stream()
+                .collect(Collectors.toMap(User_::uid, user -> user, (first, second) -> first));
+
+        return memberships.stream()
+                .map(membership -> {
+                    User_ user = users.get(membership.uid());
+                    // groupuser_.uid has no foreign key to user_, so a membership can
+                    // outlive the account it names. Leaving it out beats rendering a
+                    // blank row where a person should be.
+                    return user == null ? null : new GroupMemberView(
+                            user.uid(),
+                            user.user_name(),
+                            user.profile_picture(),
+                            membership.administrator());
+                })
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     private Groupuser_ membershipRow(Long gid, Long uid, Long time, boolean administrator) {
