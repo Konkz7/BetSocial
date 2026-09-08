@@ -23,16 +23,11 @@ public interface GroupRepository extends ListCrudRepository<Group_,Long> {
     @Query("UPDATE Group_ SET group_name = :name WHERE gid = :gid AND deleted_at IS NULL")
     int updateName(@Param("gid") Long gid, @Param("name") String name);
 
-    /**
-     * Soft-deletes a conversation once the last member has gone.
-     *
-     * The messages are left in place rather than removed with it - they are the
-     * record of what was said, and group_ is the only row that needs to know the
-     * conversation is over.
-     */
-    @Modifying
-    @Transactional
-    @Query("UPDATE Group_ SET deleted_at = :time WHERE gid = :gid AND deleted_at IS NULL")
-    int softDelete(@Param("gid") Long gid, @Param("time") Long time);
+    // No soft delete here on purpose. A group is only ever hard-deleted, via
+    // ListCrudRepository.deleteById, and V1's foreign keys cascade that to
+    // groupuser_ and message_. Soft-deleting it would leave the membership rows
+    // in place pointing at a conversation nobody can reach, and hard-deleting it
+    // automatically would destroy the soft-deleted memberships that are the only
+    // record of who was ever in it - so nothing deletes a group on its own.
 
 }

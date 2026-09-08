@@ -137,18 +137,98 @@ class GroupLifecycleTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("the last member leaving closes the group")
-    void lastMemberClosesTheGroup() {
+    @DisplayName("an emptied group is not deleted out from under its history")
+    void emptyGroupSurvives() {
         User_ creator = users.save(user());
         User_ second = users.save(user());
 
-        Long gid = createGroup(loginAs(creator), "short lived", List.of(second.uid()));
+        Long gid = createGroup(loginAs(creator), "abandoned", List.of(second.uid()));
 
         exchange(HttpMethod.DELETE, "/api/groups/leave/" + gid, loginAs(creator));
-        assertThat(deletedAtOf(gid)).as("still has a member, so still open").isNull();
-
         exchange(HttpMethod.DELETE, "/api/groups/leave/" + gid, loginAs(second));
-        assertThat(deletedAtOf(gid)).as("nobody left to read it").isNotNull();
+
+        assertThat(activeMemberCount(gid)).as("nobody is in it any more").isZero();
+
+        // Deleting it here would cascade away the soft-deleted membership rows,
+        // which are the only record that either of them was ever in it.
+        assertThat(groupExists(gid))
+                .as("the group row must survive so the history it holds survives")
+                .isTrue();
+        assertThat(pastGroupIds(loginAs(second)))
+                .as("and both should still be able to see they were in it")
+                .contains(gid);
+    }
+
+    @Test
+    @DisplayName("being removed leaves a record the removed user can see")
+    void removalIsVisibleToTheRemovedUser() {
+        User_ creator = users.save(user());
+        User_ removed = users.save(user());
+
+        Long gid = createGroup(loginAs(creator), "not for you", List.of(removed.uid()));
+
+        assertThat(pastGroupIds(loginAs(removed)))
+                .as("nothing to show while they are still a member")
+                .doesNotContain(gid);
+
+        exchange(HttpMethod.DELETE, "/api/groups/remove-member/" + gid + "/" + removed.uid(),
+                loginAs(creator));
+
+        assertThat(pastGroupIds(loginAs(removed)))
+                .as("a hard delete could not be told apart from never having joined")
+                .contains(gid);
+
+        // The membership is over, so it is no longer a conversation they can reach.
+        assertThat(get("/api/groups/members/" + gid, loginAs(removed)).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(activeMemberCount(gid)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("a removed member can be added back")
+    void removedMemberCanRejoin() {
+        User_ creator = users.save(user());
+        User_ member = users.save(user());
+
+        Long gid = createGroup(loginAs(creator), "revolving door", List.of(member.uid()));
+
+        exchange(HttpMethod.DELETE, "/api/groups/remove-member/" + gid + "/" + member.uid(),
+                loginAs(creator));
+
+        // The soft-deleted row must not block a new one: they hold two memberships
+        // for this group now, of which only the second is active.
+        assertThat(exchange(HttpMethod.POST, "/api/groups/add-member/" + gid + "/" + member.uid(),
+                loginAs(creator)).getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
+
+        assertThat(activeMemberCount(gid)).isEqualTo(2);
+        assertThat(get("/api/groups/members/" + gid, loginAs(member)).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("only an administrator may delete a group, and it takes everything with it")
+    void deleteIsRestrictedAndTotal() {
+        User_ creator = users.save(user());
+        User_ member = users.save(user());
+
+        Long gid = createGroup(loginAs(creator), "doomed", List.of(member.uid()));
+
+        assertThat(exchange(HttpMethod.DELETE, "/api/groups/delete/" + gid, loginAs(member))
+                .getStatusCode())
+                .as("an ordinary member cannot destroy a conversation")
+                .isEqualTo(HttpStatus.FORBIDDEN);
+
+        assertThat(exchange(HttpMethod.DELETE, "/api/groups/delete/" + gid, loginAs(creator))
+                .getStatusCode())
+                .isEqualTo(HttpStatus.NO_CONTENT);
+
+        assertThat(groupExists(gid)).isFalse();
+        // V1's foreign keys cascade the delete, so no row is left pointing at a
+        // group that has gone.
+        assertThat(membershipRowCount(gid))
+                .as("membership rows should go with it, soft-deleted ones included")
+                .isZero();
     }
 
     @Test
@@ -268,8 +348,31 @@ class GroupLifecycleTest extends AbstractIntegrationTest {
         return false;
     }
 
-    private Long deletedAtOf(Long gid) {
-        return jdbc.queryForObject("SELECT deleted_at FROM group_ WHERE gid = ?", Long.class, gid);
+    private boolean groupExists(Long gid) {
+        return jdbc.queryForObject(
+                "SELECT count(*) FROM group_ WHERE gid = ?", Integer.class, gid) > 0;
+    }
+
+    private int activeMemberCount(Long gid) {
+        return jdbc.queryForObject(
+                "SELECT count(*) FROM groupuser_ WHERE gid = ? AND deleted_at IS NULL",
+                Integer.class, gid);
+    }
+
+    private int membershipRowCount(Long gid) {
+        return jdbc.queryForObject(
+                "SELECT count(*) FROM groupuser_ WHERE gid = ?", Integer.class, gid);
+    }
+
+    private List<Long> pastGroupIds(String session) {
+        try {
+            JsonNode rows = mapper.readTree(get("/api/groups/past-groups", session).getBody());
+            List<Long> gids = new java.util.ArrayList<>();
+            rows.forEach(row -> gids.add(row.get("gid").asLong()));
+            return gids;
+        } catch (Exception e) {
+            throw new IllegalStateException("could not read past groups", e);
+        }
     }
 
     private String nameOf(Long gid) {

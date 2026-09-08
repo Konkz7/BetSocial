@@ -125,9 +125,10 @@ public class GroupService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "That user is not a member of this group"));
 
-        // The actor is still a member, so this can never empty the group - only
-        // leaving can, which is where the group is closed.
-        groupUserRepository.delete(target);
+        // Soft-deleted, not removed: being removed from a group is something the
+        // person needs to be able to see afterwards, and a vanished row cannot be
+        // told apart from never having been a member.
+        groupUserRepository.softDelete(target.guid(), new Date().getTime());
     }
 
     /**
@@ -139,19 +140,21 @@ public class GroupService {
         Groupuser_ membership = requireMembership(gid, uid);
         requireGroupConversation(gid);
 
-        groupUserRepository.delete(membership);
+        groupUserRepository.softDelete(membership.guid(), new Date().getTime());
 
         List<Groupuser_> remaining = groupUserRepository.findByGid(gid);
 
+        // A group with nobody left in it is deliberately *not* deleted here.
+        // Deleting it would cascade away every membership row, including the
+        // soft-deleted ones that are the only record anyone was ever in it - so
+        // emptying a group would quietly destroy the history it is meant to keep.
+        // Removing a conversation for good is an explicit act: see deleteGroup.
         if (remaining.isEmpty()) {
-            // Nobody is left to read it, so the conversation is closed. The
-            // messages stay; only the group row is marked.
-            groupRepository.softDelete(gid, new Date().getTime());
             return;
         }
 
         // If that was the last administrator the group would otherwise be stuck
-        // forever - nobody able to rename it, remove anyone, or close it. The
+        // forever - nobody able to rename it, remove anyone, or delete it. The
         // longest-standing remaining member takes the role.
         if (remaining.stream().noneMatch(Groupuser_::administrator)) {
             Groupuser_ successor = remaining.stream()
@@ -161,6 +164,33 @@ public class GroupService {
 
             groupUserRepository.updateAdministrator(successor.guid(), true);
         }
+    }
+
+    /**
+     * Deletes a conversation outright. Administrators only.
+     *
+     * This is the one destructive operation on a group and the only way one is
+     * ever removed. The foreign keys cascade it to both the messages and every
+     * membership row, so nothing is left pointing at a group that has gone.
+     * Nothing does this automatically - an abandoned group simply stays, unseen,
+     * so that the people who were in it keep their record of having been there.
+     */
+    @Transactional
+    public void deleteGroup(Long gid, Long actorUid) {
+        Groupuser_ actor = requireMembership(gid, actorUid);
+        requireGroupConversation(gid);
+
+        if (!actor.administrator()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Only an administrator can delete this group");
+        }
+
+        groupRepository.deleteById(gid);
+    }
+
+    /** The conversations a user used to be in, most recently left first. */
+    public List<Groupuser_> getPastMemberships(Long uid) {
+        return groupUserRepository.findPastMembershipsByUid(uid);
     }
 
     /** Renames a group. Administrators only. */
@@ -186,7 +216,7 @@ public class GroupService {
     }
 
     private Groupuser_ membershipRow(Long gid, Long uid, Long time, boolean administrator) {
-        return new Groupuser_(null, gid, uid, null, time, time, administrator);
+        return new Groupuser_(null, gid, uid, null, time, time, administrator, null);
     }
 
     /**
@@ -205,12 +235,11 @@ public class GroupService {
      * leave a conversation the rest of the code cannot describe.
      */
     private Group_ requireGroupConversation(Long gid) {
+        // group_.deleted_at is deliberately not consulted: a group is only ever
+        // hard-deleted now, so the row being absent is the whole signal. That
+        // column and its V3 check constraint are left over and want dropping.
         Group_ group = groupRepository.findById(gid)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
-
-        if (group.deleted_at() != null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found");
-        }
 
         if (group.sort() != 1) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -265,7 +294,8 @@ public class GroupService {
                 other_uid,
                 time,
                 time,
-                false
+                false,
+                null
         );
 
         Groupuser_ other = new Groupuser_(
@@ -275,7 +305,8 @@ public class GroupService {
                 uid,
                 time,
                 time,
-                false
+                false,
+                null
         );
 
         groupUserRepository.save(user);

@@ -15,15 +15,38 @@ import java.util.Optional;
 public interface GroupUserRepository extends ListCrudRepository<Groupuser_,Long> {
 
 
-    @Query("SELECT * FROM Groupuser_ WHERE uid= :uid")
+    // Membership is soft-deleted, so every one of these is about *current*
+    // membership and filters accordingly. A user who was removed and later added
+    // back holds more than one row for the same group; only one is ever active.
+
+    @Query("SELECT * FROM Groupuser_ WHERE uid= :uid AND deleted_at IS NULL")
     List<Groupuser_> findByUid(@Param("uid") Long uid);
 
-    @Query("SELECT * FROM Groupuser_ WHERE gid= :gid AND uid= :uid")
+    @Query("SELECT * FROM Groupuser_ WHERE gid= :gid AND uid= :uid AND deleted_at IS NULL")
     Optional<Groupuser_> findByGidandUid(@Param("gid") Long gid, @Param("uid") Long uid);
 
-    /** Every membership row for a conversation - who a message has to reach. */
-    @Query("SELECT * FROM Groupuser_ WHERE gid= :gid")
+    /** Every current membership row for a conversation - who a message has to reach. */
+    @Query("SELECT * FROM Groupuser_ WHERE gid= :gid AND deleted_at IS NULL")
     List<Groupuser_> findByGid(@Param("gid") Long gid);
+
+    /**
+     * Memberships that have ended - the conversations a user used to be in.
+     *
+     * Only the most recent ending per group, so somebody removed and re-removed
+     * appears once rather than once per departure.
+     */
+    @Query("""
+    SELECT DISTINCT ON (gid) *
+    FROM Groupuser_
+    WHERE uid = :uid AND deleted_at IS NOT NULL
+    ORDER BY gid, deleted_at DESC
+    """)
+    List<Groupuser_> findPastMembershipsByUid(@Param("uid") Long uid);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Groupuser_ SET deleted_at = :time WHERE guid = :guid AND deleted_at IS NULL")
+    int softDelete(@Param("guid") Long guid, @Param("time") Long time);
 
     @Modifying
     @Transactional
