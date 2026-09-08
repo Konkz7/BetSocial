@@ -21,9 +21,18 @@ public interface GroupUserRepository extends ListCrudRepository<Groupuser_,Long>
     @Query("SELECT * FROM Groupuser_ WHERE gid= :gid AND uid= :uid")
     Optional<Groupuser_> findByGidandUid(@Param("gid") Long gid, @Param("uid") Long uid);
 
+    /** Every membership row for a conversation - who a message has to reach. */
+    @Query("SELECT * FROM Groupuser_ WHERE gid= :gid")
+    List<Groupuser_> findByGid(@Param("gid") Long gid);
+
     @Modifying
     @Transactional
     @Query("UPDATE Groupuser_ SET last_read_timestamp = :now WHERE guid = :guid")
     int updateReadTimestamp(@Param("guid") Long guid , @Param("now") Long now);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Groupuser_ SET administrator = :administrator WHERE guid = :guid")
+    int updateAdministrator(@Param("guid") Long guid, @Param("administrator") boolean administrator);
 
 }
