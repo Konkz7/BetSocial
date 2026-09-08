@@ -302,6 +302,7 @@ public class MessageService {
             convoList.add(new ConversationDTO(
                     isDirect ? other.user_name() : group.group_name(),
                     other == null ? null : other.uid(),
+                    !isDirect,
                     MessageView.of(lastMessage,
                             readUpTo(membersByGid.getOrDefault(group.gid(), List.of()), uid)),
                     // Unread for this reader: it arrived after they last opened the

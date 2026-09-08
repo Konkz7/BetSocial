@@ -1,6 +1,7 @@
 package com.example.World;
 
 import com.example.World.Groups.GroupService;
+import com.example.World.Messages.MessageService;
 import com.example.World.Groups.Group_;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.User_;
@@ -44,6 +45,7 @@ class GroupLifecycleTest extends AbstractIntegrationTest {
 
     @Autowired UserRepository users;
     @Autowired GroupService groups;
+    @Autowired MessageService messages;
     @Autowired PasswordEncoder passwordEncoder;
 
     private final ObjectMapper mapper = new ObjectMapper();
@@ -64,6 +66,68 @@ class GroupLifecycleTest extends AbstractIntegrationTest {
                 .as("the creator must be an administrator, or nobody can manage the group")
                 .isTrue();
         assertThat(adminFlagOf(members, member.uid())).isFalse();
+    }
+
+    @Test
+    @DisplayName("the member list carries what it takes to draw somebody")
+    void memberListCarriesNamesAndPictures() throws Exception {
+        User_ creator = users.save(user());
+        User_ member = users.save(user());
+
+        Long gid = createGroup(loginAs(creator), "drawable", List.of(member.uid()));
+
+        JsonNode members = mapper.readTree(
+                get("/api/groups/members/" + gid, loginAs(creator)).getBody());
+
+        assertThat(members).hasSize(2);
+        for (JsonNode row : members) {
+            // A uid alone decides who may do what; it cannot put anybody on screen.
+            // Both the member list and the sender label beside each group message
+            // need these.
+            assertThat(row.hasNonNull("user_name")).isTrue();
+            assertThat(row.has("profile_picture")).isTrue();
+            assertThat(row.has("administrator")).isTrue();
+        }
+
+        // The projection must not carry what User_ does.
+        String body = get("/api/groups/members/" + gid, loginAs(creator)).getBody();
+        assertThat(body)
+                .doesNotContain("pass_word")
+                .doesNotContain("verification_token")
+                .doesNotContain("fb_notification_token");
+    }
+
+    @Test
+    @DisplayName("a group of two is still a group")
+    void groupOfTwoIsNotADirectConversation() throws Exception {
+        User_ creator = users.save(user());
+        User_ member = users.save(user());
+
+        Long groupGid = createGroup(loginAs(creator), "just the two of us", List.of(member.uid()));
+        Group_ direct = groups.openDirectConversation(creator.uid(), member.uid());
+
+        // A conversation with no messages is left out of the list entirely.
+        messages.sendMessage(groupGid, member.uid(), "in the group", 0);
+        messages.sendMessage(direct.gid(), member.uid(), "and privately", 0);
+
+        JsonNode conversations = mapper.readTree(
+                get("/api/messages/conversations", loginAs(creator)).getBody());
+        assertThat(conversations).hasSize(2);
+
+        for (JsonNode conversation : conversations) {
+            boolean isTheGroup = conversation.get("gid").asLong() == groupGid;
+
+            assertThat(conversation.get("isGroup").asBoolean())
+                    .as("conversation %s", conversation.get("name").asText())
+                    .isEqualTo(isTheGroup);
+
+            // Both have exactly one other person in them, so both carry a uid.
+            // Telling them apart by that would send this group to the direct
+            // message screen, and would do the same to any group that shrank to two.
+            assertThat(conversation.hasNonNull("uid"))
+                    .as("uid is present either way, which is why it cannot be the test")
+                    .isTrue();
+        }
     }
 
     @Test

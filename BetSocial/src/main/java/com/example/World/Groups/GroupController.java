@@ -110,7 +110,7 @@ public class GroupController {
     }
 
     @GetMapping("/members/{gid}")
-    List<Groupuser_> getMembers(@PathVariable Long gid, HttpSession session) {
+    List<GroupMemberView> getMembers(@PathVariable Long gid, HttpSession session) {
         return groupService.getMembers(gid, requireUserId(session));
     }
 
