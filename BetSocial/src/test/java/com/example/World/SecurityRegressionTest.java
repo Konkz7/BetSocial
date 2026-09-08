@@ -51,7 +51,26 @@ class SecurityRegressionTest extends AbstractIntegrationTest {
         String session = login("john", "password");
 
         assertThat(get("/api/bets/all", session).getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(get("/api/predictions/all", session).getStatusCode()).isEqualTo(HttpStatus.OK);
+        // Was /api/predictions/all, which has since been removed - see
+        // predictionDumpRemoved. /mine is the reachable predictions route now.
+        assertThat(get("/api/predictions/mine", session).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("the bulk prediction dump is gone and a stake is private to whoever placed it")
+    void predictionDumpRemoved() {
+        // GET /api/predictions/all returned every prediction in the database: who
+        // backed what, and for how much. That was already more than anybody needed
+        // and became a list of everyone's financial position once stakes cost real
+        // coins. GET /{pid} was the same leak one row at a time.
+        String session = login("john", "password");
+
+        assertThat(get("/api/predictions/all", session).getStatusCode())
+                .isNotEqualTo(HttpStatus.OK);
+
+        assertThat(get("/api/predictions/1", session).getStatusCode())
+                .as("somebody else's stake is not readable by walking ids")
+                .isIn(HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND);
     }
 
     @Test

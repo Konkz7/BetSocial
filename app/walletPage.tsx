@@ -1,192 +1,163 @@
-import React, { useState ,} from "react";
-import { View, Text, Button, TextInput,Alert,Linking, StyleSheet , TouchableOpacity } from "react-native";
-import axios from "axios";
-import { IP_STRING } from "./Constants";
+import React, { useCallback, useState } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { PiggyBank,ArrowLeft, PlusCircle } from "lucide-react-native";
-import { getCircleSecret } from "./API";
-import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card } from "react-native-paper";
-import { Picker } from '@react-native-picker/picker';
+import { ArrowLeft } from "lucide-react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { getWallet } from "./API";
 
+/**
+ * The wallet: a balance, and the movements that add up to it.
+ *
+ * Both come from the ledger, so the number at the top can always be checked
+ * against the rows beneath it. What this replaces showed a hardcoded "30.00"
+ * above a button that created a crypto wallet through an endpoint deleted with
+ * CircleService - every call on the screen had been 404ing for a long time.
+ *
+ * There is nothing to buy here and no card to add. Coins arrive as an opening
+ * grant and a daily top-up, and are won or lost on bets.
+ */
 
-const WalletScreen = ({navigation}:any) => {
-  const [amount, setAmount] = useState("");
-  
+/** Matches LedgerReason on the server. */
+const REASON_LABELS: Record<string, string> = {
+  OPENING_GRANT: "Opening grant",
+  DAILY_TOPUP: "Daily top-up",
+  STAKE: "Stake",
+  STAKE_REFUND: "Refund",
+  WINNINGS: "Winnings",
+  ADJUSTMENT: "Adjustment",
+};
 
-  const queryClient = useQueryClient();
-  const walletData:any = queryClient.getQueryData(["wallet"]);
-  const [selectedValue, setSelectedValue] = useState('option1');
+const formatWhen = (millis: number) =>
+  new Date(millis).toLocaleDateString([], {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
-  // Options list with labels and values
-  const options = [
-    { label: 'Option 1', value: 'option1' },
-    { label: 'Option 2', value: 'option2' },
-    { label: 'Option 3', value: 'option3' },
-  ];
+const WalletScreen = ({ navigation }: any) => {
+  const [wallet, setWallet] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-
-  const addWallet = async () => {
-    try {
-      const response = await axios.post(IP_STRING+"/circle/create-user-wallet");
-      Alert.alert("Message:", "Wallet created successfully! Your wallet id: " + response.data.data.wallet.id);
-      queryClient.invalidateQueries( {queryKey: ["wallet"]});
-    } catch (error) {
-      Alert.alert("Error", "Failed to create wallet. Please try again later.");
-    }
-    
+  const load = async () => {
+    setLoading(true);
+    // Opening the wallet is also what collects the daily top-up, so this is
+    // refetched on focus rather than cached.
+    setWallet(await getWallet());
+    setLoading(false);
   };
 
-  
+  useFocusEffect(useCallback(() => { load(); }, []));
+
   return (
-    <SafeAreaView style = {styles.container}>
-      <View style = {styles.header}>
-        <View>
-          <TouchableOpacity style={{ flexDirection: "row", alignItems: "center" }} onPress={() => navigation.goBack()}>
-            <ArrowLeft size={36} color={"green"} />
-            <Text style = {styles.headerText}>Back</Text>
-          </TouchableOpacity>
-        </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <ArrowLeft size={28} color={"green"} />
+          <Text style={styles.headerText}>Back</Text>
+        </TouchableOpacity>
       </View>
-      <View>
-        {walletData == null ? (
-          <View style = {[styles.body,{marginTop: 200}]}>
-            <PiggyBank size={150}  ></PiggyBank>
-            <View style = { styles.addWallet}>
-            <TouchableOpacity onPress={addWallet}>
-              <Text style = {styles.addWalletText}> Add Wallet </Text>
-            </TouchableOpacity>
-          </View>
-          <Text style = {[styles.addWalletInfo, {maxWidth: 280}]}> It seems you havent made a wallet with us. Start now! (Please know that all funds 
-              are stored in USDC in order to prioritise the user experience while ensuring security.)
+
+      <View style={styles.balanceCard}>
+        <Text style={styles.balanceLabel}>Balance</Text>
+        <Text style={styles.balance}>
+          {wallet ? wallet.balance.toLocaleString() : "—"}
+        </Text>
+        <Text style={styles.balanceUnit}>coins</Text>
+      </View>
+
+      <Text style={styles.historyHeading}>Recent activity</Text>
+
+      <FlatList
+        data={wallet?.entries ?? []}
+        keyExtractor={(item) => item.leid.toString()}
+        removeClippedSubviews={false}
+        onRefresh={load}
+        refreshing={loading}
+        ListEmptyComponent={
+          <Text style={styles.empty}>
+            {loading ? "Loading…" : "Nothing has moved yet."}
           </Text>
-        </View>
-        ) : 
-        (<View style = {styles.body}>
-          
-          <Card style = {styles.balanceContainer}>  
-            <Text style = {styles.balanceTitle}>Balance :</Text>
-            <Text style = {styles.addWalletInfo} >Wallet ID : {walletData.data.wallet.id}</Text>
-            <Text style ={styles.balance}>30.00</Text>
-            <Text style ={[styles.currency]}>USDC</Text>
-          </Card>
-
-          <View style = {{marginTop: 20}}>
-            <Text style = {styles.pmTitle}>Pick saved card: </Text>
-            <View style = {styles.pickerShadow}>
-              <Picker
-                selectedValue={selectedValue}
-                style={styles.picker}
-                onValueChange={(itemValue) => setSelectedValue(itemValue)}
-                placeholder="Select card..."
-              >
-                {options.map((option, index) => (
-                  <Picker.Item key={index} label={option.label} value={option.value} />
-                ))}
-              </Picker>
+        }
+        renderItem={({ item }) => (
+          <View style={styles.row}>
+            <View style={styles.rowText}>
+              <Text style={styles.description} numberOfLines={1}>
+                {item.description}
+              </Text>
+              <Text style={styles.meta}>
+                {REASON_LABELS[item.reason] ?? item.reason} · {formatWhen(item.created_at)}
+              </Text>
             </View>
-            <TouchableOpacity style = {styles.addCardButton} onPress={() => navigation.navigate("Card_W")}>
-              <PlusCircle size = {24} ></PlusCircle>
-              <Text style = {[styles.addWalletInfo, {marginTop: 0 , marginLeft: 3}]}>Add a card</Text>
-            </TouchableOpacity>
+            {/* Signed, so a debit reads as one without needing a separate column. */}
+            <Text style={[styles.amount, item.amount < 0 ? styles.debit : styles.credit]}>
+              {item.amount > 0 ? "+" : ""}{item.amount.toLocaleString()}
+            </Text>
           </View>
-          
-         
-          
-
-
-         </View>
         )}
-        
-      </View>
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container:{
-    flex:1,
-    backgroundColor: "#fcfcf7",
-  },header: {
-    flexDirection:"row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "white",
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
-    padding: 10,
-  },headerText:{
-    paddingLeft:10,
-    fontSize: 17,
-    color: "green",
-  },body:{
-    
-    justifyContent: "center",
-    alignItems: "center",
-  }
-  ,addWallet:{
-    height:70,
-    width: 170,
-    backgroundColor: "green",
-    borderRadius: 10,
-  },addWalletText:{
-    fontSize: 20,
-    color: "white",
-    fontWeight: "bold",
-    textAlign: "center",
-    padding : 20,
-  },addWalletInfo:{
-    fontSize: 15,
-    color: "#bbb",
-    textAlign: "center",
-    fontStyle: "italic",
-    marginTop: 10,
-  },balanceTitle:{
-    fontSize: 38,
-    fontWeight: "bold",
-    textAlign: "center",
-  },balance:{
-    fontSize: 60,
-    fontWeight: "bold",
-    textAlign: "center",
-    color: "green"
-  },currency:{
-    fontSize: 30,
-    fontWeight: "bold",
-    textAlign: "center",
-  },pmTitle:{
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },balanceContainer:{
-    marginTop:30,
-    padding: 20, 
-    borderRadius: 10, 
-    width: 380,
-    backgroundColor: "white",
-  },pickerShadow: {
-    backgroundColor: "white", // added background color
-    borderRadius: 20,         // ensure corners are rounded
-    elevation: 5,             // Android shadow
-    shadowColor: "#000",      // iOS shadow properties
-    shadowOffset: { width: 1, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
+  container: { flex: 1, backgroundColor: "#fcfcf7" },
+  header: { paddingHorizontal: 12, paddingVertical: 10 },
+  backButton: { flexDirection: "row", alignItems: "center" },
+  headerText: { fontSize: 18, color: "green", marginLeft: 4 },
 
-  },picker: {
-    height: 60,
-    width: 380,
-    // Remove backgroundColor from here if it's redundant
-    // backgroundColor: "white",
-    borderRadius: 20,
-    color: "black",
-    paddingVertical: 10,
-  },addCardButton:{
-    marginTop: 10 , 
+  balanceCard: {
+    backgroundColor: "white",
+    marginHorizontal: 16,
+    marginTop: 8,
+    paddingVertical: 28,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  balanceLabel: {
+    fontSize: 13,
+    color: "#6b7280",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  balance: { fontSize: 52, fontWeight: "700", color: "#111827", marginTop: 4 },
+  balanceUnit: { fontSize: 14, color: "#6b7280" },
+
+  historyHeading: {
+    marginHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 8,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#374151",
+  },
+
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-  }
+    backgroundColor: "white",
+    marginHorizontal: 16,
+    marginBottom: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  rowText: { flex: 1, marginRight: 12 },
+  description: { fontSize: 15, color: "#111827" },
+  meta: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
+  amount: { fontSize: 16, fontWeight: "600" },
+  credit: { color: "#2F6B4F" },
+  debit: { color: "#9E3B34" },
+
+  empty: { textAlign: "center", marginTop: 40, color: "#6b7280" },
 });
 
 export default WalletScreen;

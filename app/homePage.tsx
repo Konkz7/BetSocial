@@ -26,7 +26,10 @@ import {
   Frown,
 } from "lucide-react-native";
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {getBalance, getCircleSecret,getIpAddress,getProfile,getWallet,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads, getActiveNotifications, getConversations, getFollows} from "./API";
+// getBalance, getCircleSecret and getIpAddress are gone with the /circle
+// endpoints they called - deleted along with CircleService, and 404ing ever
+// since. Only the commented-out queries below ever referenced them.
+import {getProfile,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads, getActiveNotifications, getConversations, getFollows} from "./API";
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { getProfilePictureUrl, IP_STRING } from "./Constants";

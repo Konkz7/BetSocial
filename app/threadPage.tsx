@@ -25,7 +25,7 @@ import {
 } 
   from "lucide-react-native";
 import Card from "./Components/Card"; 
-import { getProfile, createComment, getComments, registerThreadLike } from "./API";
+import { getProfile, createComment, getComments, registerThreadLike, makePrediction, getMyPredictions } from "./API";
 import Video from "react-native-video";
 import { CommentList } from "./Components/CommentTemplate";
 import { screenStore } from "./GlobalFlags";
@@ -46,7 +46,11 @@ const ThreadScreen = ({navigation,route}:any) => {
 
   const [prediction, setPrediction] = useState<(boolean | null)[]>([]);
   const [wager, setWager] = useState<number[]>([]);
-  const [expected, setExpected] = useState<number[]>([]);
+
+  // What this person has already staked, keyed by bid. A prediction cannot be
+  // changed once placed, so this decides whether a bet is still open to them.
+  const [myPredictions, setMyPredictions] = useState<Record<number, any>>({});
+  const [placing, setPlacing] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(true); // Show loading indicator
 
@@ -99,6 +103,71 @@ const ThreadScreen = ({navigation,route}:any) => {
   const changeWager = (index: number , text:string) => {
     setWager((prev) =>
       prev.map((item, i) => (i === index ? (text ? Number.parseInt(text):0) : item))
+    );
+  };
+
+  const loadMyPredictions = async () => {
+    const mine = await getMyPredictions();
+    const byBid: Record<number, any> = {};
+    (mine ?? []).forEach((p: any) => { byBid[p.bid] = p; });
+    setMyPredictions(byBid);
+  };
+
+  /**
+   * What this stake would win if that side turns out to be right.
+   *
+   * The same arithmetic settlement uses, with the stake added to its own side
+   * first - because by the time it pays out, it is part of that pool. Integer,
+   * rounded down, for the same reason: the figure shown should not be a coin
+   * more than the figure paid.
+   *
+   * It is an estimate and moves as other people stake. Nothing was shown here
+   * before - "Expected currently" was fixed at zero and never recalculated.
+   */
+  const expectedReturn = (bet: any, choice: boolean | null, stake: number) => {
+    if (choice === null || !stake || stake <= 0) { return 0; }
+
+    const mySide = (choice ? bet.amount_for : bet.amount_against) + stake;
+    const otherSide = choice ? bet.amount_against : bet.amount_for;
+
+    // 80% of the losing pool is shared out; the rest is not paid to anybody.
+    return stake + Math.floor((stake * otherSide * 80) / (mySide * 100));
+  };
+
+  const placeBet = async (bet: any, index: number) => {
+    const choice = prediction.at(index);
+    const stake = wager.at(index) ?? 0;
+
+    if (choice === null || choice === undefined) {
+      Alert.alert("Pick a side", "Choose for or against before staking.");
+      return;
+    }
+    if (!stake || stake <= 0) {
+      Alert.alert("Enter a stake", "A bet needs at least one coin on it.");
+      return;
+    }
+
+    Alert.alert(
+      "Place this bet?",
+      `${stake} coins on ${choice ? "YES" : "NO"}. The coins leave your wallet now and a stake cannot be changed or withdrawn once placed.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Place bet",
+          onPress: async () => {
+            setPlacing(bet.bid);
+            const ok = await makePrediction(bet.bid, choice, stake);
+            setPlacing(null);
+
+            if (ok) {
+              // Refresh both: the pools have moved, and this bet is now closed to
+              // this person.
+              await getBets();
+              await loadMyPredictions();
+            }
+          },
+        },
+      ],
     );
   };
 
@@ -238,10 +307,10 @@ const ThreadScreen = ({navigation,route}:any) => {
       setBetStats(new Array(bets.length).fill(false));
       setBetSaves(new Array(bets.length).fill(false));
       setBetClicked(new Array(bets.length).fill(false));
-      setExpected(new Array(bets.length).fill(0))
       setWager(new Array(bets.length).fill(0))
       setPrediction(new Array(bets.length).fill(null));
       getSaves();
+      loadMyPredictions();
     }
 
 }, [bets]);
@@ -349,21 +418,56 @@ const ThreadScreen = ({navigation,route}:any) => {
                   <View style = {[styles.predictionRow, {}]}>
                     <View style = {[styles.predictionContainer,prediction.at(index) === null? {opacity: 0.2} : {opacity: 1}]}>
                       <Text style = {{fontSize:20,fontWeight:"bold",alignSelf:"flex-start",marginLeft:16,marginBottom:5}}>Wager:</Text>
+                      {/* Editable once a side is chosen. This read
+                          `prediction.at(index) === null`, which locked the field
+                          the moment you picked one - the opposite of the order
+                          you do it in. */}
                       <TextInput style = {{borderRadius: 5, backgroundColor:"white",width:130, height:35}}
                       inputMode="numeric"
-                      placeholder="Bet..."
+                      placeholder="Coins..."
                       value={wager.at(index)?.toString()}
                       onChangeText={(text) => changeWager(index,text)}
-                      editable={prediction.at(index) === null}
+                      editable={prediction.at(index) !== null && !myPredictions[bet.bid]}
                       />
                     </View>
 
                     <View style = {[styles.predictionContainer,prediction.at(index) === null? {opacity: 0.2} : {opacity: 1}]}>
-                      <Text style = {{fontSize:15,fontWeight:"bold",marginBottom:5}}>Expected currently:</Text>
-                      <Text style = {[{fontSize: 56, fontWeight: "bold", color: "dodgerblue"},]}>£{expected.at(index)}</Text>
+                      <Text style = {{fontSize:15,fontWeight:"bold",marginBottom:5}}>Returns if right:</Text>
+                      {/* Was fixed at zero and never recalculated. This is the
+                          arithmetic settlement actually uses, and it moves as
+                          other people stake. */}
+                      <Text style = {[{fontSize: 44, fontWeight: "bold", color: "dodgerblue"},]}>
+                        {expectedReturn(bet, prediction.at(index) ?? null, wager.at(index) ?? 0)}
+                      </Text>
                     </View>
-                    
+
                   </View>
+
+                  {/* The stake, and the only way one is placed. There was no
+                      submit control here at all: the whole panel existed and
+                      nothing was ever sent to the server. */}
+                  {myPredictions[bet.bid] ? (
+                    <View style={styles.placedBanner}>
+                      <Text style={styles.placedText}>
+                        You staked {myPredictions[bet.bid].amount_bet} on{" "}
+                        {myPredictions[bet.bid].prediction ? "YES" : "NO"}
+                      </Text>
+                      <Text style={styles.placedNote}>
+                        A stake cannot be changed once placed
+                      </Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.placeButton,
+                        (prediction.at(index) === null || !(wager.at(index) ?? 0)) && styles.placeButtonOff]}
+                      disabled={placing === bet.bid}
+                      onPress={() => placeBet(bet, index)}
+                    >
+                      <Text style={styles.placeButtonText}>
+                        {placing === bet.bid ? "Placing…" : "Place bet"}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
 
                   <TouchableOpacity style = {[styles.fab,{top: -45 , left: -25,padding: 10,backgroundColor:"lightgreen"}]}
                   onPress={() => toggle(setBetClicked,index)}>
@@ -511,6 +615,40 @@ const ThreadScreen = ({navigation,route}:any) => {
 };
 
 const styles = StyleSheet.create({
+  placeButton: {
+    backgroundColor: "#10B981",
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  placeButtonOff: {
+    backgroundColor: "#9CA3AF",
+  },
+  placeButtonText: {
+    color: "white",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  placedBanner: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: "#ECFDF5",
+    alignItems: "center",
+  },
+  placedText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#065F46",
+  },
+  placedNote: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginTop: 2,
+  },
   container:{
     flex: 1,
     backgroundColor: "#f6f2e6",

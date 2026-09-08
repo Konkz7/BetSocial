@@ -28,7 +28,6 @@ import { Home, Search, Bell, Mail, CirclePlus, LucideAArrowDown, BanIcon} from "
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WalletScreen from './app/walletPage';
-import AddCardScreen from './app/addCardPage';
 import MessageScreen from './app/messagePage';
 import SearchScreen from './app/searchPage';
 import ProfileScreen from './app/Profile/profilePage';
@@ -123,8 +122,10 @@ function MessageStackNavigator() {
 function WalletStackNavigator() {
   return (
     <WalletStack.Navigator screenOptions={{ headerShown: false }}>
+      {/* Card_W is gone with addCardPage. Coins cannot be bought, so there is
+          nothing to pay for and no card to take - and a screen that collects card
+          numbers carries obligations a project like this cannot meet. */}
       <WalletStack.Screen name="Wallet" component={WalletScreen} />
-      <WalletStack.Screen name="Card_W" component={AddCardScreen} />
     </WalletStack.Navigator>
   );
 };

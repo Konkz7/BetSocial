@@ -37,18 +37,40 @@ public class PredictionController {
         this.ledgerService = ledgerService;
     }
 
-    @GetMapping("/all")
-    List<Prediction_> findAll(){
-        return predictionRepository.findAll();
+    // GET /all is deliberately absent. It returned every prediction in the
+    // database to any authenticated caller: who backed what, and for how much.
+    // That was already more than anyone needed and is now a list of everybody's
+    // financial position. It had no client caller.
+
+    /**
+     * The caller's own predictions.
+     *
+     * One request rather than one per bet: a thread can carry several, and the
+     * screen needs to know which of them this person has already staked on -
+     * a prediction cannot be changed once placed, so the difference decides
+     * whether a bet is still open to them.
+     */
+    @GetMapping("/mine")
+    List<Prediction_> mine(HttpSession session){
+        return predictionRepository.findByUid(requireUserId(session));
     }
 
+    /**
+     * A single prediction, readable only by whoever made it.
+     *
+     * This used to return anybody's by id, which meant walking pids to read what
+     * everyone had staked and on which side.
+     */
     @GetMapping("/{pid}")
-    Prediction_ findById(@PathVariable Long pid){
-        Optional<Prediction_> prediction = predictionRepository.findById(pid);
-        if(prediction.isEmpty()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Prediction not found");
+    Prediction_ findById(@PathVariable Long pid, HttpSession session){
+        Prediction_ prediction = predictionRepository.findById(pid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prediction not found"));
+
+        if (!prediction.uid().equals(requireUserId(session))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "That is not your prediction");
         }
-        return prediction.get();
+
+        return prediction;
     }
 
     @ResponseStatus(HttpStatus.CREATED)
