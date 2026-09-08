@@ -18,7 +18,7 @@ public interface PredictionRepository extends ListCrudRepository<Prediction_,Lon
     @Query("UPDATE Prediction_ SET prediction = :prediction, amount_bet = :amount WHERE pid = :id AND deleted_at IS NULL")
     int updatePrediction(@Param("id") Long id,
                      @Param("prediction") Boolean prediction,
-                     @Param("amount") Float amount);
+                     @Param("amount") Long amount);
 
     @Query("SELECT * FROM Prediction_ WHERE bid = :id AND deleted_at IS NULL")
     List<Prediction_> findByBid(
@@ -35,19 +35,19 @@ public interface PredictionRepository extends ListCrudRepository<Prediction_,Lon
     @Transactional
     @Query("UPDATE Prediction_ SET  amount_won = :amount WHERE pid = :id AND deleted_at IS NULL")
     int updateAmountWon(@Param("id") Long id,
-                         @Param("amount") Float amount);
+                         @Param("amount") Long amount);
 
     @Modifying
     @Transactional
     @Query("UPDATE Bet_ SET  amount_for = :amount + amount_for WHERE bid = :id AND deleted_at IS NULL")
     int updateAmountFor(@Param("id") Long id,
-                        @Param("amount") Float amount);
+                        @Param("amount") Long amount);
 
     @Modifying
     @Transactional
     @Query("UPDATE Bet_ SET  amount_against = :amount + amount_against WHERE bid = :id AND deleted_at IS NULL")
     int updateAmountAgainst(@Param("id") Long id,
-                        @Param("amount") Float amount);
+                        @Param("amount") Long amount);
 
 
     /**

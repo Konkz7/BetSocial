@@ -14,6 +14,6 @@ public record PredictionDTO(
         @NonNull
         Boolean prediction ,
         @Positive
-        Float amount_bet
+        Long amount_bet
 ) {
 }

@@ -1,8 +1,12 @@
 package com.example.World.Bets;
 
 
+import com.example.World.Predictions.PredictionRepository;
+import com.example.World.Predictions.Prediction_;
 import com.example.World.Threads.ThreadDTO;
 import com.example.World.Threads.ThreadRepository;
+import com.example.World.Wallet.LedgerReason;
+import com.example.World.Wallet.LedgerService;
 import com.example.World.Threads.Thread_;
 import com.example.World.Users.User_;
 import jakarta.servlet.http.HttpSession;
@@ -10,6 +14,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -25,11 +30,17 @@ public class BetController {
     private final BetRepository betRepository;
     private final ThreadRepository threadRepository;
     private final BetSaveRepository betSaveRepository;
+    private final PredictionRepository predictionRepository;
+    private final LedgerService ledgerService;
 
-    public BetController(BetRepository betRepository, ThreadRepository threadRepository, BetSaveRepository betSaveRepository) {
+    public BetController(BetRepository betRepository, ThreadRepository threadRepository,
+                         BetSaveRepository betSaveRepository, PredictionRepository predictionRepository,
+                         LedgerService ledgerService) {
         this.betRepository = betRepository;
         this.threadRepository = threadRepository;
         this.betSaveRepository = betSaveRepository;
+        this.predictionRepository = predictionRepository;
+        this.ledgerService = ledgerService;
     }
 
     @GetMapping("/all")
@@ -64,7 +75,8 @@ public class BetController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Thread not found");
         });
 
-        betRepository.save(new Bet_(null, bet.tid(), Status.ACTIVE.toInt(), null, 0f,0f,
+        // Both pools start empty and grow as people stake into them.
+        betRepository.save(new Bet_(null, bet.tid(), Status.ACTIVE.toInt(), null, 0L, 0L,
                 bet.description(), new Date().getTime(), null,bet.ends_at(),bet.is_verified(),bet.king_mode(),
                 bet.profit_mode(),bet.max_amount(),bet.min_amount(), null));
     }
@@ -124,6 +136,15 @@ public class BetController {
         betRepository.makeDecision( decision.bid(), decision.reason(), decision.decision(), new Date().getTime(), userId );
     }
 
+    /**
+     * Cancels a bet and gives every stake back.
+     *
+     * Nothing was ever returned before, but nothing had been taken either. Now
+     * that placing a prediction costs coins, cancelling without refunding would
+     * quietly keep them - and the owner of the bet is the one who decides to
+     * cancel, which is not a position anybody should be able to profit from.
+     */
+    @Transactional
     @ResponseStatus(HttpStatus.ACCEPTED)
     @PutMapping("/cancel/{bid}")
     void cancelBet(@PathVariable Long bid , HttpSession session){
@@ -147,6 +168,12 @@ public class BetController {
         }, () -> {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Bet has no valid thread");
         });
+
+        for (Prediction_ prediction : predictionRepository.findByBid(bid)) {
+            ledgerService.record(prediction.uid(), prediction.amount_bet(),
+                    LedgerReason.STAKE_REFUND, bid,
+                    "Bet cancelled: \"" + bet.description() + "\"");
+        }
 
         betRepository.updateStatus(bid, Status.CANCELLED.toInt());
     }

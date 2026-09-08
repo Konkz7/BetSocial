@@ -23,8 +23,8 @@ public record BetDTO(
      @NonNull
      Boolean profit_mode,
      @NonNull
-     Float max_amount,
+     Long max_amount,
      @NonNull
-     Float min_amount
+     Long min_amount
     ) {
 }
