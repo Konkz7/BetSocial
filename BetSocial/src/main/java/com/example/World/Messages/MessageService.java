@@ -16,6 +16,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,11 +38,16 @@ public class MessageService {
     }
 
     /**
-     * The recipient is derived from the sender's own membership row rather than
-     * supplied by the caller. It used to be taken straight from the client's
-     * STOMP payload, and it reaches registerNotification, which sends a Firebase
-     * push whose body is the message text - so naming any uid there delivered
-     * arbitrary text as a push to a user who was not in the conversation.
+     * Sends a message to a conversation of any size.
+     *
+     * Who receives it is derived from the conversation's membership rows, never
+     * supplied by the caller. The recipient used to be taken straight from the
+     * client's STOMP payload, and it reaches registerNotification, which sends a
+     * Firebase push whose body is the message text - so naming any uid there
+     * delivered arbitrary text as a push to a user outside the conversation.
+     *
+     * A direct message is simply the case where that membership list has one
+     * other person in it, so there is no separate DM path.
      */
     public Message_ sendMessage(Long gid, Long senderId, String content, Integer mediaType ) {
 
@@ -49,15 +55,27 @@ public class MessageService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.FORBIDDEN, "You are not a member of this conversation"));
 
-        // other_uid is the counterparty of a direct message, set when the pair of
-        // membership rows is created. It is null in a group chat, which still
-        // fails below exactly as it did before - group sends are handled next.
+        // Everyone in the conversation except whoever is sending.
+        List<User_> recipients = groupUserRepository.findByGid(gid).stream()
+                .map(Groupuser_::uid)
+                .filter(uid -> !uid.equals(senderId))
+                .distinct()
+                .map(userRepository::findById)
+                .flatMap(Optional::stream)
+                .toList();
+
+        // recipient_id is direct-message metadata and nothing more: it names the
+        // single counterparty of a DM and is null in a group, where there is no
+        // one counterparty to name. Nothing derives delivery from it any more.
         Long recipientId = membership.other_uid();
 
-        User_ recipient = userRepository.findById(recipientId).orElseThrow();
-        User_ sender = userRepository.findById(senderId).orElseThrow();
-
-        boolean is_read = recipient.status().equals("online/chat/" + gid);
+        // A single boolean cannot express "read by 3 of 5", so it only carries
+        // meaning for a DM - is that one person already looking at this chat.
+        // Retiring this column in favour of groupuser_.last_read_timestamp is the
+        // next piece of work; until then a group message is simply never
+        // pre-marked as read.
+        boolean is_read = recipients.size() == 1
+                && recipients.get(0).status().equals(watchingChat(gid));
 
         Message_ message = new Message_(
            null,
@@ -72,19 +90,28 @@ public class MessageService {
                 null
         );
 
-
-
-
         Message_ msg = messageRepository.save(message);
         groupService.updateRecentData(gid,msg.mid());
 
-        if(!(sender.status().equals(recipient.status()))) {
-            NotificationDTO temp = new NotificationDTO(senderId, "message", gid, "user");
+        String body = mediaType == 0 ? content : mediaType == 1 ? "Photo was sent" : "Video was sent";
 
+        // target_id is the conversation, so registerNotification's existing
+        // de-duplication collapses a burst of messages into one notification per
+        // recipient rather than one per message.
+        NotificationDTO notification = new NotificationDTO(senderId, "message", gid, "user");
+
+        for (User_ recipient : recipients) {
+            // Skip only the people who are already looking at this conversation.
+            // This used to compare the sender's status to the recipient's, which
+            // happens to be equal when both are watching the same chat - but also
+            // when both are merely offline, so an offline recipient was silently
+            // denied the push that was the whole point of the notification.
+            if (recipient.status().equals(watchingChat(gid))) {
+                continue;
+            }
 
             notificationService.registerNotification(recipient.fb_notification_token(),
-                    mediaType == 0 ? content : mediaType == 1 ? "Photo was sent" : "Video was sent", temp, recipientId);
-
+                    body, notification, recipient.uid());
         }
         // Return the saved row, not the pre-save object: `message` was built with
         // mid = null and only `msg` carries the generated id. MessageController
@@ -92,6 +119,11 @@ public class MessageService {
         // clients with mid = null - which collided as duplicate React keys and
         // left live messages unmatchable for delete and read-receipt calls.
         return msg;
+    }
+
+    /** The status a user carries while they have this conversation open. */
+    private static String watchingChat(Long gid) {
+        return "online/chat/" + gid;
     }
 
     /** Soft-deletes a message. Only its sender may do so. */
