@@ -23,17 +23,36 @@ public class MessageService {
 
     private final MessageRepository messageRepository;
     private final GroupService groupService;
+    private final GroupUserRepository groupUserRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
 
     public MessageService(MessageRepository messageRepository, GroupService groupService, GroupUserRepository groupUserRepository, UserRepository userRepository, NotificationService notificationService) {
         this.messageRepository = messageRepository;
         this.groupService = groupService;
+        // Injected but never assigned before, so the field did not exist at all.
+        this.groupUserRepository = groupUserRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
     }
 
-    public Message_ sendMessage(Long gid, Long senderId, Long recipientId , String content, Integer mediaType ) {
+    /**
+     * The recipient is derived from the sender's own membership row rather than
+     * supplied by the caller. It used to be taken straight from the client's
+     * STOMP payload, and it reaches registerNotification, which sends a Firebase
+     * push whose body is the message text - so naming any uid there delivered
+     * arbitrary text as a push to a user who was not in the conversation.
+     */
+    public Message_ sendMessage(Long gid, Long senderId, String content, Integer mediaType ) {
+
+        Groupuser_ membership = groupUserRepository.findByGidandUid(gid, senderId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.FORBIDDEN, "You are not a member of this conversation"));
+
+        // other_uid is the counterparty of a direct message, set when the pair of
+        // membership rows is created. It is null in a group chat, which still
+        // fails below exactly as it did before - group sends are handled next.
+        Long recipientId = membership.other_uid();
 
         User_ recipient = userRepository.findById(recipientId).orElseThrow();
         User_ sender = userRepository.findById(senderId).orElseThrow();
