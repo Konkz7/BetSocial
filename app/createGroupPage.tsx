@@ -118,6 +118,12 @@ const CreateGroupScreen = ({ navigation }: any) => {
       <FlatList
         data={visible}
         keyExtractor={item => item.uid.toString()}
+        // Every other list in the app sets this, and for the same reason: with
+        // clipping on, Android detaches rows as they scroll out and then fails to
+        // find them again when the screen unmounts - "Cannot remove child from
+        // parent, index out of range". Leaving it at the platform default was an
+        // omission here, not a decision.
+        removeClippedSubviews={false}
         ListEmptyComponent={
           <Text style={styles.empty}>
             {isLoading ? 'Loading people…' : 'Nobody matches that'}
@@ -130,7 +136,11 @@ const CreateGroupScreen = ({ navigation }: any) => {
               style={styles.avatar}
             />
             <Text style={styles.name}>{item.user_name}</Text>
-            {isSelected(item.uid) && <Check size={20} color="#10B981" />}
+            {/* Always rendered and coloured in or out, rather than added and
+                removed. Selecting somebody would otherwise change how many
+                children the row has, which is the other half of what makes the
+                native view tree and React's disagree about what is where. */}
+            <Check size={20} color={isSelected(item.uid) ? '#10B981' : 'transparent'} />
           </TouchableOpacity>
         )}
       />
