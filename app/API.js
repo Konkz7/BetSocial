@@ -138,6 +138,62 @@ export const getUsers = async() =>{
     }
   }
 
+  // The server explains why it refused - not an administrator, group full, already
+  // a member - and application.properties has include-message=always, so that
+  // reaches us. Repeating it beats replacing it with a sentence of our own.
+  const groupError = (error, fallback) =>
+    Alert.alert(fallback, error.response?.data?.message ?? error.message);
+
+  export const addGroupMember = async(gid, uid) =>{
+    try {
+        await axios.post(IP_STRING + "/api/groups/add-member/"+gid+"/"+uid);
+        return true;
+    } catch (error) {
+      groupError(error, "Couldnt add them");
+      return false;
+    }
+  }
+
+  export const removeGroupMember = async(gid, uid) =>{
+    try {
+        await axios.delete(IP_STRING + "/api/groups/remove-member/"+gid+"/"+uid);
+        return true;
+    } catch (error) {
+      groupError(error, "Couldnt remove them");
+      return false;
+    }
+  }
+
+  export const renameGroup = async(gid, group_name) =>{
+    try {
+        const group = await axios.put(IP_STRING + "/api/groups/rename/"+gid, { group_name });
+        return group.data;
+    } catch (error) {
+      groupError(error, "Couldnt rename the group");
+      return null;
+    }
+  }
+
+  export const leaveGroup = async(gid) =>{
+    try {
+        await axios.delete(IP_STRING + "/api/groups/leave/"+gid);
+        return true;
+    } catch (error) {
+      groupError(error, "Couldnt leave the group");
+      return false;
+    }
+  }
+
+  export const deleteGroup = async(gid) =>{
+    try {
+        await axios.delete(IP_STRING + "/api/groups/delete/"+gid);
+        return true;
+    } catch (error) {
+      groupError(error, "Couldnt delete the group");
+      return false;
+    }
+  }
+
   //PROFILE
   export const changeBio = async(text) =>{
     try {

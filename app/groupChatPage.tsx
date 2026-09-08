@@ -187,7 +187,12 @@ const GroupChatScreen = ({ navigation, route }: any) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ArrowLeft size={24} color="#10B981" />
         </TouchableOpacity>
-        <View style={styles.groupInfo}>
+        {/* Tapping the header opens the member list, which is where adding,
+            removing, renaming and leaving live. */}
+        <Pressable
+          style={styles.groupInfo}
+          onPress={() => navigation.navigate('GroupMembersScreen_M', { gid, name })}
+        >
           <View style={styles.groupIcon}>
             <Users size={20} color="#10B981" />
           </View>
@@ -197,7 +202,7 @@ const GroupChatScreen = ({ navigation, route }: any) => {
               {members ? `${members.length} members` : ' '}
             </Text>
           </View>
-        </View>
+        </Pressable>
       </View>
 
       <ScrollView
