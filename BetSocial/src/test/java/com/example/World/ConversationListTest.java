@@ -64,8 +64,8 @@ class ConversationListTest extends AbstractIntegrationTest {
         Group_ withB = groups.createDMGroup("ab", a.uid(), b.uid());
         Group_ withC = groups.createDMGroup("ac", a.uid(), c.uid());
 
-        send(withB.gid(), a.uid(), b.uid(), "to-b");
-        send(withC.gid(), a.uid(), c.uid(), "to-c");
+        send(withB.gid(), a.uid(), "to-b");
+        send(withC.gid(), a.uid(), "to-c");
 
         List<ConversationDTO> result = messages.getConversations(a.uid());
 
@@ -79,8 +79,8 @@ class ConversationListTest extends AbstractIntegrationTest {
         });
     }
 
-    private void send(Long gid, Long from, Long to, String text) {
-        messages.sendMessage(gid, from, to, text, 0);
+    private void send(Long gid, Long from, String text) {
+        messages.sendMessage(gid, from, text, 0);
     }
 
     private User_ user(String name) {

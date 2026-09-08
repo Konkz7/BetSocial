@@ -56,7 +56,9 @@ public class MessageController {
         // gid it likes once connected, regardless of what it declared at connect.
         messageService.requireMembership(gid, uid);
 
-        Message_ result = messageService.sendMessage(gid, uid, message.recipient_id(), message.description(), message.media_type());
+        // message.recipient_id() is deliberately not passed on: the recipient is
+        // derived from the conversation's membership rows inside sendMessage.
+        Message_ result = messageService.sendMessage(gid, uid, message.description(), message.media_type());
 
         simpMessagingTemplate.convertAndSend("/topic/chat/" + gid, result);
 
