@@ -16,6 +16,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -81,6 +82,12 @@ public class MessageService {
         Message_ msg = messageRepository.save(message);
         groupService.updateRecentData(gid,msg.mid());
 
+        // Anyone with this conversation open has, by definition, read what just
+        // arrived in it. Recording that now keeps last_read_timestamp the single
+        // answer to "has this been read" - the alternative is every reader of that
+        // timestamp also having to ask who happens to be looking at this moment.
+        long readUpTo = markWatchersCaughtUp(gid, memberships, recipients, senderId, msg.created_at());
+
         String body = mediaType == 0 ? content : mediaType == 1 ? "Photo was sent" : "Video was sent";
 
         // target_id is the conversation, so registerNotification's existing
@@ -106,7 +113,47 @@ public class MessageService {
         // broadcasts this over /topic/chat/{gid}, so every live message reached
         // clients with mid = null - which collided as duplicate React keys and
         // left live messages unmatchable for delete and read-receipt calls.
-        return MessageView.of(msg, readUpTo(memberships, senderId));
+        return MessageView.of(msg, readUpTo);
+    }
+
+    /**
+     * Advances the read timestamp of every member who currently has this
+     * conversation open, and returns the resulting read horizon.
+     *
+     * Without this a message sent to somebody sitting in the chat stayed unseen to
+     * its sender until that person left and came back: their timestamp was from
+     * when they opened the conversation, which is necessarily before anything sent
+     * afterwards. The old per-message column got this right by consulting status
+     * at send time, and dropping it lost the behaviour with it.
+     */
+    private long markWatchersCaughtUp(Long gid, List<Groupuser_> memberships,
+                                      List<User_> recipients, Long senderId, long sentAt) {
+        Set<Long> watching = recipients.stream()
+                .filter(recipient -> recipient.status().equals(watchingChat(gid)))
+                .map(User_::uid)
+                .collect(Collectors.toSet());
+
+        long earliest = Long.MAX_VALUE;
+        boolean anybodyElse = false;
+
+        for (Groupuser_ membership : memberships) {
+            if (membership.uid().equals(senderId)) {
+                continue;
+            }
+            anybodyElse = true;
+
+            long readAt = membership.last_read_timestamp();
+
+            if (watching.contains(membership.uid()) && readAt < sentAt) {
+                groupUserRepository.advanceReadTimestamp(membership.guid(), sentAt);
+                readAt = sentAt;
+            }
+
+            earliest = Math.min(earliest, readAt);
+        }
+
+        // Nobody else is in the conversation, so nobody has read it.
+        return anybodyElse ? earliest : Long.MIN_VALUE;
     }
 
     /**
