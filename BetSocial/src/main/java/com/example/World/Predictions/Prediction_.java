@@ -16,9 +16,10 @@ public record Prediction_(
         Long uid,
         @NonNull
         Boolean prediction , //true for, false against
-        @Positive
-        Float amount_bet ,
-        Float amount_won ,
+        /** Whole coins, taken from the wallet the moment the prediction is placed. */
+        @NonNull
+        Long amount_bet ,
+        Long amount_won ,
         @NonNull
         Long created_at,
         Long deleted_at,
