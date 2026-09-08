@@ -1,21 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet,SafeAreaView } from 'react-native';
-import { ArrowLeft, Smile } from 'lucide-react-native';
-import {DMCheck, fillReadMarkers, getConversations, getUser, makePrivateGroup} from "./API";
+import { Smile, UsersRound } from 'lucide-react-native';
+import { getConversations, getUser } from './API';
 import { useFocusEffect } from '@react-navigation/native';
 import { getProfilePictureUrl, timeAgo } from './Constants';
-import { useQueryClient } from '@tanstack/react-query';
 import { eventEmitter } from './Components/EventBus';
 import { messageSeenStore, screenStore } from './GlobalFlags';
 
   
 
-const MessageScreen = ({ navigation , route } : any) => {
-
-  //fix seen issues
-
-  const queryClient = useQueryClient();
-  const self = queryClient.getQueryData(["user"]) as any;
+const MessageScreen = ({ navigation } : any) => {
 
   const [conversations, setConversations] = useState<any[]>([]);
 
@@ -48,13 +42,7 @@ const MessageScreen = ({ navigation , route } : any) => {
     console.log("Message seen status updated:", messageSeenStore.get())
   };
 
-  async function goToDMScreen(uid:number, gid:number){
-
-    
-    const recipient : any = {};
-    recipient["user"] = await getUser(uid);
-    recipient["gid"] = gid;
-
+  function markRead(gid:number){
     // Clear the row's unread styling straight away rather than waiting for the
     // list to be refetched. This used to set lastMessage.is_read, which is what
     // the row was styled from at the time; the row reads `unread` now, so setting
@@ -66,8 +54,28 @@ const MessageScreen = ({ navigation , route } : any) => {
         }
         return conv;
     }));
+  }
+
+  async function openConversation(conversation:any){
+    markRead(conversation.gid);
+
+    // isGroup is sent by the server rather than worked out here. The obvious
+    // guess - that uid is null for a group - is wrong: uid names the other person
+    // whenever there is exactly one of them, which a named group of two also has.
+    // Guessing would open such a group in the direct message screen.
+    if (conversation.isGroup) {
+      navigation.navigate("GroupChatScreen_M", {
+        gid: conversation.gid,
+        name: conversation.name,
+      });
+      return;
+    }
+
+    const recipient : any = {};
+    recipient["user"] = await getUser(conversation.uid);
+    recipient["gid"] = conversation.gid;
+
     navigation.navigate("DMScreen_M",recipient);
-    
   }
 
   useEffect(() => {
@@ -101,6 +109,12 @@ const MessageScreen = ({ navigation , route } : any) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("CreateGroupScreen_M")}
+          style={styles.newGroupButton}
+        >
+          <UsersRound size={24} color="green" />
+        </TouchableOpacity>
       </View>
       <FlatList
         data={conversations}
@@ -112,7 +126,7 @@ const MessageScreen = ({ navigation , route } : any) => {
                     </View>}
         renderItem={({ item }) => (   
           
-            <TouchableOpacity style={styles.conversationItem} onPress={() => goToDMScreen(item.uid, item.gid)}> 
+            <TouchableOpacity style={styles.conversationItem} onPress={() => openConversation(item)}>
             <View style={styles.avatarContainer}>
               <Image
                   source={getProfilePictureUrl(item?.avatar)}
@@ -145,6 +159,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 20,
     paddingHorizontal: 16,
     backgroundColor: 'white',
@@ -153,6 +168,9 @@ const styles = StyleSheet.create({
   },
   backButton: {
     marginRight: 12,
+  },
+  newGroupButton: {
+    padding: 4,
   },
   headerTitle: {
     fontSize: 20,
