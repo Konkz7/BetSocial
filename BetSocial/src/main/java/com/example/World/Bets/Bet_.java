@@ -17,10 +17,14 @@ public record Bet_(
         @Column()
         Integer status,
         Boolean outcome,
-        @Positive
-        Float amount_for,
-        @Positive
-        Float amount_against,
+        // Whole coins. These were floats, which drift as a pool is added to and
+        // cannot hold most decimal amounts exactly - the wrong type for a number
+        // that decides who gets paid. @Positive was also wrong: a pool starts at
+        // zero and stays there until somebody stakes on that side.
+        @NonNull
+        Long amount_for,
+        @NonNull
+        Long amount_against,
         @NotEmpty
         String description,
         @NonNull
@@ -34,10 +38,12 @@ public record Bet_(
         Boolean king_mode,
         @NonNull
         Boolean profit_mode,
+        /** The largest single stake allowed, or 0 for no limit. */
         @NonNull
-        Float max_amount,
+        Long max_amount,
+        /** The smallest single stake allowed. 0 for no limit. */
         @NonNull
-        Float min_amount,
+        Long min_amount,
         @Version
         Integer b_version
 
