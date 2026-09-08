@@ -153,7 +153,10 @@ const HomeScreen = ({navigation,route}:any) => {
           messageSeenStore.set(true);
       }
       for (const conversation of data) {
-        if (!conversation.lastMessage.is_read) {
+        // The server works out what is unread for this reader. This used to ask
+        // whether the last message had been read by *anyone*, so your own sent
+        // message showed the badge back at you until the other person opened it.
+        if (conversation.unread) {
           messageSeenStore.set(false);
           break;
         }

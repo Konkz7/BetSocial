@@ -49,29 +49,23 @@ public class MessageService {
      * A direct message is simply the case where that membership list has one
      * other person in it, so there is no separate DM path.
      */
-    public Message_ sendMessage(Long gid, Long senderId, String content, Integer mediaType ) {
+    public MessageView sendMessage(Long gid, Long senderId, String content, Integer mediaType ) {
 
-        if (groupUserRepository.findByGidandUid(gid, senderId).isEmpty()) {
+        List<Groupuser_> memberships = groupUserRepository.findByGid(gid);
+
+        if (memberships.stream().noneMatch(m -> m.uid().equals(senderId))) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You are not a member of this conversation");
         }
 
         // Everyone in the conversation except whoever is sending.
-        List<User_> recipients = groupUserRepository.findByGid(gid).stream()
+        List<User_> recipients = memberships.stream()
                 .map(Groupuser_::uid)
                 .filter(uid -> !uid.equals(senderId))
                 .distinct()
                 .map(userRepository::findById)
                 .flatMap(Optional::stream)
                 .toList();
-
-        // A single boolean cannot express "read by 3 of 5", so it only carries
-        // meaning when there is exactly one other person - are they already
-        // looking at this conversation. Replacing it with
-        // groupuser_.last_read_timestamp is the next piece of work; until then a
-        // message to a larger conversation is simply never pre-marked as read.
-        boolean is_read = recipients.size() == 1
-                && recipients.get(0).status().equals(watchingChat(gid));
 
         Message_ message = new Message_(
            null,
@@ -81,7 +75,6 @@ public class MessageService {
                 new Date().getTime(),
                 null,
                 gid,
-                is_read,
                 null
         );
 
@@ -113,7 +106,24 @@ public class MessageService {
         // broadcasts this over /topic/chat/{gid}, so every live message reached
         // clients with mid = null - which collided as duplicate React keys and
         // left live messages unmatchable for delete and read-receipt calls.
-        return msg;
+        return MessageView.of(msg, readUpTo(memberships, senderId));
+    }
+
+    /**
+     * The moment before which every other member has read this conversation.
+     *
+     * A message counts as read once it was created at or before this - which is
+     * the sender's seen-tick. Taking the earliest means "everyone", so one member
+     * who has not looked yet holds the whole conversation unread, rather than the
+     * old column's answer about whichever single recipient it happened to name.
+     */
+    private static long readUpTo(List<Groupuser_> memberships, Long viewerUid) {
+        return memberships.stream()
+                .filter(m -> !m.uid().equals(viewerUid))
+                .mapToLong(Groupuser_::last_read_timestamp)
+                .min()
+                // Nobody else is in the conversation, so nobody has read it.
+                .orElse(Long.MIN_VALUE);
     }
 
     /** The status a user carries while they have this conversation open. */
@@ -133,10 +143,27 @@ public class MessageService {
         messageRepository.softDelete(mid, new Date().getTime());
     }
 
+    /** A single message, provided the caller belongs to the conversation it is in. */
+    public MessageView getMessage(Long mid, Long uid) {
+        Message_ message = messageRepository.findById(mid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "message not found"));
+
+        requireMembership(message.gid(), uid);
+
+        return MessageView.of(message, readUpTo(groupUserRepository.findByGid(message.gid()), uid));
+    }
+
     /** Returns a conversation's messages, provided the caller is a member of it. */
-    public List<Message_> getChatMessages(Long gid, Long uid) {
+    public List<MessageView> getChatMessages(Long gid, Long uid) {
         requireMembership(gid, uid);
-        return messageRepository.findMessagesByGidAsc(gid);
+
+        // One read horizon for the whole conversation rather than a stored flag
+        // per message, so this stays a single extra query however long the history.
+        long readUpTo = readUpTo(groupUserRepository.findByGid(gid), uid);
+
+        return messageRepository.findMessagesByGidAsc(gid).stream()
+                .map(message -> MessageView.of(message, readUpTo))
+                .toList();
     }
 
     public void requireMembership(Long gid, Long uid) {
@@ -145,16 +172,16 @@ public class MessageService {
         }
     }
 
-
+    /**
+     * Records that the caller has read this conversation up to now.
+     *
+     * This used to walk every unread message in the conversation and flip a column
+     * on each one - a write per message to say one thing about one reader, and a
+     * thing the message was the wrong place to keep. It is one row now: the
+     * caller's own membership.
+     */
     public void updatePrevReadReceipts(Long uid, Long gid){
-
-        List<Message_> messages = messageRepository.findMessagesByGidAscAndRead(gid);
-
-        for(Message_ m : messages){
-            if(!m.uid().equals(uid)) {
-                messageRepository.updateReadReceipt(m.mid());
-            }
-        }
+        groupService.updateLastReadTimestamp(gid, uid);
     }
 
     public List<ConversationDTO> getConversations( Long uid ){
@@ -167,12 +194,25 @@ public class MessageService {
 
         List<Group_> groups = groupService.getUserGroups(uid);
 
-        // The counterparty of a direct conversation used to be read off
-        // groupuser_.other_uid. It now comes from the membership rows, which is the
-        // only place it was ever really recorded - fetched for every conversation
-        // in one query rather than one lookup per row.
-        Map<Long, Long> counterpartByGid = groupService.getCounterpartsOf(
-                uid, groups.stream().map(Group_::gid).toList());
+        // Every conversation's membership, in one query. Both the counterparty of a
+        // direct conversation and the point up to which the others have read come
+        // from these rows, and asking per conversation would make the cost of the
+        // messages screen grow with how much the user uses the app.
+        Map<Long, List<Groupuser_>> membersByGid =
+                groupService.getMembershipsOf(groups.stream().map(Group_::gid).toList());
+
+        Map<Long, Long> counterpartByGid = new java.util.HashMap<>();
+        membersByGid.forEach((gid, members) -> {
+            List<Long> others = members.stream()
+                    .map(Groupuser_::uid)
+                    .filter(other -> !other.equals(uid))
+                    .toList();
+            // Exactly one other person means there is somebody to name the
+            // conversation after; more than one and it carries its own name.
+            if (others.size() == 1) {
+                counterpartByGid.put(gid, others.get(0));
+            }
+        });
 
         Map<Long, User_> counterparts = userRepository.findAllById(
                         counterpartByGid.values().stream().distinct().toList())
@@ -213,11 +253,14 @@ public class MessageService {
             convoList.add(new ConversationDTO(
                     isDirect ? other.user_name() : group.group_name(),
                     other == null ? null : other.uid(),
-                    lastMessage,
-                    // unread, not is_read. This was handed lastMessage.is_read(),
-                    // the exact inverse of what the field means - harmless only
-                    // because no client had started reading it yet.
-                    !lastMessage.is_read() && !lastMessage.uid().equals(uid),
+                    MessageView.of(lastMessage,
+                            readUpTo(membersByGid.getOrDefault(group.gid(), List.of()), uid)),
+                    // Unread for this reader: it arrived after they last opened the
+                    // conversation, and they are not the one who sent it. The same
+                    // rule for two people or twenty, where the old per-message flag
+                    // could only ever describe one recipient.
+                    lastMessage.created_at() > gUser.last_read_timestamp()
+                            && !lastMessage.uid().equals(uid),
                     other == null ? null : other.profile_picture(),
                     group.gid()));
         }

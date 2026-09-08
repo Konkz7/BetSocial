@@ -333,32 +333,20 @@ public class GroupService {
     }
 
     /**
-     * For each of the given conversations, the single other member - or nothing at
-     * all when there is more than one, because then there is no counterpart to
-     * name and the conversation carries its own name instead.
+     * The current membership of each of the given conversations, keyed by gid.
      *
-     * One query for every conversation rather than a lookup per conversation: this
-     * feeds the conversation list, which is fetched on every visit to the messages
-     * screen.
+     * One query for all of them rather than a lookup per conversation: this feeds
+     * the conversation list, which is fetched on every visit to the messages
+     * screen, and both who a conversation is with and how far the others have read
+     * it come out of these same rows.
      */
-    public Map<Long, Long> getCounterpartsOf(Long uid, List<Long> gids) {
+    public Map<Long, List<Groupuser_>> getMembershipsOf(List<Long> gids) {
         if (gids.isEmpty()) {
             return Map.of();
         }
 
-        Map<Long, List<Long>> othersByGid = groupUserRepository.findByGidIn(gids).stream()
-                .filter(gu -> !gu.uid().equals(uid))
-                .collect(Collectors.groupingBy(Groupuser_::gid,
-                        Collectors.mapping(Groupuser_::uid, Collectors.toList())));
-
-        Map<Long, Long> counterparts = new HashMap<>();
-        othersByGid.forEach((gid, others) -> {
-            if (others.size() == 1) {
-                counterparts.put(gid, others.get(0));
-            }
-        });
-
-        return counterparts;
+        return groupUserRepository.findByGidIn(gids).stream()
+                .collect(Collectors.groupingBy(Groupuser_::gid));
     }
 
     /** True when the user belongs to the group - used to gate access to its messages. */

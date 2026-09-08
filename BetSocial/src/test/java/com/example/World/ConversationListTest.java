@@ -73,6 +73,67 @@ class ConversationListTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("clears once the reader has opened the conversation")
+    void openingTheConversationClearsUnread() {
+        User_ sender = users.save(user("read-a"));
+        User_ reader = users.save(user("read-b"));
+
+        Group_ direct = groups.openDirectConversation(sender.uid(), reader.uid());
+        messages.sendMessage(direct.gid(), sender.uid(), "first", 0);
+
+        assertThat(conversationFor(reader, direct).unread()).isTrue();
+
+        // What the client calls on opening a conversation. It used to walk every
+        // unread message and flip a column on each; it records one timestamp now.
+        messages.updatePrevReadReceipts(reader.uid(), direct.gid());
+
+        assertThat(conversationFor(reader, direct).unread())
+                .as("nothing has arrived since they last looked")
+                .isFalse();
+
+        messages.sendMessage(direct.gid(), sender.uid(), "second", 0);
+
+        assertThat(conversationFor(reader, direct).unread())
+                .as("but something arriving afterwards is unread again")
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("holds a group unread until every member has caught up")
+    void groupIsReadOnlyWhenEveryoneHasRead() {
+        User_ sender = users.save(user("group-read-a"));
+        User_ first = users.save(user("group-read-b"));
+        User_ second = users.save(user("group-read-c"));
+
+        Group_ group = groups.createGroup("read state", sender.uid(),
+                List.of(first.uid(), second.uid()));
+        messages.sendMessage(group.gid(), sender.uid(), "everyone see this", 0);
+
+        assertThat(seenBySender(sender, group))
+                .as("neither of them has opened it yet")
+                .isFalse();
+
+        messages.updatePrevReadReceipts(first.uid(), group.gid());
+
+        // The old per-message boolean could not express this at all: it recorded
+        // one recipient's state and silently stood in for the rest.
+        assertThat(seenBySender(sender, group))
+                .as("one of two having read it is not everyone")
+                .isFalse();
+
+        messages.updatePrevReadReceipts(second.uid(), group.gid());
+
+        assertThat(seenBySender(sender, group))
+                .as("now that both have, the sender's message is seen")
+                .isTrue();
+    }
+
+    /** The sender's seen-tick: has everyone else read the message they sent. */
+    private boolean seenBySender(User_ sender, Group_ group) {
+        return messages.getChatMessages(group.gid(), sender.uid()).get(0).is_read();
+    }
+
+    @Test
     @DisplayName("sends the unread flag to the client under that name")
     void unreadIsSerialised() throws Exception {
         User_ sender = users.save(user("unread-json-a"));
