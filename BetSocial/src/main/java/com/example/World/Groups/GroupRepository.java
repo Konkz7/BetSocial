@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 
 public interface GroupRepository extends ListCrudRepository<Group_,Long> {
@@ -17,6 +18,35 @@ public interface GroupRepository extends ListCrudRepository<Group_,Long> {
     @Transactional
     @Query("UPDATE Group_ SET last_mid = :mid WHERE gid = :gid")
     int updateGroupRecentData(@Param("gid") Long gid, @Param("mid") Long mid);
+
+    /**
+     * The direct conversation between two people, if they already have one.
+     *
+     * Used so that opening a chat from a profile reuses the existing conversation
+     * instead of starting a second one beside it. A direct conversation is an
+     * unnamed one whose active membership is exactly this pair - checked by
+     * counting, so a group that happens to contain both of them cannot match.
+     */
+    @Query("""
+    SELECT g.* FROM Group_ g
+    WHERE g.group_name IS NULL
+      AND (
+        SELECT count(*) FROM Groupuser_ gu
+        WHERE gu.gid = g.gid AND gu.deleted_at IS NULL
+      ) = 2
+      AND EXISTS (
+        SELECT 1 FROM Groupuser_ gu
+        WHERE gu.gid = g.gid AND gu.uid = :uid AND gu.deleted_at IS NULL
+      )
+      AND EXISTS (
+        SELECT 1 FROM Groupuser_ gu
+        WHERE gu.gid = g.gid AND gu.uid = :otherUid AND gu.deleted_at IS NULL
+      )
+    ORDER BY g.gid
+    LIMIT 1
+    """)
+    Optional<Group_> findDirectConversation(@Param("uid") Long uid,
+                                            @Param("otherUid") Long otherUid);
 
     @Modifying
     @Transactional

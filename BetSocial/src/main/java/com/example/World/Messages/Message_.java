@@ -13,7 +13,10 @@ public record Message_(
       Long mid,       // Primary key
       @NonNull
       Long uid,        // Foreign key to Users table
-      Long recipient_id,     // Foreign key to Users table, can be null for group messages
+      // recipient_id is gone: who receives a message is every other member of its
+      // conversation, derived from the membership rows. Naming one recipient could
+      // not describe a group, and after delivery moved to membership it described
+      // nothing at all. The column remains, unread, pending a drop.
       @NotEmpty
       String description,// The actual message description
       @NotNull

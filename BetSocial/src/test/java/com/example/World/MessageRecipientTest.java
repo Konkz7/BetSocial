@@ -3,6 +3,7 @@ package com.example.World;
 import com.example.World.Groups.GroupService;
 import com.example.World.Groups.Group_;
 import com.example.World.Messages.MessageService;
+import com.example.World.Notifications.NotificationRepository;
 import com.example.World.Messages.Message_;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.User_;
@@ -25,9 +26,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * message text - so a modified client could name any uid and deliver arbitrary
  * text as a push notification to somebody who was not in the conversation.
  *
- * The recipient is now derived from the sender's own membership row, which no
- * client can influence. The signature no longer accepts one at all, so these
- * tests pin the derivation rather than trying to forge a value.
+ * Who receives a message is now read from the conversation's membership rows,
+ * which no client can influence. Neither the method signature nor the message row
+ * has a recipient on it any more, so there is no value left to forge - these pin
+ * the audience itself instead.
  */
 @DisplayName("Message recipient")
 class MessageRecipientTest extends AbstractIntegrationTest {
@@ -38,25 +40,29 @@ class MessageRecipientTest extends AbstractIntegrationTest {
     @Autowired MessageService messages;
     @Autowired GroupService groups;
     @Autowired UserRepository users;
+    @Autowired NotificationRepository notifications;
 
     @Test
-    @DisplayName("is the conversation's counterparty, not anything the caller names")
-    void recipientComesFromMembership() {
+    @DisplayName("a message reaches its conversation and nobody beyond it")
+    void audienceIsTheConversation() {
         User_ sender = users.save(user());
         User_ peer = users.save(user());
         User_ outsider = users.save(user());
 
-        Group_ dm = groups.createDMGroup(sender.uid() + "" + peer.uid(), sender.uid(), peer.uid());
+        Group_ direct = groups.openDirectConversation(sender.uid(), peer.uid());
 
-        Message_ sent = messages.sendMessage(dm.gid(), sender.uid(), "hello", 0);
+        messages.sendMessage(direct.gid(), sender.uid(), "hello", 0);
 
-        assertThat(sent.recipient_id())
-                .as("the recipient should be the other member of the conversation")
-                .isEqualTo(peer.uid());
+        assertThat(notifications.getActiveNotifications(peer.uid()))
+                .as("the other member of the conversation is notified")
+                .isNotEmpty();
 
-        assertThat(sent.recipient_id())
-                .as("and never a user who has nothing to do with it")
-                .isNotEqualTo(outsider.uid());
+        // The abuse this closes: registerNotification sends a push whose body is
+        // the message text, so naming an arbitrary uid delivered arbitrary text to
+        // a stranger. There is no longer any way to name one.
+        assertThat(notifications.getActiveNotifications(outsider.uid()))
+                .as("somebody outside it must not be reachable through it")
+                .isEmpty();
     }
 
     @Test
@@ -66,7 +72,7 @@ class MessageRecipientTest extends AbstractIntegrationTest {
         User_ peer = users.save(user());
         User_ outsider = users.save(user());
 
-        Group_ dm = groups.createDMGroup(sender.uid() + "" + peer.uid(), sender.uid(), peer.uid());
+        Group_ dm = groups.openDirectConversation(sender.uid(), peer.uid());
 
         // MessageController already checks membership before calling this, but the
         // service no longer depends on that being done for it: with no membership

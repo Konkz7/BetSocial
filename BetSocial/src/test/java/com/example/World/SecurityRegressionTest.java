@@ -304,14 +304,14 @@ class SecurityRegressionTest extends AbstractIntegrationTest {
         User_ peer = users.save(authzUser());
         User_ outsider = users.save(authzUser());
 
-        Group_ group = groups.createDMGroup(member.uid() + "" + peer.uid(), member.uid(), peer.uid());
+        Group_ group = groups.openDirectConversation(member.uid(), peer.uid());
 
         // The row is written straight through the repository rather than through
         // MessageService.sendMessage. What is under test here is who may read a
         // message, not how one is sent, and going via the service would couple
         // this fixture to that method's signature for no benefit.
         Message_ message = messages.save(new Message_(
-                null, peer.uid(), member.uid(), "private", 0,
+                null, peer.uid(), "private", 0,
                 new Date().getTime(), null, group.gid(), false, null));
 
         return new Conversation(member, peer, outsider, group.gid(), message.mid());

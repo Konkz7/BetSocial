@@ -33,7 +33,9 @@ const MessageScreen = ({ navigation , route } : any) => {
     
     for (const conversation of conversations) {
 
-      if (!conversation.lastMessage.is_read && conversation.lastMessage.recipient_id === self.uid) {
+      // The server decides what counts as unread now. It used to be worked out
+      // here from a recipient_id, which only ever existed for a two-person chat.
+      if (conversation.unread) {
         messageSeenStore.set(false);
         break;
       }else{
@@ -119,7 +121,7 @@ const MessageScreen = ({ navigation , route } : any) => {
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.time}>{timeAgo(item.lastMessage.created_at)} ago</Text>
               </View>
-              <Text style={[styles.lastMessage, !item.lastMessage.is_read && item.lastMessage.recipient_id === self.uid && styles.unread]}>
+              <Text style={[styles.lastMessage, item.unread && styles.unread]}>
                 {item.lastMessage.description}
               </Text>
             </View>

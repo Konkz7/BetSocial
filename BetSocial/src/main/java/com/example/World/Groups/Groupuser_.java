@@ -11,7 +11,10 @@ public record Groupuser_(
     Long gid,
     @NonNull
     Long uid,
-    Long other_uid,
+    // other_uid is gone: it named the counterparty of a direct message, which was
+    // only ever meaningful because direct messages were a separate kind. The other
+    // participants of any conversation are its other membership rows. The column
+    // remains, unread, pending a drop.
     @NonNull
     Long created_at,
     @NonNull

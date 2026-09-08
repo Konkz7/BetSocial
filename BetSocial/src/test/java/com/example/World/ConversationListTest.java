@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * without checking it.
  *
  * A conversation that exists but has no messages yet - which is exactly what
- * createDMGroup produces - therefore breaks the caller's entire conversation
+ * opening a direct conversation produces - therefore breaks the caller's entire conversation
  * list, not just that one row.
  */
 @DisplayName("Conversation list")
@@ -41,7 +41,7 @@ class ConversationListTest extends AbstractIntegrationTest {
         User_ a = users.save(user("phase5-a"));
         User_ b = users.save(user("phase5-b"));
 
-        Group_ group = groups.createDMGroup(a.uid() + "" + b.uid(), a.uid(), b.uid());
+        Group_ group = groups.openDirectConversation(a.uid(), b.uid());
         assertThat(group.last_mid())
                 .as("a freshly created DM has no messages")
                 .isNull();
@@ -61,8 +61,8 @@ class ConversationListTest extends AbstractIntegrationTest {
         User_ b = users.save(user("phase5-d"));
         User_ c = users.save(user("phase5-e"));
 
-        Group_ withB = groups.createDMGroup("ab", a.uid(), b.uid());
-        Group_ withC = groups.createDMGroup("ac", a.uid(), c.uid());
+        Group_ withB = groups.openDirectConversation(a.uid(), b.uid());
+        Group_ withC = groups.openDirectConversation(a.uid(), c.uid());
 
         send(withB.gid(), a.uid(), "to-b");
         send(withC.gid(), a.uid(), "to-c");

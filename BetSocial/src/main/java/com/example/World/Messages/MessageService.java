@@ -51,9 +51,10 @@ public class MessageService {
      */
     public Message_ sendMessage(Long gid, Long senderId, String content, Integer mediaType ) {
 
-        Groupuser_ membership = groupUserRepository.findByGidandUid(gid, senderId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.FORBIDDEN, "You are not a member of this conversation"));
+        if (groupUserRepository.findByGidandUid(gid, senderId).isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "You are not a member of this conversation");
+        }
 
         // Everyone in the conversation except whoever is sending.
         List<User_> recipients = groupUserRepository.findByGid(gid).stream()
@@ -64,23 +65,17 @@ public class MessageService {
                 .flatMap(Optional::stream)
                 .toList();
 
-        // recipient_id is direct-message metadata and nothing more: it names the
-        // single counterparty of a DM and is null in a group, where there is no
-        // one counterparty to name. Nothing derives delivery from it any more.
-        Long recipientId = membership.other_uid();
-
         // A single boolean cannot express "read by 3 of 5", so it only carries
-        // meaning for a DM - is that one person already looking at this chat.
-        // Retiring this column in favour of groupuser_.last_read_timestamp is the
-        // next piece of work; until then a group message is simply never
-        // pre-marked as read.
+        // meaning when there is exactly one other person - are they already
+        // looking at this conversation. Replacing it with
+        // groupuser_.last_read_timestamp is the next piece of work; until then a
+        // message to a larger conversation is simply never pre-marked as read.
         boolean is_read = recipients.size() == 1
                 && recipients.get(0).status().equals(watchingChat(gid));
 
         Message_ message = new Message_(
            null,
                 senderId,
-                recipientId,
                 content,
                 mediaType,
                 new Date().getTime(),
@@ -170,17 +165,32 @@ public class MessageService {
         Map<Long, Groupuser_> membershipByGid = groupService.getGroupProfiles(uid).stream()
                 .collect(Collectors.toMap(Groupuser_::gid, gu -> gu, (first, second) -> first));
 
+        List<Group_> groups = groupService.getUserGroups(uid);
+
+        // The counterparty of a direct conversation used to be read off
+        // groupuser_.other_uid. It now comes from the membership rows, which is the
+        // only place it was ever really recorded - fetched for every conversation
+        // in one query rather than one lookup per row.
+        Map<Long, Long> counterpartByGid = groupService.getCounterpartsOf(
+                uid, groups.stream().map(Group_::gid).toList());
+
+        Map<Long, User_> counterparts = userRepository.findAllById(
+                        counterpartByGid.values().stream().distinct().toList())
+                .stream()
+                .collect(Collectors.toMap(User_::uid, u -> u, (first, second) -> first));
+
         List<ConversationDTO> convoList = new ArrayList<>();
 
-        for (Group_ group : groupService.getUserGroups(uid)) {
+        for (Group_ group : groups) {
             Groupuser_ gUser = membershipByGid.get(group.gid());
             if (gUser == null) {
                 continue;
             }
 
             // A conversation with no messages yet has last_mid null - exactly what
-            // createDMGroup produces. Dereferencing it threw "Id must not be null"
-            // and took down the caller's entire conversation list, not just this row.
+            // opening a direct conversation produces. Dereferencing it threw "Id
+            // must not be null" and took down the caller's entire conversation
+            // list, not just this row.
             if (group.last_mid() == null) {
                 continue;
             }
@@ -190,23 +200,24 @@ public class MessageService {
                 continue;
             }
 
-            // other_uid identifies the counterparty in a direct message. Group chats
-            // have no single counterparty, so it is null there and only the group's
-            // own name is available.
-            User_ other = gUser.other_uid() == null
-                    ? null
-                    : userRepository.findById(gUser.other_uid()).orElse(null);
+            // An unnamed conversation is a direct one and is titled by whoever else
+            // is in it. A named one is a group and carries its own name.
+            boolean isDirect = group.group_name() == null;
+            Long counterpartId = counterpartByGid.get(group.gid());
+            User_ other = counterpartId == null ? null : counterparts.get(counterpartId);
 
-            boolean isDirectMessage = group.sort() == 0;
-            if (isDirectMessage && other == null) {
+            if (isDirect && other == null) {
                 continue;
             }
 
             convoList.add(new ConversationDTO(
-                    isDirectMessage ? other.user_name() : group.group_name(),
+                    isDirect ? other.user_name() : group.group_name(),
                     other == null ? null : other.uid(),
                     lastMessage,
-                    lastMessage.is_read(),
+                    // unread, not is_read. This was handed lastMessage.is_read(),
+                    // the exact inverse of what the field means - harmless only
+                    // because no client had started reading it yet.
+                    !lastMessage.is_read() && !lastMessage.uid().equals(uid),
                     other == null ? null : other.profile_picture(),
                     group.gid()));
         }

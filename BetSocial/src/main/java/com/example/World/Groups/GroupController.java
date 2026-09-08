@@ -72,11 +72,16 @@ public class GroupController {
         return check;
     }
 
+    /**
+     * Opens the direct conversation with someone, creating it only if there is not
+     * one already. It used to create a second conversation unconditionally, beside
+     * whatever was already there, and pass a name of the two uids concatenated
+     * that nothing ever displayed.
+     */
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/make/{otherUid}")
     Group_ makeDMGroup(@PathVariable Long otherUid, HttpSession session) {
-        Long uid = (Long) session.getAttribute("userId");
-        return groupService.createDMGroup(uid + "" + otherUid,uid,otherUid);
+        return groupService.openDirectConversation(requireUserId(session), otherUid);
     }
 
 

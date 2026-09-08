@@ -90,7 +90,6 @@ const DMScreen = ({ navigation ,route }:any) => {
 
     const messageObj = {
       gid: chatGid,
-      recipient_id: user.uid,
       description: newMessage,
       media_type: 0, 
     };
@@ -108,7 +107,6 @@ const DMScreen = ({ navigation ,route }:any) => {
 
     const messageObj = {
       gid: chatGid,
-      recipient_id: user.uid,
       description: mediaUri,
       media_type: type,
     };
