@@ -314,6 +314,16 @@ public class GroupService {
     // the same thing the membership rows already said. openDirectConversation
     // creates the same thing through the one creation path.
 
+    /**
+     * A conversation's name, or null when it is a direct one.
+     *
+     * Notifications read differently for the two - a group is titled by its name,
+     * a direct conversation by whoever sent the message.
+     */
+    public String conversationNameOf(Long gid) {
+        return groupRepository.findById(gid).map(Group_::group_name).orElse(null);
+    }
+
     public int updateRecentData(Long gid, Long message){
         return groupRepository.updateGroupRecentData(gid, message);
     }
