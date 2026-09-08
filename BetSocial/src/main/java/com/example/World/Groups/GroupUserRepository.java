@@ -63,6 +63,19 @@ public interface GroupUserRepository extends ListCrudRepository<Groupuser_,Long>
     @Query("UPDATE Groupuser_ SET last_read_timestamp = :now WHERE guid = :guid")
     int updateReadTimestamp(@Param("guid") Long guid , @Param("now") Long now);
 
+    /**
+     * Moves a read timestamp forward, never back.
+     *
+     * Used when a message arrives at somebody who already has the conversation
+     * open. The guard matters because that happens concurrently with the reader's
+     * own updates, and a message that took slightly longer to save must not undo a
+     * later one.
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE Groupuser_ SET last_read_timestamp = :now WHERE guid = :guid AND last_read_timestamp < :now")
+    int advanceReadTimestamp(@Param("guid") Long guid, @Param("now") Long now);
+
     @Modifying
     @Transactional
     @Query("UPDATE Groupuser_ SET administrator = :administrator WHERE guid = :guid")

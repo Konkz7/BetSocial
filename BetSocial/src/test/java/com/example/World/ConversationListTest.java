@@ -4,6 +4,7 @@ import com.example.World.Groups.GroupService;
 import com.example.World.Groups.Group_;
 import com.example.World.Messages.ConversationDTO;
 import com.example.World.Messages.MessageService;
+import com.example.World.Messages.MessageView;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.User_;
 import com.example.World.support.AbstractIntegrationTest;
@@ -126,6 +127,52 @@ class ConversationListTest extends AbstractIntegrationTest {
         assertThat(seenBySender(sender, group))
                 .as("now that both have, the sender's message is seen")
                 .isTrue();
+    }
+
+    @Test
+    @DisplayName("is seen straight away when the recipient already has the chat open")
+    void seenImmediatelyWhileTheRecipientIsWatching() {
+        User_ sender = users.save(user("watching-a"));
+        User_ watcher = users.save(user("watching-b"));
+
+        Group_ direct = groups.openDirectConversation(sender.uid(), watcher.uid());
+
+        // What WebSocketEventListener sets when someone subscribes to a chat.
+        users.changeStatus(watcher.uid(), "online/chat/" + direct.gid());
+
+        MessageView sent = messages.sendMessage(direct.gid(), sender.uid(), "you are here", 0);
+
+        // Their read timestamp is from when they opened the conversation, which is
+        // necessarily before this message. Without recognising that they are still
+        // sitting in it, the tick stayed grey until they left and came back.
+        assertThat(sent.is_read())
+                .as("somebody with the conversation open has read what just arrived in it")
+                .isTrue();
+
+        // And it has to survive a reload, not just be true in the broadcast.
+        assertThat(seenBySender(sender, direct))
+                .as("the timestamp is recorded, not patched onto the response")
+                .isTrue();
+
+        assertThat(conversationFor(watcher, direct).unread())
+                .as("nor is it unread for the person who is looking at it")
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("stays unseen when the recipient is online but in a different chat")
+    void notSeenWhenWatchingAnotherConversation() {
+        User_ sender = users.save(user("elsewhere-a"));
+        User_ other = users.save(user("elsewhere-b"));
+
+        Group_ direct = groups.openDirectConversation(sender.uid(), other.uid());
+
+        // Online, and even in *a* chat - just not this one.
+        users.changeStatus(other.uid(), "online/chat/" + (direct.gid() + 1));
+
+        assertThat(messages.sendMessage(direct.gid(), sender.uid(), "over here", 0).is_read())
+                .as("being in another conversation is not reading this one")
+                .isFalse();
     }
 
     /** The sender's seen-tick: has everyone else read the message they sent. */
