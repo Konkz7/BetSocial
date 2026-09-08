@@ -26,7 +26,7 @@ class MigrationTest extends AbstractIntegrationTest {
                 "SELECT version FROM flyway_schema_history WHERE success = true ORDER BY installed_rank",
                 String.class);
 
-        assertThat(applied).containsExactly("1", "2", "3", "4");
+        assertThat(applied).containsExactly("1", "2", "3", "4", "5");
     }
 
     @Test
@@ -44,6 +44,29 @@ class MigrationTest extends AbstractIntegrationTest {
                 // but it was missing from the database, so /superusers/approval and
                 // /api/bets/decide both failed at runtime.
                 "decision_log");
+    }
+
+    @Test
+    @DisplayName("let a conversation go unnamed, but not be named blank")
+    void conversationNameIsOptional() {
+        // A direct conversation has no name - it is titled from whoever else is in
+        // it. V1 forbade that outright, which is why createDMGroup invented a name
+        // from the two uids concatenated just to get a row in.
+        Long gid = jdbc.queryForObject(
+                "INSERT INTO group_ (group_name, created_at) VALUES (NULL, ?) RETURNING gid",
+                Long.class, System.currentTimeMillis());
+
+        assertThat(gid).isNotNull();
+        assertThat(jdbc.queryForObject(
+                "SELECT group_name FROM group_ WHERE gid = ?", String.class, gid))
+                .as("NULL must stay NULL rather than picking up a default")
+                .isNull();
+
+        // Optional is not the same as blank: a named group still needs a real name.
+        assertThatThrownBy(() -> jdbc.update(
+                "INSERT INTO group_ (group_name, created_at) VALUES ('', ?)",
+                System.currentTimeMillis()))
+                .hasMessageContaining("chk_group_name_not_blank");
     }
 
     @Test

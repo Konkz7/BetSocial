@@ -238,7 +238,7 @@ class GroupLifecycleTest extends AbstractIntegrationTest {
         User_ two = users.save(user());
         User_ outsider = users.save(user());
 
-        Group_ dm = groups.createDMGroup(one.uid() + "" + two.uid(), one.uid(), two.uid());
+        Group_ dm = groups.openDirectConversation(one.uid(), two.uid());
 
         // A DM has a fixed pair of participants. Adding a third, or leaving half of
         // it, produces a conversation the rest of the code cannot describe.

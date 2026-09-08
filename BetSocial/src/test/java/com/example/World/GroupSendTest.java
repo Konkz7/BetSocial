@@ -74,36 +74,65 @@ class GroupSendTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("a group message names no single recipient")
-    void groupMessageHasNoRecipientId() {
-        User_ creator = users.save(user());
-        User_ second = users.save(user());
-        User_ third = users.save(user());
+    @DisplayName("a direct conversation is the one-other-person case of the same path")
+    void directConversationUsesTheSamePath() {
+        User_ sender = users.save(user());
+        User_ peer = users.save(user());
+        User_ outsider = users.save(user());
 
-        Group_ group = groups.createGroup("no-counterparty", creator.uid(),
-                List.of(second.uid(), third.uid()));
+        Group_ direct = groups.openDirectConversation(sender.uid(), peer.uid());
 
-        Message_ sent = messages.sendMessage(group.gid(), creator.uid(), "hi", 0);
+        Message_ sent = messages.sendMessage(direct.gid(), sender.uid(), "just us", 0);
 
-        // recipient_id is direct-message metadata. A group has no one
-        // counterparty to name, and nothing derives delivery from it any more.
-        assertThat(sent.recipient_id()).isNull();
+        assertThat(sent.mid()).isNotNull();
+        // Delivery is the membership rows and nothing else. There is no recipient
+        // named on the message to check any more - reaching the right people is
+        // the whole of what "recipient" ever meant.
+        assertThat(notificationsFor(peer.uid())).isNotEmpty();
+        assertThat(notificationsFor(outsider.uid()))
+                .as("somebody outside the conversation hears nothing")
+                .isEmpty();
     }
 
     @Test
-    @DisplayName("a direct message still names its counterparty")
-    void directMessageStillCarriesRecipient() {
+    @DisplayName("a direct conversation has no name and is reused, not duplicated")
+    void directConversationIsUnnamedAndReused() {
         User_ sender = users.save(user());
         User_ peer = users.save(user());
 
-        Group_ dm = groups.createDMGroup(sender.uid() + "" + peer.uid(), sender.uid(), peer.uid());
+        Group_ first = groups.openDirectConversation(sender.uid(), peer.uid());
 
-        Message_ sent = messages.sendMessage(dm.gid(), sender.uid(), "just us", 0);
+        // Having no name is what makes a conversation direct - it is titled in the
+        // client from whoever else is in it, rather than by the two uids
+        // concatenated that nothing ever displayed.
+        assertThat(first.group_name()).isNull();
 
-        assertThat(sent.recipient_id())
-                .as("a DM is the one-other-person case, not a separate path")
-                .isEqualTo(peer.uid());
-        assertThat(notificationsFor(peer.uid())).isNotEmpty();
+        // Opening it again from either side must find the existing one. It used to
+        // create a second conversation beside the first every single time.
+        assertThat(groups.openDirectConversation(sender.uid(), peer.uid()).gid())
+                .isEqualTo(first.gid());
+        assertThat(groups.openDirectConversation(peer.uid(), sender.uid()).gid())
+                .as("the same conversation regardless of who opens it")
+                .isEqualTo(first.gid());
+    }
+
+    @Test
+    @DisplayName("a group is not mistaken for the direct conversation of two of its members")
+    void groupIsNotADirectConversation() {
+        User_ one = users.save(user());
+        User_ two = users.save(user());
+        User_ three = users.save(user());
+
+        groups.createGroup("shared group", one.uid(), List.of(two.uid(), three.uid()));
+
+        // Two people who share a group but have never spoken privately still have
+        // no direct conversation - matching on membership alone would have found
+        // the group and dropped their private messages into it.
+        assertThat(groups.sameGroupCheck(one.uid(), two.uid())).isNull();
+
+        Group_ direct = groups.openDirectConversation(one.uid(), two.uid());
+        assertThat(direct.group_name()).isNull();
+        assertThat(groups.sameGroupCheck(one.uid(), two.uid())).isEqualTo(direct.gid());
     }
 
     @Test
@@ -119,7 +148,7 @@ class GroupSendTest extends AbstractIntegrationTest {
         assertThat(sender.status()).isEqualTo("offline");
         assertThat(peer.status()).isEqualTo("offline");
 
-        Group_ dm = groups.createDMGroup(sender.uid() + "" + peer.uid(), sender.uid(), peer.uid());
+        Group_ dm = groups.openDirectConversation(sender.uid(), peer.uid());
         messages.sendMessage(dm.gid(), sender.uid(), "are you there", 0);
 
         assertThat(notificationsFor(peer.uid()))

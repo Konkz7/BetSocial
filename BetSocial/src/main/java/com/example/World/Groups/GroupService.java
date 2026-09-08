@@ -8,6 +8,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class GroupService {
@@ -32,9 +33,16 @@ public class GroupService {
         this.userRepository = userRepository;
     }
 
+    /**
+     * Creates a conversation.
+     *
+     * A null name makes a direct conversation, which must be between exactly two
+     * people and is closed to anyone else. Any other conversation is a group and
+     * needs a name - there would otherwise be nothing to call it.
+     */
     @Transactional
     public Group_ createGroup(String name ,Long creatorId, List<Long> users) {
-        String groupName = requireValidName(name);
+        String groupName = name == null ? null : requireValidName(name);
 
         // The creator is added as a member below, so naming them again in the
         // list would give them two membership rows in the same conversation.
@@ -43,6 +51,11 @@ public class GroupService {
                 .filter(uid -> !uid.equals(creatorId))
                 .distinct()
                 .toList();
+
+        if (groupName == null && members.size() != 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "A conversation with more or fewer than two people is a group and needs a name");
+        }
 
         if (members.size() + 1 > MAX_GROUP_MEMBERS) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -59,7 +72,6 @@ public class GroupService {
         Group_ group = new Group_(
             null,
             groupName,
-            1,
             null,
             time,
    null,
@@ -70,7 +82,8 @@ public class GroupService {
         group = groupRepository.save(group);
 
         // The creator is the first administrator - otherwise a new group would
-        // have nobody able to rename it or remove anyone.
+        // have nobody able to rename it or remove anyone. It means nothing in a
+        // direct conversation, where there is nothing to administer.
         groupUserRepository.save(membershipRow(group.gid(), creatorId, time, true));
 
         for(Long user: members){
@@ -79,6 +92,24 @@ public class GroupService {
 
 
         return group;
+    }
+
+    /**
+     * The direct conversation between two people, creating it if they have not
+     * spoken before. Reusing the existing one is what stops a second conversation
+     * appearing alongside the first every time someone opens a profile.
+     */
+    @Transactional
+    public Group_ openDirectConversation(Long uid, Long otherUid) {
+        if (uid.equals(otherUid)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "You cannot start a conversation with yourself");
+        }
+
+        requireUserExists(otherUid);
+
+        return groupRepository.findDirectConversation(uid, otherUid)
+                .orElseGet(() -> createGroup(null, uid, List.of(otherUid)));
     }
 
     /**
@@ -216,7 +247,7 @@ public class GroupService {
     }
 
     private Groupuser_ membershipRow(Long gid, Long uid, Long time, boolean administrator) {
-        return new Groupuser_(null, gid, uid, null, time, time, administrator, null);
+        return new Groupuser_(null, gid, uid, time, time, administrator, null);
     }
 
     /**
@@ -230,9 +261,15 @@ public class GroupService {
     }
 
     /**
-     * These operations only make sense for a real group. A direct message has a
-     * fixed pair of participants; adding a third or leaving half of it would
-     * leave a conversation the rest of the code cannot describe.
+     * These operations only make sense for a named group.
+     *
+     * A direct conversation is closed: adding a third person to it would give a
+     * stranger the whole of a private history that two people had every reason to
+     * expect stayed between them. Starting a new group is the way to widen a
+     * conversation, and it begins empty.
+     *
+     * Having no name is what makes a conversation direct - see Group_. There is no
+     * separate kind, so there is no separate flag to consult.
      */
     private Group_ requireGroupConversation(Long gid) {
         // group_.deleted_at is deliberately not consulted: a group is only ever
@@ -241,9 +278,9 @@ public class GroupService {
         Group_ group = groupRepository.findById(gid)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
 
-        if (group.sort() != 1) {
+        if (group.group_name() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "This is a direct message, not a group");
+                    "This is a direct conversation, not a group");
         }
 
         return group;
@@ -271,50 +308,11 @@ public class GroupService {
         return trimmed;
     }
 
-    public Group_ createDMGroup(String name ,Long uid , Long other_uid) {
-        Long time = new Date().getTime();
-
-        Group_ group = new Group_(
-                null,
-                name,
-                0,
-                null,
-                time,
-                null,
-                null
-        );
-
-
-        group = groupRepository.save(group);
-
-        Groupuser_ user = new Groupuser_(
-                null,
-                group.gid(),
-                uid,
-                other_uid,
-                time,
-                time,
-                false,
-                null
-        );
-
-        Groupuser_ other = new Groupuser_(
-                null,
-                group.gid(),
-                other_uid,
-                uid,
-                time,
-                time,
-                false,
-                null
-        );
-
-        groupUserRepository.save(user);
-        groupUserRepository.save(other);
-
-
-        return group;
-    }
+    // createDMGroup is gone. It built a second kind of conversation by hand -
+    // sort = 0, a name of the two uids concatenated that was shown to nobody, and
+    // a pair of membership rows each pointing at the other person. All three said
+    // the same thing the membership rows already said. openDirectConversation
+    // creates the same thing through the one creation path.
 
     public int updateRecentData(Long gid, Long message){
         return groupRepository.updateGroupRecentData(gid, message);
@@ -334,25 +332,53 @@ public class GroupService {
         return groupUserRepository.findByUid(uid);
     }
 
+    /**
+     * For each of the given conversations, the single other member - or nothing at
+     * all when there is more than one, because then there is no counterpart to
+     * name and the conversation carries its own name instead.
+     *
+     * One query for every conversation rather than a lookup per conversation: this
+     * feeds the conversation list, which is fetched on every visit to the messages
+     * screen.
+     */
+    public Map<Long, Long> getCounterpartsOf(Long uid, List<Long> gids) {
+        if (gids.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, List<Long>> othersByGid = groupUserRepository.findByGidIn(gids).stream()
+                .filter(gu -> !gu.uid().equals(uid))
+                .collect(Collectors.groupingBy(Groupuser_::gid,
+                        Collectors.mapping(Groupuser_::uid, Collectors.toList())));
+
+        Map<Long, Long> counterparts = new HashMap<>();
+        othersByGid.forEach((gid, others) -> {
+            if (others.size() == 1) {
+                counterparts.put(gid, others.get(0));
+            }
+        });
+
+        return counterparts;
+    }
+
     /** True when the user belongs to the group - used to gate access to its messages. */
     public boolean isMember(Long gid, Long uid) {
         return groupUserRepository.findByGidandUid(gid, uid).isPresent();
     }
 
 
+    /**
+     * The gid of an existing direct conversation between two people, or null.
+     *
+     * This used to load every conversation each of them belonged to, intersect the
+     * two sets, then fetch each shared conversation in turn to test its sort -
+     * work proportional to how much they each use the app, to answer a question
+     * about one row. The database answers it directly now.
+     */
     public Long sameGroupCheck(Long uid1, Long uid2){
-        Set<Long> gid1 = new HashSet<>(groupUserRepository.findByUid(uid1).stream().map(Groupuser_::gid).toList());
-        Set<Long> gid2 = new HashSet<>(groupUserRepository.findByUid(uid2).stream().map(Groupuser_::gid).toList());
-
-        gid1.retainAll(gid2);
-
-        for(Long l : gid1){
-            if(groupRepository.findById(l).orElseThrow().sort() == 0){
-                return l;
-            }
-        }
-
-        return null;
+        return groupRepository.findDirectConversation(uid1, uid2)
+                .map(Group_::gid)
+                .orElse(null);
     }
 
 }

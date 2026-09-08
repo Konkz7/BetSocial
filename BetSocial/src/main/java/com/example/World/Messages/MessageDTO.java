@@ -9,7 +9,9 @@ import org.springframework.lang.NonNull;
 
 public record MessageDTO(
 
-        Long recipient_id,     // Foreign key to Users table, can be null for group messages
+        // No recipient: a message goes to its conversation, and who that reaches is
+        // read from the membership rows. The client used to name a recipient here
+        // and the server used to believe it.
         Long gid,
         @NotEmpty
         String description ,        // The actual message description

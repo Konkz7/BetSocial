@@ -30,6 +30,16 @@ public interface GroupUserRepository extends ListCrudRepository<Groupuser_,Long>
     List<Groupuser_> findByGid(@Param("gid") Long gid);
 
     /**
+     * The same, for several conversations at once.
+     *
+     * The conversation list needs the members of every conversation a user is in;
+     * asking per conversation would make that cost grow with how much they use the
+     * app.
+     */
+    @Query("SELECT * FROM Groupuser_ WHERE gid IN (:gids) AND deleted_at IS NULL")
+    List<Groupuser_> findByGidIn(@Param("gids") List<Long> gids);
+
+    /**
      * Memberships that have ended - the conversations a user used to be in.
      *
      * Only the most recent ending per group, so somebody removed and re-removed
