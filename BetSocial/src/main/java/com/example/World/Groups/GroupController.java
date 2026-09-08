@@ -82,4 +82,59 @@ public class GroupController {
         Long uid = (Long) session.getAttribute("userId");
         groupService.updateLastReadTimestamp(gid,uid);
     }
+
+    // --- group lifecycle --------------------------------------------------
+    //
+    // GroupService.createGroup already existed but had no endpoint and no caller,
+    // so a group could not be made at all. These expose it and the operations a
+    // group needs to be usable.
+    //
+    // The permission model, applied in GroupService: any member may add someone,
+    // only an administrator may remove or rename, anyone may leave, the creator is
+    // the first administrator, and a group is soft-deleted once the last member
+    // has left.
+
+    @ResponseStatus(HttpStatus.CREATED)
+    @PostMapping("/create")
+    Group_ createGroup(@Valid @RequestBody GroupCreateDTO request, HttpSession session) {
+        Long uid = requireUserId(session);
+        return groupService.createGroup(request.group_name(), uid, request.members());
+    }
+
+    @GetMapping("/members/{gid}")
+    List<Groupuser_> getMembers(@PathVariable Long gid, HttpSession session) {
+        return groupService.getMembers(gid, requireUserId(session));
+    }
+
+    @ResponseStatus(HttpStatus.CREATED)
+    @PostMapping("/add-member/{gid}/{newUid}")
+    Groupuser_ addMember(@PathVariable Long gid, @PathVariable Long newUid, HttpSession session) {
+        return groupService.addMember(gid, requireUserId(session), newUid);
+    }
+
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DeleteMapping("/remove-member/{gid}/{targetUid}")
+    void removeMember(@PathVariable Long gid, @PathVariable Long targetUid, HttpSession session) {
+        groupService.removeMember(gid, requireUserId(session), targetUid);
+    }
+
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DeleteMapping("/leave/{gid}")
+    void leaveGroup(@PathVariable Long gid, HttpSession session) {
+        groupService.leaveGroup(gid, requireUserId(session));
+    }
+
+    @PutMapping("/rename/{gid}")
+    Group_ renameGroup(@PathVariable Long gid, @Valid @RequestBody GroupRenameDTO request,
+                       HttpSession session) {
+        return groupService.renameGroup(gid, requireUserId(session), request.group_name());
+    }
+
+    private static Long requireUserId(HttpSession session) {
+        Long uid = (Long) session.getAttribute("userId");
+        if (uid == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not logged in");
+        }
+        return uid;
+    }
 }
