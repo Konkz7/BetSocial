@@ -57,7 +57,7 @@ class PredictionRepositoryTest extends AbstractIntegrationTest {
         Bet_ bet = bets.save(newBet(thread.tid(), now));
 
         Prediction_ prediction = predictions.save(new Prediction_(
-                null, bet.bid(), punter.uid(), true, 10f, 0f, now, null, null));
+                null, bet.bid(), punter.uid(), true, 10L, 0L, now, null, null));
 
         // Guarantee a bet exists at bid == pid - the row the old query would hit.
         long collidingBid = prediction.pid();
@@ -94,9 +94,9 @@ class PredictionRepositoryTest extends AbstractIntegrationTest {
     }
 
     private Bet_ newBet(Long tid, long now) {
-        return new Bet_(null, tid, Status.ACTIVE.toInt(), null, 0f, 0f,
+        return new Bet_(null, tid, Status.ACTIVE.toInt(), null, 0L, 0L,
                 "phase4 regression bet", now, null, now + 86_400_000L,
-                false, false, false, 100f, 1f, null);
+                false, false, false, 100L, 1L, null);
     }
 
     private User_ user(String name) {
