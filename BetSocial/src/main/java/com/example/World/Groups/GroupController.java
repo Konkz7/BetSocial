@@ -9,7 +9,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 
 import java.util.List;
-import java.util.Optional;
 
 @RequestMapping("/api/groups")
 @RestController
@@ -24,18 +23,22 @@ public class GroupController {
         this.groupUserRepository = groupUserRepository;
     }
 
-    @GetMapping("/all")
-    List<Group_> findAll(){
-        return groupRepository.findAll();
-    }
+    // GET /all is deliberately absent: it dumped every group in the database to
+    // any authenticated caller, and there is no per-user scoping that would make
+    // it meaningful. /user-groups already returns the caller's own conversations.
 
     @GetMapping("/{gid}")
-    Group_ findById(@PathVariable Long gid){
-        Optional<Group_> group = groupRepository.findById(gid);
-        if(group.isEmpty()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "group not found");
+    Group_ findById(@PathVariable Long gid, HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+
+        // Membership is checked before the lookup so that a non-member cannot
+        // tell an existing group from a missing one.
+        if(!groupService.isMember(gid, uid)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this group");
         }
-        return group.get();
+
+        return groupRepository.findById(gid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "group not found"));
     }
 
     // Returns an empty list rather than 404 when the user has no conversations.
