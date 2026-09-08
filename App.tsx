@@ -38,6 +38,7 @@ import SettingsScreen from './app/settingsPage';
 import DMScreen from './app/dmPage';
 import GroupChatScreen from './app/groupChatPage';
 import CreateGroupScreen from './app/createGroupPage';
+import GroupMembersScreen from './app/groupMembersPage';
 import { activitySeenStore, messageSeenStore } from './app/GlobalFlags';
 import { BannerProvider } from './app/Components/BannerProvider';
 import notifee, {AndroidImportance} from '@notifee/react-native';
@@ -111,6 +112,7 @@ function MessageStackNavigator() {
       <MessageStack.Screen name = "DMScreen_M" component ={DMScreen} />
       <MessageStack.Screen name = "GroupChatScreen_M" component ={GroupChatScreen} />
       <MessageStack.Screen name = "CreateGroupScreen_M" component ={CreateGroupScreen} />
+      <MessageStack.Screen name = "GroupMembersScreen_M" component ={GroupMembersScreen} />
 
     </MessageStack.Navigator>
   );
