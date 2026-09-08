@@ -26,7 +26,7 @@ class MigrationTest extends AbstractIntegrationTest {
                 "SELECT version FROM flyway_schema_history WHERE success = true ORDER BY installed_rank",
                 String.class);
 
-        assertThat(applied).containsExactly("1", "2", "3", "4", "5");
+        assertThat(applied).containsExactly("1", "2", "3", "4", "5", "6");
     }
 
     @Test
