@@ -259,7 +259,7 @@ for images (50MB / 100MB for video), but that is the app being polite to itself 
 anything talking to Firebase directly ignores it.
 
 The only place those limits can actually be enforced is the **Storage rules on
-the bucket**, in the Firebase console. Something like:
+the bucket**, in the Firebase console:
 
 ```
 rules_version = '2';
@@ -267,25 +267,44 @@ service firebase.storage {
   match /b/{bucket}/o {
     match /images/{file} {
       allow read;
-      allow write: if request.auth != null
-                   && request.resource.size < 15 * 1024 * 1024
+      allow write: if request.resource.size < 15 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
     match /videos/{file} {
       allow read;
-      allow write: if request.auth != null
-                   && request.resource.size < 100 * 1024 * 1024
+      allow write: if request.resource.size < 100 * 1024 * 1024
                    && request.resource.contentType.matches('video/.*');
     }
     match /profile_pictures/{file} {
       allow read;
-      allow write: if request.auth != null
-                   && request.resource.size < 15 * 1024 * 1024
+      allow write: if request.resource.size < 15 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
   }
 }
 ```
+
+#### Why there is no `request.auth != null` in there
+
+The obvious line to add is `request.auth != null`, and it would reject every
+upload this app makes. There are **two Firebase SDKs** in the client and they do
+not share a signed-in user:
+
+| SDK | Used for | Signed in? |
+|---|---|---|
+| `@react-native-firebase/*` | phone OTP at registration, push messaging | during registration only |
+| `firebase` (JS SDK) | **Storage uploads**, via `initializeApp` in `Constants.js` | never |
+
+`FBStorageService` uploads through the JS SDK instance, which nothing ever
+authenticates — and ordinary login goes to this application's own session, not to
+Firebase at all. So `request.auth` is null on every upload, and a rule requiring
+it fails with `storage/unauthorized`.
+
+The rules above are therefore what the app can satisfy today: they stop the
+things that actually hurt an open bucket — arbitrary size, arbitrary file type —
+but **anyone holding the client config can still write to it**, and that config
+ships inside the app. Closing that needs the upload path to carry an identity;
+see the note in `FBStorageService`.
 
 **Check what the rules currently are before going public.** A bucket left on the
 default test rules is writable by anyone who has the project's client config,
