@@ -147,7 +147,7 @@ public class BetController {
     @Transactional
     @ResponseStatus(HttpStatus.ACCEPTED)
     @PutMapping("/cancel/{bid}")
-    void cancelBet(@PathVariable Long bid , HttpSession session){
+    public void cancelBet(@PathVariable Long bid , HttpSession session){
         Long userId = (Long) session.getAttribute("userId");
         Optional<Bet_> optionalBet = betRepository.findById(bid);
         Bet_ bet;
