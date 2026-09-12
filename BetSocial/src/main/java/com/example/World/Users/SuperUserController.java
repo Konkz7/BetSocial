@@ -7,6 +7,7 @@ import com.example.World.Bets.DecisionDTO;
 import com.example.World.Bets.PendingBetView;
 import com.example.World.Bets.Status;
 import com.example.World.Predictions.PredictionRepository;
+import com.example.World.SampleData;
 import com.example.World.Reports.ReportDecisionDTO;
 import com.example.World.Reports.ReportService;
 import com.example.World.Reports.ReportView;
@@ -47,16 +48,19 @@ public class SuperUserController {
     private final LedgerService ledgerService;
     private final ThreadRepository threadRepository;
     private final ReportService reportService;
+    private final SampleData sampleData;
 
     public SuperUserController(UserRepository userRepository, BetRepository betRepository,
                                PredictionRepository predictionRepository, LedgerService ledgerService,
-                               ThreadRepository threadRepository, ReportService reportService) {
+                               ThreadRepository threadRepository, ReportService reportService,
+                               SampleData sampleData) {
         this.userRepository = userRepository;
         this.betRepository = betRepository;
         this.predictionRepository = predictionRepository;
         this.ledgerService = ledgerService;
         this.threadRepository = threadRepository;
         this.reportService = reportService;
+        this.sampleData = sampleData;
     }
 
     @GetMapping("/all")
@@ -123,6 +127,22 @@ public class SuperUserController {
     @GetMapping("/reports")
     List<ReportView> openReports(){
         return reportService.openReports();
+    }
+
+    /**
+     * Fills the database with enough content to see pagination work.
+     *
+     * Here rather than only behind an environment variable, because the variable
+     * was the wrong switch: it has to be set before the backend starts and does
+     * not reach an IDE run configuration, so using it meant remembering to launch
+     * a particular way. This needs no restart.
+     *
+     * Admin-only by virtue of /superusers/**, and idempotent - asking twice tops
+     * up to the same targets rather than doubling anything.
+     */
+    @PostMapping("/sample-data")
+    String generateSampleData(){
+        return sampleData.generate();
     }
 
     /** Removes the content, suspends the account, or says there was nothing wrong. */
