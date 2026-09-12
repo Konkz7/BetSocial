@@ -573,3 +573,46 @@ export const getBlockedUsers = async () =>{
     return [];
   }
 }
+
+//REPORTING
+// Reporting reaches a moderator, unlike blocking, which is private to you.
+// target_type is THREAD, COMMENT or USER.
+export const reportContent = async (target_type, target_id, reason, detail) =>{
+  try {
+    await axios.post(IP_STRING + "/api/reports",
+      { target_type, target_id, reason, detail });
+    Alert.alert("Thanks", "A moderator will look at this.");
+    return true;
+  } catch (error) {
+    // 409 is the normal "you already reported this" case rather than a fault,
+    // so it gets its own wording.
+    if (error.response?.status === 409) {
+      Alert.alert("Already reported", "You have already reported this.");
+    } else {
+      Alert.alert("Couldnt report that", error.response?.data?.message ?? error.message);
+    }
+    return false;
+  }
+}
+
+// Admin only. Each row carries the reported content, so the queue needs one call.
+export const getOpenReports = async() =>{
+  try {
+    const open = await axios.get(IP_STRING + "/superusers/reports");
+    return open.data;
+  } catch (error) {
+    Alert.alert("Error!", "The moderation queue couldnt be loaded.");
+    return [];
+  }
+}
+
+// action is REMOVED, SUSPENDED or DISMISSED.
+export const decideReport = async(rid, action) =>{
+  try {
+    await axios.post(IP_STRING + "/superusers/reports/decide", { rid, action });
+    return true;
+  } catch (error) {
+    Alert.alert("Couldnt action that report", error.response?.data?.message ?? error.message);
+    return false;
+  }
+}

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, Image, TouchableOpacity, Pressable, Alert } from "react-native";
+import { promptReport } from "./ReportPrompt";
 import { Heart, Reply, X } from "lucide-react-native"; // install lucide-react-native
 import { timeAgo, getProfilePictureUrl } from "../Constants";
 import { registerCommentLike,deleteComment, getUser } from "../API";
@@ -149,7 +150,17 @@ export function CommentList({ loadedComments, setLoadedComments ,replyNum ,setRe
 
   const deleteCommentAction = (comment) => {
     const ownComment = uid === comment.uid;
-    if(!ownComment || comment.deleted) return;
+
+    // Already gone - there is nothing to delete and nothing left to report.
+    if(comment.deleted) return;
+
+    // Somebody else's comment: this used to return silently, so a long press did
+    // nothing at all. Reporting is what a long press on another person's comment
+    // should offer, and Apple's guideline 1.2 requires it to be reachable.
+    if(!ownComment){
+      promptReport("COMMENT", comment.cid, "comment");
+      return;
+    }
 
     // Show a confirmation dialog before deleting
     Alert.alert(

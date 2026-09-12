@@ -7,6 +7,9 @@ import com.example.World.Bets.DecisionDTO;
 import com.example.World.Bets.PendingBetView;
 import com.example.World.Bets.Status;
 import com.example.World.Predictions.PredictionRepository;
+import com.example.World.Reports.ReportDecisionDTO;
+import com.example.World.Reports.ReportService;
+import com.example.World.Reports.ReportView;
 import com.example.World.Predictions.Prediction_;
 import com.example.World.Threads.ThreadRepository;
 import com.example.World.Threads.Thread_;
@@ -43,15 +46,17 @@ public class SuperUserController {
     private final PredictionRepository predictionRepository;
     private final LedgerService ledgerService;
     private final ThreadRepository threadRepository;
+    private final ReportService reportService;
 
     public SuperUserController(UserRepository userRepository, BetRepository betRepository,
                                PredictionRepository predictionRepository, LedgerService ledgerService,
-                               ThreadRepository threadRepository) {
+                               ThreadRepository threadRepository, ReportService reportService) {
         this.userRepository = userRepository;
         this.betRepository = betRepository;
         this.predictionRepository = predictionRepository;
         this.ledgerService = ledgerService;
         this.threadRepository = threadRepository;
+        this.reportService = reportService;
     }
 
     @GetMapping("/all")
@@ -106,6 +111,29 @@ public class SuperUserController {
                     staked,
                     bet.ends_at());
         }).toList();
+    }
+
+    /**
+     * The moderation queue: what people have reported and nobody has decided on.
+     *
+     * Alongside the bet approvals rather than on a screen of its own - both are
+     * the same job, a privileged person working through a list of decisions, and
+     * the existing screen already does that well.
+     */
+    @GetMapping("/reports")
+    List<ReportView> openReports(){
+        return reportService.openReports();
+    }
+
+    /** Removes the content, suspends the account, or says there was nothing wrong. */
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PostMapping("/reports/decide")
+    void decideReport(@Valid @RequestBody ReportDecisionDTO decision, HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        if (uid == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not logged in");
+        }
+        reportService.decide(decision.rid(), decision.action(), uid);
     }
 
     @Transactional

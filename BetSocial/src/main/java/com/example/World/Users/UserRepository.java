@@ -72,4 +72,18 @@ public interface UserRepository extends ListCrudRepository<User_, Long> {
     @Transactional
     @Query("UPDATE User_ SET status = :status WHERE uid = :id AND deleted_at IS NULL")
     int changeStatus(@Param("id") Long id,@Param("status") String status);
+
+    /**
+     * Suspends an account by soft-deleting it.
+     *
+     * Every lookup in this repository already filters deleted_at IS NULL,
+     * including findByUsername - which is what UserService.loadUserByUsername
+     * uses - so a suspended account cannot sign in and does not appear anywhere.
+     * Nothing is destroyed: the row, its threads and its ledger stay, so the
+     * decision can be reversed and the history still reads.
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE User_ SET deleted_at = :time WHERE uid = :id AND deleted_at IS NULL")
+    int suspend(@Param("id") Long id, @Param("time") Long time);
 }

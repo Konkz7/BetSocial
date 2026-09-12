@@ -26,7 +26,7 @@ class MigrationTest extends AbstractIntegrationTest {
                 "SELECT version FROM flyway_schema_history WHERE success = true ORDER BY installed_rank",
                 String.class);
 
-        assertThat(applied).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11");
+        assertThat(applied).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12");
     }
 
     @Test
@@ -37,7 +37,7 @@ class MigrationTest extends AbstractIntegrationTest {
                 String.class);
 
         assertThat(tables).contains(
-                "user_", "thread_", "threadlike_", "comment_", "commentlike_", "block_",
+                "user_", "thread_", "threadlike_", "comment_", "commentlike_", "block_", "report_",
                 "bet_", "betsave_", "prediction_", "message_", "group_",
                 "groupuser_", "follow_", "notification_", "card_",
                 // Added by V2. BetRepository.makeDecision inserts into this table,
