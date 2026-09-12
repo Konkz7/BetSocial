@@ -19,6 +19,55 @@ public interface UserRepository extends ListCrudRepository<User_, Long> {
     @Query("SELECT * FROM User_ WHERE user_role = 0 AND uid != :uid AND deleted_at IS NULL")
     List<User_> findAllActiveUsers(@Param("uid") Long uid);
 
+    /**
+     * People matching a name, capped.
+     *
+     * This replaces handing back every account. Paging a user list was never the
+     * right answer for the screens that used it - all three were choosing
+     * somebody, and nobody scrolls to account four hundred to pick a friend -
+     * so the fix is to search rather than to page.
+     *
+     * An empty term matches everyone, which is what a picker wants when it first
+     * opens: a list to start from rather than a blank screen. The cap applies
+     * either way.
+     *
+     * Blocked accounts are excluded in both directions, the same rule as the
+     * feed. ILIKE rather than LOWER(...) LIKE LOWER(...) because it says what it
+     * means and Postgres can use an index on it.
+     */
+    @Query("""
+    SELECT u.* FROM User_ u
+    WHERE u.user_role = 0
+      AND u.uid != :viewer
+      AND u.deleted_at IS NULL
+      AND (:term = '' OR u.user_name ILIKE '%' || :term || '%')
+      AND NOT EXISTS (
+          SELECT 1 FROM Block_ b
+          WHERE (b.blocker_uid = :viewer AND b.blocked_uid = u.uid)
+             OR (b.blocker_uid = u.uid AND b.blocked_uid = :viewer))
+    ORDER BY u.user_name ASC
+    LIMIT :limit
+    """)
+    List<User_> search(@Param("viewer") Long viewer, @Param("term") String term,
+                       @Param("limit") int limit);
+
+    /**
+     * Specific accounts by id.
+     *
+     * For screens that need to put a name to an id they already hold - the
+     * activity list resolving who did the thing a notification is about - rather
+     * than to browse. It used to fetch every account and search it in memory,
+     * which quietly stopped working as soon as the list was capped.
+     *
+     * Soft-deleted accounts are left out, so a suspended account's name stops
+     * appearing. Blocking is deliberately not applied here: a notification is a
+     * record of something that already happened, and hiding only the name would
+     * leave an unattributable row rather than removing it. Filtering
+     * notifications by block is worth doing properly and separately.
+     */
+    @Query("SELECT * FROM User_ WHERE uid IN (:ids) AND deleted_at IS NULL")
+    List<User_> findAllByIds(@Param("ids") List<Long> ids);
+
     @Query("SELECT * FROM User_ WHERE email = :email AND deleted_at IS NULL")
     Optional<User_> findByEmail(String email);
 

@@ -30,14 +30,70 @@ public class UserController {
         this.blockService = blockService;
     }
 
-    @GetMapping("/all")
-    List<UserView> findAll(HttpSession session){
+    /**
+     * The caller's id, or 401.
+     *
+     * The rest of this controller reads the attribute inline and trusts it. The
+     * two endpoints below cannot: one puts the id straight into a query as the
+     * viewer whose blocks apply, and a null there would silently match nobody's
+     * blocks rather than refusing the request.
+     */
+    private static Long requireUserId(HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
-        Set<Long> invisible = blockService.invisibleTo(uid);
-        return userRepository.findAllActiveUsers(uid).stream()
-                .filter(u -> !invisible.contains(u.uid()))
+        if(uid == null){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not logged in");
+        }
+        return uid;
+    }
+
+    /** How many people a search returns. Enough to choose from, not enough to scroll. */
+    private static final int SEARCH_LIMIT = 30;
+
+    /** The most ids one request will resolve. A screenful of notifications, generously. */
+    private static final int MAX_IDS = 200;
+
+    // GET /all is gone. It returned every account in the database on every open
+    // of the search screen, the group-creation picker and the member list. All
+    // three were choosing somebody and all three filtered by name in memory
+    // afterwards, so the list was both unbounded and larger than anything any of
+    // them showed.
+
+    /**
+     * People matching a name.
+     *
+     * Capped, and the filtering the three calling screens each did in memory now
+     * happens once, in the database. An empty term returns the first page
+     * alphabetically so a picker opens with something in it.
+     */
+    @GetMapping("/search")
+    List<UserView> search(@RequestParam(required = false) String q, HttpSession session){
+        Long uid = requireUserId(session);
+        String term = q == null ? "" : q.trim();
+        return userRepository.search(uid, term, SEARCH_LIMIT).stream()
                 .map(UserView::from)
                 .toList();
+    }
+
+    /**
+     * Specific accounts by id, for screens that hold ids and need names.
+     *
+     * The activity list used to fetch every account and search it in memory. That
+     * worked only because the list was everything; capped, it would have failed
+     * to name anybody outside the first page - and failed quietly, which is
+     * worse.
+     */
+    @GetMapping("/by-ids")
+    List<UserView> byIds(@RequestParam List<Long> ids, HttpSession session){
+        requireUserId(session);
+
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        if (ids.size() > MAX_IDS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Too many ids in one request; the limit is " + MAX_IDS);
+        }
+        return userRepository.findAllByIds(ids).stream().map(UserView::from).toList();
     }
 
     @GetMapping("/{uid}")

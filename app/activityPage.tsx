@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView, Image } from 'react-native';
 import { useQuery } from "@tanstack/react-query";
-import { fillReadMarkers, getActiveNotifications, getUser, getUsers, readNotifications, removeNotification, toThreadProfile} from "./API";
+import { fillReadMarkers, getActiveNotifications, getUser, getUsersByIds, readNotifications, removeNotification, toThreadProfile} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
 import { getProfilePictureUrl, timeAgo } from './Constants';
 import { activitySeenStore, screenStore } from './GlobalFlags';
@@ -17,9 +17,22 @@ const ActivityScreen = ({ navigation, route } : any) => {
         queryFn: getActiveNotifications
     });
 
-    const { data: users, isLoading: usersLoading , refetch: refetchUsers } = useQuery({ 
-        queryKey: ["Users"], 
-        queryFn: getUsers 
+    // Only the people these notifications are actually about.
+    //
+    // This used to fetch every account in the database and search it in memory,
+    // which worked only because the list was everything. The list is capped now,
+    // so an actor outside the first page would simply fail to resolve - and fail
+    // silently, leaving a nameless row.
+    const actorIds = useMemo(
+        () => [...new Set((notifications ?? []).map((n: any) => n.actor_id))]
+                .filter((id) => id !== null && id !== undefined),
+        [notifications],
+    );
+
+    const { data: users, isLoading: usersLoading , refetch: refetchUsers } = useQuery({
+        queryKey: ["usersByIds", actorIds],
+        queryFn: () => getUsersByIds(actorIds),
+        enabled: actorIds.length > 0,
     });
 
     useFocusEffect(

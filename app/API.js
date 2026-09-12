@@ -81,12 +81,37 @@ export const removeThread = async(tid) =>{
 }
 
 // USERS
-export const getUsers = async() =>{
+// People matching a name, capped by the server. Replaces getUsers, which
+// returned every account in the database - all three screens that called it were
+// choosing somebody and filtered by name in memory afterwards, so the request
+// was both unbounded and bigger than anything any of them displayed.
+//
+// An empty term returns the first names alphabetically, so a picker opens with a
+// list rather than a blank screen.
+export const searchUsers = async(term) =>{
     try {
-        const users = await axios.get(IP_STRING + "/api/users/all");
+        const query = term ? "?q=" + encodeURIComponent(term) : "";
+        const users = await axios.get(IP_STRING + "/api/users/search" + query);
         return users.data;
     } catch (error) {
       Alert.alert("Error!", "Users couldnt be obtained.")
+      return [];
+    }
+  }
+
+// Specific accounts by id, for a screen that holds ids and needs names - the
+// activity list naming whoever a notification is about. It used to fetch every
+// account and search it in memory, which only worked while the list was
+// everything.
+export const getUsersByIds = async(ids) =>{
+    try {
+        if (!ids || ids.length === 0) { return []; }
+        const users = await axios.get(
+          IP_STRING + "/api/users/by-ids?ids=" + ids.join(","));
+        return users.data;
+    } catch (error) {
+      console.log("Error!", "Couldnt resolve users: " + error.message);
+      return [];
     }
   }
 
