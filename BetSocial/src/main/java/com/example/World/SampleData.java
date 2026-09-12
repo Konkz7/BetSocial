@@ -1,5 +1,6 @@
 package com.example.World;
 
+import com.example.World.Groups.GroupRepository;
 import com.example.World.Groups.GroupService;
 import com.example.World.Groups.Group_;
 import com.example.World.Messages.MessageRepository;
@@ -27,14 +28,20 @@ import java.util.Random;
  * depends on there being a lot of something: rate limiting, notification
  * fan-out, feed performance.
  *
- * Off by default and gated behind a property, because this writes a few hundred
- * rows and nobody wants that to happen because they cloned the repository. Turn
- * it on with:
+ * Never runs on its own. There are two ways to ask for it, because the first one
+ * on its own was not good enough:
  *
- *     SAMPLE_DATA=true ./mvnw spring-boot:run
+ *   POST /superusers/sample-data      - as an admin, no restart needed
+ *   SAMPLE_DATA=true ./mvnw spring-boot:run
  *
- * Tops up to a target rather than appending, so leaving it switched on does not
- * grow the database without limit on every restart.
+ * The property has to be set before the backend starts and does not reach an IDE
+ * run configuration - the README says the same about DB_PASSWORD - so using it
+ * meant remembering to launch a particular way, and forgetting looked exactly
+ * like the feature not working. The endpoint is the one to reach for; the
+ * property is for a scripted setup.
+ *
+ * Everything here tops up to a target rather than appending, so asking twice
+ * changes nothing the second time.
  */
 @Component
 public class SampleData {
@@ -46,6 +53,9 @@ public class SampleData {
 
     /** Past a conversation page too, with room to scroll back through several. */
     private static final int TARGET_MESSAGES_PER_CONVERSATION = 120;
+
+    /** The name of the long sample conversation, used to avoid making a second one. */
+    private static final String CONVERSATION_NAME = "Sample long chat";
 
     /** Enough accounts that a user list or search has to do something. */
     private static final int TARGET_USERS = 60;
@@ -76,15 +86,18 @@ public class SampleData {
     private final ThreadRepository threadRepository;
     private final MessageRepository messageRepository;
     private final GroupService groupService;
+    private final GroupRepository groupRepository;
     private final boolean enabled;
 
     public SampleData(UserRepository userRepository, ThreadRepository threadRepository,
                       MessageRepository messageRepository, GroupService groupService,
+                      GroupRepository groupRepository,
                       @Value("${betsocial.sample-data:false}") boolean enabled) {
         this.userRepository = userRepository;
         this.threadRepository = threadRepository;
         this.messageRepository = messageRepository;
         this.groupService = groupService;
+        this.groupRepository = groupRepository;
         this.enabled = enabled;
     }
 
@@ -99,19 +112,38 @@ public class SampleData {
         if (!enabled) {
             return;
         }
+        generate();
+    }
 
+    /**
+     * Creates the sample data, whoever asked for it.
+     *
+     * Separate from the startup hook because the environment variable turned out
+     * to be the wrong switch: it does not reach an IDE run configuration - the
+     * README says so about DB_PASSWORD for the same reason - so switching it on
+     * meant remembering to launch the backend a particular way, which is exactly
+     * the kind of thing that gets forgotten. An admin can now ask for it while
+     * the server is running, and the property is kept for a scripted setup.
+     *
+     * Returns what it did rather than nothing, so the caller can say so.
+     */
+    public String generate() {
         List<User_> existing = userRepository.findAll().stream()
                 .filter(u -> u.deleted_at() == null)
                 .toList();
 
         if (existing.isEmpty()) {
-            log.warn("Sample data is switched on but there are no accounts to attach it to.");
-            return;
+            log.warn("Sample data was asked for but there are no accounts to attach it to.");
+            return "No accounts to attach sample data to.";
         }
 
+        int usersBefore = existing.size();
         List<User_> people = topUpUsers(existing);
-        topUpThreads(people);
-        topUpConversation(people);
+        int threadsAdded = topUpThreads(people);
+        int messagesAdded = topUpConversation(people);
+
+        return "Added " + (people.size() - usersBefore) + " accounts, "
+                + threadsAdded + " threads and " + messagesAdded + " messages.";
     }
 
     private List<User_> topUpUsers(List<User_> existing) {
@@ -139,14 +171,14 @@ public class SampleData {
         return userRepository.findAll().stream().filter(u -> u.deleted_at() == null).toList();
     }
 
-    private void topUpThreads(List<User_> people) {
+    private int topUpThreads(List<User_> people) {
         long live = threadRepository.findAll().stream()
                 .filter(t -> t.deleted_at() == null)
                 .count();
 
         int missing = (int) (TARGET_THREADS - live);
         if (missing <= 0) {
-            return;
+            return 0;
         }
 
         // Spread backwards in time, a few minutes apart, so the feed has a real
@@ -163,6 +195,7 @@ public class SampleData {
                     RANDOM.nextInt(10) == 0, null));
         }
         log.info("Sample data: added {} threads.", missing);
+        return missing;
     }
 
     private String headline() {
@@ -173,15 +206,24 @@ public class SampleData {
      * One long conversation, so a chat screen has more than a screenful of
      * history to scroll back through.
      */
-    private void topUpConversation(List<User_> people) {
+    private int topUpConversation(List<User_> people) {
         if (people.size() < 3) {
-            return;
+            return 0;
+        }
+
+        // Idempotent like the other two. Without this, asking twice would create
+        // a second identical conversation - which matters far more now that
+        // asking is a button rather than a restart.
+        boolean alreadyThere = groupRepository.findAll().stream()
+                .anyMatch(group -> CONVERSATION_NAME.equals(group.group_name()));
+        if (alreadyThere) {
+            return 0;
         }
 
         User_ owner = people.get(0);
         List<Long> others = List.of(people.get(1).uid(), people.get(2).uid());
 
-        Group_ group = groupService.createGroup("Sample long chat", owner.uid(), others);
+        Group_ group = groupService.createGroup(CONVERSATION_NAME, owner.uid(), others);
 
         long now = System.currentTimeMillis();
         List<Long> members = List.of(owner.uid(), others.get(0), others.get(1));
@@ -200,5 +242,7 @@ public class SampleData {
 
         log.info("Sample data: added a conversation ({}) with {} messages.",
                 group.gid(), TARGET_MESSAGES_PER_CONVERSATION);
+
+        return TARGET_MESSAGES_PER_CONVERSATION;
     }
 }
