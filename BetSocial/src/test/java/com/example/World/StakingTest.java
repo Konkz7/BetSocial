@@ -74,6 +74,25 @@ class StakingTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("the person who set a bet cannot stake on it")
+    void ownerCannotBackTheirOwnBet() {
+        User_ owner = user();
+        Bet_ bet = activeBet(owner);
+
+        // They declare the outcome, so backing it would be deciding a bet they
+        // stand to win.
+        ResponseEntity<String> response = place(owner, bet, true, 100);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(ledger.balanceOf(owner.uid()))
+                .as("and nothing is taken for a stake that was refused")
+                .isEqualTo(1_000);
+        assertThat(bets.findById(bet.bid()).orElseThrow().amount_for())
+                .as("nor does the pool move")
+                .isZero();
+    }
+
+    @Test
     @DisplayName("refuses a stake the balance cannot cover")
     void cannotStakeMoreThanYouHold() {
         User_ owner = user();

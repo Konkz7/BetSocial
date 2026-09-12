@@ -65,6 +65,10 @@ const ThreadScreen = ({navigation,route}:any) => {
   const queryClient = useQueryClient();
   const self = queryClient.getQueryData(["user"]) as any;
 
+  // Every bet on this screen belongs to this thread, and a bet can only be
+  // created by the thread's author - so one comparison covers all of them.
+  const ownBet = !!self?.uid && threadObject?.user?.uid === self.uid;
+
   const statusStrings = [
     "Active" ,
     "Pending",
@@ -101,8 +105,13 @@ const ThreadScreen = ({navigation,route}:any) => {
   };
 
   const changeWager = (index: number , text:string) => {
+    // Digits only. inputMode is a hint, not a guarantee - a keyboard that offers
+    // a decimal point or a minus sign would otherwise put NaN in the field and
+    // there is no typing your way back out of that.
+    const digits = text.replace(/[^0-9]/g, "");
+
     setWager((prev) =>
-      prev.map((item, i) => (i === index ? (text ? Number.parseInt(text):0) : item))
+      prev.map((item, i) => (i === index ? (digits ? Number.parseInt(digits, 10) : 0) : item))
     );
   };
 
@@ -398,8 +407,25 @@ const ThreadScreen = ({navigation,route}:any) => {
             {bets.map((bet:any, index:any) => (
              <View>
               <Card key={index} variant= {betClicked.at(index)? "pcard" : ""}>
-                {betClicked.at(index) ? (
-                 
+                {betClicked.at(index) && ownBet ? (
+
+                  /* You declare the outcome of your own bets, so backing one
+                     would be deciding something you stand to win. The server has
+                     always refused this; the form was offered anyway, so the only
+                     way to find out was to fill it in and be turned down. */
+                  <View style={styles.ownBetNotice}>
+                    <Text style={styles.ownBetTitle}>This is your bet</Text>
+                    <Text style={styles.ownBetText}>
+                      You settle its outcome, so you cannot stake on it.
+                    </Text>
+                    <TouchableOpacity style = {[styles.fab,{top: -45 , left: -25,padding: 10,backgroundColor:"lightgreen"}]}
+                    onPress={() => toggle(setBetClicked,index)}>
+                      <Undo2 size = {36} color={"white"}></Undo2>
+                    </TouchableOpacity>
+                  </View>
+
+                ) : betClicked.at(index) ? (
+
                 <View>
                   <View style = {[styles.predictionRow,{marginTop:10}]}>
                     <TouchableOpacity style = {[styles.predictionContainer,{}, prediction.at(index) === false? {backgroundColor: "red"} : {backgroundColor: "#eee"},
@@ -418,16 +444,20 @@ const ThreadScreen = ({navigation,route}:any) => {
                   <View style = {[styles.predictionRow, {}]}>
                     <View style = {[styles.predictionContainer,prediction.at(index) === null? {opacity: 0.2} : {opacity: 1}]}>
                       <Text style = {{fontSize:20,fontWeight:"bold",alignSelf:"flex-start",marginLeft:16,marginBottom:5}}>Wager:</Text>
-                      {/* Editable once a side is chosen. This read
-                          `prediction.at(index) === null`, which locked the field
-                          the moment you picked one - the opposite of the order
-                          you do it in. */}
+                      {/* Editable until a stake has actually been placed, and not
+                          gated on choosing a side first. It was tied to the side
+                          twice over: originally editable only while none was
+                          chosen, then only once one was. Either way the field
+                          fought whichever order you filled the form in. */}
                       <TextInput style = {{borderRadius: 5, backgroundColor:"white",width:130, height:35}}
                       inputMode="numeric"
                       placeholder="Coins..."
-                      value={wager.at(index)?.toString()}
+                      // Empty rather than a literal "0": a zero you have to delete
+                      // before typing is what made this feel stuck, since clearing
+                      // it just put the zero back.
+                      value={wager.at(index) ? String(wager.at(index)) : ""}
                       onChangeText={(text) => changeWager(index,text)}
-                      editable={prediction.at(index) !== null && !myPredictions[bet.bid]}
+                      editable={!myPredictions[bet.bid]}
                       />
                     </View>
 
@@ -615,6 +645,23 @@ const ThreadScreen = ({navigation,route}:any) => {
 };
 
 const styles = StyleSheet.create({
+  ownBetNotice: {
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ownBetTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  ownBetText: {
+    fontSize: 14,
+    color: "#6b7280",
+    textAlign: "center",
+    marginTop: 6,
+  },
   placeButton: {
     backgroundColor: "#10B981",
     marginHorizontal: 16,
