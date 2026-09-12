@@ -27,7 +27,11 @@ class MediaReferenceTest {
     private final MediaReference media = new MediaReference(BUCKET);
 
     private static String ours(String objectPath) {
-        return "https://firebasestorage.googleapis.com/v0/b/" + BUCKET + "/o/"
+        return in(BUCKET, objectPath);
+    }
+
+    private static String in(String bucket, String objectPath) {
+        return "https://firebasestorage.googleapis.com/v0/b/" + bucket + "/o/"
                 + objectPath.replace("/", "%2F") + "?alt=media&token=abc";
     }
 
@@ -153,5 +157,42 @@ class MediaReferenceTest {
             unconfigured.require(ours("images/abc.jpg"));
             unconfigured.require("https://example.com/tracker.gif");
         }).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("accepts the other spelling of our own bucket")
+    void acceptsTheCounterpartName() {
+        String otherSpelling = in("betsocial-test.firebasestorage.app", "images/abc.jpg");
+
+        // Configured as .appspot.com, uploaded to .firebasestorage.app. Only one
+        // of the two exists for a given project, so whichever is in the property
+        // and whichever the client happens to use should not decide whether
+        // photos work - the failure is otherwise "the app uploaded it and then
+        // the server said it was not ours", which reads as a bug in neither.
+        assertThatCode(() -> media.require(otherSpelling)).doesNotThrowAnyException();
+        assertThat(media.objectPathOf(otherSpelling)).contains("images/abc.jpg");
+
+        MediaReference configuredTheOtherWay = new MediaReference("betsocial-test.firebasestorage.app");
+        assertThatCode(() -> configuredTheOtherWay.require(ours("images/abc.jpg")))
+                .as("and the same in reverse")
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("the counterpart is still only ours, not anyone with the same suffix")
+    void theCounterpartIsStillOurProject() {
+        assertThatThrownBy(() -> media.require(in("someone-else.firebasestorage.app", "images/x.jpg")))
+                .as("accepting an alias must not widen this to every project on the host")
+                .isInstanceOf(ResponseStatusException.class);
+    }
+
+    @Test
+    @DisplayName("tolerates a property with whitespace around it")
+    void trimsTheConfiguredValue() {
+        MediaReference padded = new MediaReference("  " + BUCKET + "  ");
+
+        assertThatCode(() -> padded.require(ours("images/abc.jpg")))
+                .as("a trailing space in an env var should not silently disable the check")
+                .doesNotThrowAnyException();
     }
 }
