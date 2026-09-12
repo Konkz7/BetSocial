@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
-import { createGroup, getUsers } from './API';
+import { createGroup, searchUsers } from './API';
 import { getProfilePictureUrl } from './Constants';
 
 // Mirrors GroupService.MAX_GROUP_MEMBERS. The server rejects anything larger; this
@@ -25,15 +25,17 @@ const CreateGroupScreen = ({ navigation }: any) => {
   const [selected, setSelected] = useState<any[]>([]);
   const [creating, setCreating] = useState(false);
 
-  const { data: users, isLoading } = useQuery({ queryKey: ['Users'], queryFn: getUsers });
-
-  const visible = useMemo(() => {
-    if (!users) return [];
-    if (!search) return users;
-    return users.filter((user: any) =>
-      user.user_name.toLowerCase().includes(search.toLowerCase()),
-    );
-  }, [users, search]);
+  // The search term is part of the query key, so typing fetches and react-query
+  // caches each term. The filtering that used to happen here in memory now
+  // happens in the database, capped - which is the point: this screen never
+  // needed every account, it needed the handful you are looking for.
+  const { data: visible = [], isLoading } = useQuery({
+    queryKey: ['userSearch', search],
+    queryFn: () => searchUsers(search),
+    // Keeps the previous term's results on screen while the next request is in
+    // flight, so the list does not blink empty on every keystroke.
+    placeholderData: previous => previous,
+  });
 
   const isSelected = (uid: number) => selected.some(user => user.uid === uid);
 
@@ -118,6 +120,15 @@ const CreateGroupScreen = ({ navigation }: any) => {
       <FlatList
         data={visible}
         keyExtractor={item => item.uid.toString()}
+        // Both of these fix the "Cannot remove child from parent" crash on
+        // leaving this screen, and both had gone missing from this file - the
+        // fix was almost certainly lost with the stacked branches. Restored here
+        // because this is the list being changed.
+        //
+        // Clipping lets the platform detach rows while React still believes they
+        // are mounted; every other list in the app sets it false for the same
+        // reason.
+        removeClippedSubviews={false}
         ListEmptyComponent={
           <Text style={styles.empty}>
             {isLoading ? 'Loading people…' : 'Nobody matches that'}
@@ -130,7 +141,13 @@ const CreateGroupScreen = ({ navigation }: any) => {
               style={styles.avatar}
             />
             <Text style={styles.name}>{item.user_name}</Text>
-            {isSelected(item.uid) && <Check size={20} color="#10B981" />}
+            {/* Always rendered, hidden by colour rather than by existing. A
+                conditional child changes the view tree on every tap, which is
+                the other half of the same crash. */}
+            <Check
+              size={20}
+              color={isSelected(item.uid) ? '#10B981' : 'transparent'}
+            />
           </TouchableOpacity>
         )}
       />

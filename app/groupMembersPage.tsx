@@ -16,7 +16,7 @@ import {
   addGroupMember,
   deleteGroup,
   getGroupMembers,
-  getUsers,
+  searchUsers,
   leaveGroup,
   removeGroupMember,
   renameGroup,
@@ -54,10 +54,14 @@ const GroupMembersScreen = ({ navigation, route }: any) => {
     queryFn: () => getGroupMembers(gid),
   });
 
+  // Searched on the server, and only while the add sheet is open. The name
+  // filter that used to run below now runs in the database, capped - this screen
+  // was fetching every account to show a handful.
   const { data: users } = useQuery({
-    queryKey: ['Users'],
-    queryFn: getUsers,
+    queryKey: ['userSearch', search],
+    queryFn: () => searchUsers(search),
     enabled: adding,
+    placeholderData: (previous: any) => previous,
   });
 
   const iAmAdmin = !!members?.find(
@@ -68,12 +72,12 @@ const GroupMembersScreen = ({ navigation, route }: any) => {
   // reason the server would definitely give.
   const candidates = useMemo(() => {
     if (!users || !members) return [];
+    // Still filtered here, because "not already a member" is about this group
+    // rather than about the search - the server has no reason to know which
+    // conversation the picker belongs to. The name matching moved to the query.
     const present = new Set(members.map((member: any) => member.uid));
-    return users
-      .filter((user: any) => !present.has(user.uid))
-      .filter((user: any) =>
-        !search || user.user_name.toLowerCase().includes(search.toLowerCase()));
-  }, [users, members, search]);
+    return users.filter((user: any) => !present.has(user.uid));
+  }, [users, members]);
 
   // The chat screen reads this same key, so it picks up a changed membership
   // without being told about it separately. The conversation list is not a query

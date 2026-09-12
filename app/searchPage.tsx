@@ -1,9 +1,9 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet,SafeAreaView } from 'react-native';
 import { Search ,X} from 'lucide-react-native';
 import { TextInput,Searchbar } from 'react-native-paper';
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {getThreadLikes, getThreads, getUsers} from "./API";
+import {getThreadLikes, getThreads, searchUsers} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
 import threadList from './Components/ThreadList';
 import { screenStore } from './GlobalFlags';
@@ -16,9 +16,27 @@ const SearchScreen = ({ navigation} : any) => {
     const [filteredData, setFilteredData] = useState<any[]>([]);
 
 
-    const { data: users, isLoading: usersLoading } = useQuery({ queryKey: ["Users"], queryFn: getUsers });
+    // People are searched on the server now. Threads are still filtered here
+    // from the cached feed - the feed is paged, so this only searches what has
+    // been loaded, which is a real limitation and a separate change to make.
+    const { data: people = [], isLoading: usersLoading } = useQuery({
+      queryKey: ["userSearch", search],
+      queryFn: () => searchUsers(search),
+      // Only ask once something has been typed: this tab shows nothing until
+      // then, so the first request would be for a list nobody is looking at.
+      enabled: search.trim() !== "" && currentTab === "People",
+      placeholderData: (previous: any) => previous,
+    });
     const { data: threads, isLoading: threadsLoading } = useQuery({ queryKey: ["threads"], queryFn: getThreads });
 
+
+    // People results arrive asynchronously now, so they are copied into
+    // filteredData when they land rather than computed during the keystroke.
+    useEffect(() => {
+      if (currentTab === 'People' && search.trim() !== '') {
+        setFilteredData(people);
+      }
+    }, [people, currentTab, search]);
 
     useFocusEffect(
       useCallback(() => {
@@ -38,11 +56,9 @@ const SearchScreen = ({ navigation} : any) => {
       setFilteredData([]);
     } else {
       if(currentTab === 'People'){
-        setFilteredData(
-          users.filter((item: any) => 
-            item.user_name.toLowerCase().includes(text.toLowerCase())
-          )
-        );
+        // Nothing to do here any more: the query above re-runs on the new term
+        // and an effect copies the result into filteredData. Filtering in place
+        // would have searched only whatever page happened to be cached.
       }else{
         setFilteredData(
           threads.filter((item: any) => 
