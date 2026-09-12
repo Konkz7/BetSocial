@@ -1,5 +1,7 @@
 package com.example.World.Follows;
 
+import com.example.World.RateLimit.Limits;
+import com.example.World.RateLimit.RateLimiter;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,14 +12,18 @@ import java.util.List;
 @RequestMapping("/api/follows")
 public class FollowController {
     private final FollowService followService;
+    private final RateLimiter rateLimiter;
 
-    public FollowController(FollowService followService) {
+    public FollowController(FollowService followService,
+                             RateLimiter rateLimiter) {
         this.followService = followService;
+        this.rateLimiter = rateLimiter;
     }
 
     @PostMapping("/send/{receiverId}")
     public ResponseEntity<String>  sendFollow(@PathVariable Long receiverId , HttpSession session) {
         Long uid = (Long) session.getAttribute("userId");
+        rateLimiter.require(RateLimiter.scopeOf("follows", uid), Limits.FOLLOWS);
         return followService.sendFollow(uid, receiverId);
     }
 
