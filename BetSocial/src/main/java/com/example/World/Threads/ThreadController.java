@@ -1,5 +1,7 @@
 package com.example.World.Threads;
 
+import com.example.World.RateLimit.Limits;
+import com.example.World.RateLimit.RateLimiter;
 import com.example.World.Bets.BetRepository;
 import com.example.World.Bets.Status;
 import jakarta.servlet.http.HttpSession;
@@ -23,11 +25,14 @@ public class ThreadController {
     private final ThreadRepository threadRepository;
     private final BetRepository betRepository;
     private final ThreadService threadService;
+    private final RateLimiter rateLimiter;
 
-    public ThreadController(ThreadRepository threadRepository, BetRepository betRepository, ThreadService threadService) {
+    public ThreadController(ThreadRepository threadRepository, BetRepository betRepository, ThreadService threadService,
+                            RateLimiter rateLimiter) {
         this.threadRepository = threadRepository;
         this.betRepository = betRepository;
         this.threadService = threadService;
+        this.rateLimiter = rateLimiter;
     }
 
     // GET /all and GET /{tid} are deliberately absent. Both returned raw rows
@@ -92,6 +97,10 @@ public class ThreadController {
         }
 
         Long userId = (Long) session.getAttribute("userId");
+
+        // After validation, so a malformed request does not spend somebody's
+        // allowance, and before the write, which is the thing being limited.
+        rateLimiter.require(RateLimiter.scopeOf("threads", userId), Limits.THREADS);
 
         Thread_ temp = threadService.makeThread(thread, userId);
 

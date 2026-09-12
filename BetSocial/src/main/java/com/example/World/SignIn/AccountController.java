@@ -1,5 +1,7 @@
 package com.example.World.SignIn;
 
+import com.example.World.RateLimit.Limits;
+import com.example.World.RateLimit.RateLimiter;
 import com.example.World.External.Emails.EmailService;
 import com.example.World.External.Firebase.AuthService;
 import com.example.World.Users.*;
@@ -7,6 +9,7 @@ import com.example.World.Wallet.LedgerService;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -32,14 +35,17 @@ public class AccountController {
     private  final AuthService authService;
     private  final EmailService emailService;
     private final LedgerService ledgerService;
+    private final RateLimiter rateLimiter;
 
 
-    public AccountController(PasswordEncoder passwordEncoder, UserRepository userRepository, AuthService authService, EmailService emailService, LedgerService ledgerService) {
+    public AccountController(PasswordEncoder passwordEncoder, UserRepository userRepository, AuthService authService, EmailService emailService, LedgerService ledgerService,
+                             RateLimiter rateLimiter) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.authService = authService;
         this.emailService = emailService;
         this.ledgerService = ledgerService;
+        this.rateLimiter = rateLimiter;
     }
 
 
@@ -86,7 +92,15 @@ public class AccountController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@Valid @RequestBody DetailDTO user, HttpSession session) {
+    public ResponseEntity<String> register(@Valid @RequestBody DetailDTO user, HttpSession session,
+                                           HttpServletRequest request) {
+
+        // Keyed by address, because there is no account yet to key on. That is
+        // weaker than it looks - an address is shared by everyone behind one
+        // router and changed freely by anyone determined - but it is the only
+        // identity a registration has, and it stops the obvious script.
+        rateLimiter.require(RateLimiter.scopeOf("register", request.getRemoteAddr()),
+                Limits.REGISTER);
 
         /*
         if (userRepository.existsByEmail(user.email())) {

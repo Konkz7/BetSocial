@@ -1,5 +1,8 @@
 package com.example.World.Security;
 
+import com.example.World.RateLimit.Limits;
+import com.example.World.RateLimit.LoginRateLimitFilter;
+import com.example.World.RateLimit.RateLimiter;
 import com.example.World.Users.UserService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,6 +22,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 
@@ -29,11 +34,16 @@ public class SecurityConfig {
     private final UserService userService;
     private final CustomLogoutSuccessHandler customLogoutSuccessHandler;
     private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
+    private final RateLimiter rateLimiter;
+    private final LoginRateLimitFilter loginRateLimitFilter;
 
-    SecurityConfig(UserService userService, CustomLogoutSuccessHandler customLogoutSuccessHandler, CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler){
+    SecurityConfig(UserService userService, CustomLogoutSuccessHandler customLogoutSuccessHandler, CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler,
+                   RateLimiter rateLimiter, LoginRateLimitFilter loginRateLimitFilter){
         this.userService = userService;
         this.customLogoutSuccessHandler = customLogoutSuccessHandler;
         this.customAuthenticationSuccessHandler = customAuthenticationSuccessHandler;
+        this.rateLimiter = rateLimiter;
+        this.loginRateLimitFilter = loginRateLimitFilter;
     }
 
     @Bean
@@ -58,6 +68,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
         .csrf(AbstractHttpConfigurer::disable)
+        // Before the login filter on purpose: the point is to stop the password
+        // being checked at all, not to notice afterwards that it was.
+        .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
         .authorizeHttpRequests(registry -> {
             registry.requestMatchers("/req/**").permitAll();
             // The STOMP handshake must carry the session cookie: WebSocket identity
@@ -80,6 +93,18 @@ public class SecurityConfig {
                     .failureHandler(new AuthenticationFailureHandler() {
                         @Override
                         public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
+                            // Spends one of this address's allowance. Only
+                            // failures count: LoginRateLimitFilter refuses once
+                            // the allowance is gone, so somebody signing in
+                            // successfully all day is never limited.
+                            try {
+                                rateLimiter.require(LoginRateLimitFilter.keyFor(request), Limits.LOGIN);
+                            } catch (ResponseStatusException alreadySpent) {
+                                // The allowance was already empty. Nothing to
+                                // record, and the answer is the same either way -
+                                // this must not replace the 401 with a 500.
+                            }
+
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType("application/json");
                             response.getWriter().write("{\"error\": \"Invalid username or password\"}");

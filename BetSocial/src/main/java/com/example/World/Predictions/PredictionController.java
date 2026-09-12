@@ -1,6 +1,8 @@
 package com.example.World.Predictions;
 
 
+import com.example.World.RateLimit.Limits;
+import com.example.World.RateLimit.RateLimiter;
 import com.example.World.Bets.BetRepository;
 import com.example.World.Bets.Bet_;
 import com.example.World.Bets.Status;
@@ -28,13 +30,16 @@ public class PredictionController {
     private final BetRepository betRepository;
     private final ThreadRepository threadRepository;
     private final LedgerService ledgerService;
+    private final RateLimiter rateLimiter;
 
 
-    public PredictionController(PredictionRepository predictionRepository, BetRepository betRepository, ThreadRepository threadRepository, LedgerService ledgerService) {
+    public PredictionController(PredictionRepository predictionRepository, BetRepository betRepository, ThreadRepository threadRepository, LedgerService ledgerService,
+                                RateLimiter rateLimiter) {
         this.predictionRepository = predictionRepository;
         this.betRepository = betRepository;
         this.threadRepository = threadRepository;
         this.ledgerService = ledgerService;
+        this.rateLimiter = rateLimiter;
     }
 
     // GET /all is deliberately absent. It returned every prediction in the
@@ -80,6 +85,9 @@ public class PredictionController {
 
 
         Long uid = requireUserId(session);
+
+        rateLimiter.require(RateLimiter.scopeOf("predictions", uid), Limits.PREDICTIONS);
+
         Bet_ bet;
 
         Optional<Bet_> optionalBet = betRepository.findById(prediction.bid());

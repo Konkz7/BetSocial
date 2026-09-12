@@ -1,6 +1,8 @@
 package com.example.World.Comments;
 
 
+import com.example.World.RateLimit.Limits;
+import com.example.World.RateLimit.RateLimiter;
 import com.example.World.Comments.Comment_;
 import com.example.World.Comments.CommentRepository;
 import com.example.World.Threads.ThreadDTO;
@@ -21,10 +23,13 @@ import java.util.Optional;
 public class CommentController {
     private final CommentRepository commentRepository;
     private final CommentService commentService;
+    private final RateLimiter rateLimiter;
 
-    public CommentController(CommentRepository commentRepository, CommentService commentService) {
+    public CommentController(CommentRepository commentRepository, CommentService commentService,
+                             RateLimiter rateLimiter) {
         this.commentRepository = commentRepository;
         this.commentService = commentService;
+        this.rateLimiter = rateLimiter;
     }
 
     @GetMapping("/all")
@@ -45,6 +50,7 @@ public class CommentController {
     @PostMapping("/make")
     Comment_ makeComment(@Valid @RequestBody CommentDTO comment, HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
+        rateLimiter.require(RateLimiter.scopeOf("comments", uid), Limits.COMMENTS);
         return commentService.makeComment(comment,uid);
     }
 
