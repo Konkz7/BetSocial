@@ -34,6 +34,21 @@ if (firebaseConfig?.type === "service_account" || firebaseConfig?.private_key) {
   );
 }
 
+// Uploads here are unauthenticated, and the Storage rules cannot ask for an
+// identity that does not exist.
+//
+// There are two Firebase SDKs in this app. Phone OTP and push use the native one
+// (@react-native-firebase), and this file uses the JS one - separate instances
+// with separate auth state. Nothing signs into the JS instance, and ordinary
+// login goes to our own session rather than to Firebase, so request.auth is null
+// in every rule evaluated for an upload. A rule requiring it rejects the whole
+// app with storage/unauthorized.
+//
+// The consequence is that the bucket's write rules can only constrain what is
+// uploaded, not who uploads it. Fixing that means giving this instance a real
+// identity - a custom token minted from the session by the Admin SDK the backend
+// already carries - which would also let the rules pin profile_pictures/<uid> to
+// its owner. See the Media section of the README.
 const storage = getStorage(firebaseApp);
 
 const IMAGE_SOFT_LIMIT = 3 * 1024 * 1024;   // 3MB
