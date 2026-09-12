@@ -681,3 +681,31 @@ export const generateSampleData = async() =>{
     return null;
   }
 }
+
+//ACCOUNT
+// A copy of everything held about you. UK GDPR, right of access.
+export const exportMyData = async() =>{
+  try {
+    const data = await axios.get(IP_STRING + "/api/users/my-data");
+    return data.data;
+  } catch (error) {
+    Alert.alert("Couldnt get your data", error.response?.data?.message ?? error.message);
+    return null;
+  }
+}
+
+// Deletes your account. The password is required because it cannot be undone and
+// a session is easier to come by than a password.
+//
+// Your threads, comments and messages stay, attributed to "Deleted user" - they
+// are half of other people's conversations and part of other people's threads.
+// Your name, email, phone, bio and picture go.
+export const deleteMyAccount = async(pass_word) =>{
+  try {
+    await axios.delete(IP_STRING + "/api/users/delete", { data: { pass_word } });
+    return true;
+  } catch (error) {
+    Alert.alert("Couldnt delete your account", error.response?.data?.message ?? error.message);
+    return false;
+  }
+}

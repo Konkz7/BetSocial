@@ -248,11 +248,9 @@ public class SuperUserController {
         }
     }
 
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @DeleteMapping("/delete")
-    void delete(HttpSession session){
-        Long userId = (Long) session.getAttribute("userId");
-        userRepository.delete(userRepository.findById(userId).get());
-    }
+    // DELETE /superusers/delete is gone. It was a copy of the user endpoint -
+    // hard-deleting the *caller's own* account, which is not a privileged
+    // operation and had no business being here twice. Deleting an account now
+    // happens in one place, DELETE /api/users/delete, and requires the password.
 }
 

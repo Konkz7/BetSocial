@@ -43,6 +43,12 @@ public interface FollowRepository extends ListCrudRepository<Follow_, Long> {
     """)
     int deleteBetween(@Param("a") Long a, @Param("b") Long b);
 
+    /** Every follow this person is either side of, for account deletion. */
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Follow_ WHERE request_id = :uid OR receive_id = :uid")
+    int deleteAllFor(@Param("uid") Long uid);
+
 
 
 }

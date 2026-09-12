@@ -22,7 +22,31 @@ public record UserView(
         Boolean is_verified,
         Long created_at
 ) {
+    /** What a deleted account is called wherever its content still appears. */
+    public static final String TOMBSTONE_NAME = "Deleted user";
+
     public static UserView from(User_ user) {
+        // A deleted account keeps its threads, comments and messages, so it still
+        // has to render somewhere. The stored name is scrubbed to something
+        // unique and unusable - user_name is a unique column, so every deleted
+        // account cannot literally be called "Deleted user" - and the presentable
+        // version is produced here rather than stored.
+        //
+        // Bio, picture and status go too. They are personal data, and a profile
+        // picture surviving an account deletion is exactly the kind of thing the
+        // right to erasure exists about.
+        if (user.deleted_at() != null) {
+            return new UserView(
+                    user.uid(),
+                    TOMBSTONE_NAME,
+                    "",
+                    null,
+                    "offline",
+                    false,
+                    user.created_at()
+            );
+        }
+
         return new UserView(
                 user.uid(),
                 user.user_name(),
