@@ -4,6 +4,7 @@ package com.example.World.Users;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.example.World.Blocks.BlockService;
+import com.example.World.Media.MediaReference;
 import java.util.Map;
 import java.util.Set;
 import com.example.World.Bets.DecisionDTO;
@@ -28,13 +29,16 @@ public class UserController {
     private final UserService userService;
     private final BlockService blockService;
     private final AccountDataService accountDataService;
+    private final MediaReference mediaReference;
 
     public UserController(UserRepository userRepository, UserService userService,
-                          BlockService blockService, AccountDataService accountDataService) {
+                          BlockService blockService, AccountDataService accountDataService,
+                          MediaReference mediaReference) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.blockService = blockService;
         this.accountDataService = accountDataService;
+        this.mediaReference = mediaReference;
     }
 
     /**
@@ -131,8 +135,11 @@ public class UserController {
     ResponseEntity<String> changeProfilePicture(@RequestParam String pfp, HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
 
+        // A profile picture is rendered against every thread, comment and message
+        // that person has ever written, so an unchecked URL here is fetched by
+        // more people than any other piece of media in the app.
         log.debug("User {} changed profile picture", uid);
-        userRepository.changeProfilePicture(uid,pfp);
+        userRepository.changeProfilePicture(uid, mediaReference.require(pfp));
 
 
         return ResponseEntity.ok().body("Profile picture changed!");

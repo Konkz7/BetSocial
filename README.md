@@ -211,6 +211,70 @@ CI runs the same command on every pull request touching `BetSocial/` — see
 
 ---
 
+## Media
+
+Photos and videos go **straight from the device to Firebase Storage**. The bytes
+never pass through this server — only the resulting URL does, which is stored in
+`thread_.media`, or in a media message's `description`.
+
+```
+images/<uuid>.jpg          thread and comment images
+videos/<uuid>.mp4          thread and message videos
+profile_pictures/<uid>.jpg profile pictures, one per account, overwritten
+```
+
+Set the bucket so the server knows which files are ours:
+
+```bash
+FIREBASE_STORAGE_BUCKET=betsocial-e7e93.appspot.com ./mvnw spring-boot:run
+```
+
+With it set, the server refuses any media URL that does not name an object in
+that bucket under one of those prefixes, and deletes the object when its thread
+or message is removed. **Without it, neither happens** — references are stored
+unchecked and files are never cleaned up. The application warns at startup when
+it is unset.
+
+### The limits are not enforced here
+
+Because uploads bypass the server, **nothing in this codebase can enforce a file
+size or type.** `FBStorageService` compresses above 3MB and refuses above 15MB
+for images (50MB / 100MB for video), but that is the app being polite to itself —
+anything talking to Firebase directly ignores it.
+
+The only place those limits can actually be enforced is the **Storage rules on
+the bucket**, in the Firebase console. Something like:
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /images/{file} {
+      allow read;
+      allow write: if request.auth != null
+                   && request.resource.size < 15 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+    match /videos/{file} {
+      allow read;
+      allow write: if request.auth != null
+                   && request.resource.size < 100 * 1024 * 1024
+                   && request.resource.contentType.matches('video/.*');
+    }
+    match /profile_pictures/{file} {
+      allow read;
+      allow write: if request.auth != null
+                   && request.resource.size < 15 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
+```
+
+**Check what the rules currently are before going public.** A bucket left on the
+default test rules is writable by anyone who has the project's client config,
+which ships inside the app.
+
 ## Logging
 
 Every line carries the request it belongs to and who was making it:

@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.World.Blocks.BlockService;
+import com.example.World.Media.MediaReference;
+import com.example.World.Media.MediaStore;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -37,10 +39,12 @@ public class ThreadService {
     private final NotificationService notificationService;
     private final FollowService followService;
     private final BlockService blockService;
+    private final MediaReference mediaReference;
+    private final MediaStore mediaStore;
 
     ThreadService(ThreadRepository threadRepository, BetRepository betRepository, ThreadLikeRepository threadLikeRepository,
                   UserRepository userRepository, CommentRepository commentRepository, NotificationService notificationService, FollowService followService,
-                  BlockService blockService){
+                  BlockService blockService, MediaReference mediaReference, MediaStore mediaStore){
 
         this.threadRepository = threadRepository;
         this.betRepository = betRepository;
@@ -50,11 +54,17 @@ public class ThreadService {
         this.notificationService = notificationService;
         this.followService = followService;
         this.blockService = blockService;
+        this.mediaReference = mediaReference;
+        this.mediaStore = mediaStore;
     }
 
     public Thread_ makeThread(ThreadDTO thread , Long uid){
 
-        Thread_ newThread = threadRepository.save(new Thread_(null,uid,thread.title(), thread.media(), thread.media_type(), thread.category(),0L,
+        // Checked before it is stored, not when it is rendered. The column took
+        // any string, and the client draws whatever is in it - so a thread's
+        // "image" could point anywhere, and every person scrolling past would
+        // fetch it.
+        Thread_ newThread = threadRepository.save(new Thread_(null,uid,thread.title(), mediaReference.require(thread.media()), thread.media_type(), thread.category(),0L,
                 new Date().getTime(),null,thread.is_private(),null));
 
         for(Follow_ f : followService.getFollowers(uid)) {
@@ -98,6 +108,12 @@ public class ThreadService {
 
 
         threadRepository.remove(tid, new Date().getTime());
+
+        // The file goes with the post. A soft delete keeps the row so the thread
+        // can be accounted for, but the image or video is the content itself -
+        // leaving it in the bucket means a removed post is still one public URL
+        // away from being looked at.
+        mediaStore.delete(thread.media());
 
         betRepository.findByThread(tid).forEach(bet -> {
             betRepository.updateStatus(bet.bid(), Status.CANCELLED.toInt());

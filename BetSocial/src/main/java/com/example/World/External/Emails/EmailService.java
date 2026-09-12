@@ -30,7 +30,7 @@ public class EmailService {
     private final String baseUrl;
 
     public EmailService(JavaMailSender mailSender,
-                        @Value("${app.base-url:http://localhost:8080}") String baseUrl) {
+                        @Value("${app.base-url:http://192.168.1.53:8080}") String baseUrl) {
         this.mailSender = mailSender;
         this.baseUrl = baseUrl;
     }
