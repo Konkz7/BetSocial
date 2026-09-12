@@ -440,12 +440,22 @@ export const deleteMessage = async(mid,gid) =>{
 
 // Balance and the movements that add up to it. Reading this also collects the
 // daily top-up if one is due, which is why there is no button for that.
-export const getWallet = async () =>{
+// Reading the wallet is also what collects the daily top-up, so this is a GET
+// that changes something - see WalletController.
+//
+// silent is for callers that poll it rather than being opened deliberately: the
+// home header refetches on every focus, and a modal per failure would be
+// unusable. Those callers show a dash instead and the screen itself still says
+// what went wrong when somebody opens it on purpose.
+export const getWallet = async ({ silent = false } = {}) =>{
   try {
     const wallet = await axios.get(IP_STRING + "/api/wallet");
     return wallet.data;
   } catch (error) {
-    Alert.alert("Error!", "Your wallet couldnt be loaded.");
+    if (!silent) {
+      Alert.alert("Error!", "Your wallet couldnt be loaded.");
+    }
+    return null;
   }
 }
 
