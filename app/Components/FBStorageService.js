@@ -3,8 +3,36 @@ import { initializeApp } from "firebase/app";
 import uuid from 'react-native-uuid';
 import { launchImageLibrary } from 'react-native-image-picker';
 import {firebaseApp} from "../Constants";
+import { firebaseConfig } from "../Secrets";
 import { Image, Video } from 'react-native-compressor';
 import RNFS from "react-native-fs";
+
+// Firebase reports both of these the same way - "No default bucket found" - which
+// says nothing about which of the two happened, and the screens turn it into
+// "Apologies! Image couldnt be Uploaded" before anyone sees the cause.
+//
+// This does not throw. A bad config here should not take down a running app, and
+// the upload path already has an error to show; the point is to leave something
+// in the log that names the actual problem.
+if (firebaseConfig?.type === "service_account" || firebaseConfig?.private_key) {
+  // The service-account JSON and the web app config both come from the Firebase
+  // console and both look like "the Firebase credentials", but only one belongs
+  // in the app. This file is bundled, so a service account pasted here ships a
+  // private key with full project access to every device that installs it.
+  console.error(
+    "app/Secrets.js contains a service-account key. That one belongs to the " +
+    "backend (BetSocial/src/main/resources/firebaseAPI.json) and must never be " +
+    "bundled into the app - rotate it if this has been built or shared. The app " +
+    "needs the web app config instead: Firebase console -> Project settings -> " +
+    "General -> Your apps -> SDK setup and configuration. See app/Secrets.example.js."
+  );
+} else if (!firebaseConfig?.storageBucket) {
+  console.error(
+    "firebaseConfig.storageBucket is missing from app/Secrets.js, so uploads " +
+    "cannot work. It is the gs:// name shown in the Firebase console under " +
+    "Storage, written without the gs:// prefix."
+  );
+}
 
 const storage = getStorage(firebaseApp);
 
