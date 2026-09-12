@@ -91,6 +91,22 @@ It has `user_role = 2` (ADMIN) and the same password `password`, and signing in
 with it lands on the admin approval queue instead of the social feed. These are
 development seeds; anything deployed publicly needs them changed.
 
+### Sample data for testing pagination
+
+Eleven users and a few threads never cross a page boundary, so pagination cannot
+be seen by hand on a fresh database. `SAMPLE_DATA` tops the database up to 60
+accounts, 75 threads and one conversation of 120 messages:
+
+```bash
+cd BetSocial
+SAMPLE_DATA=true ./mvnw spring-boot:run
+```
+
+It is off by default, tops up to those targets rather than appending on every
+restart, and uses a fixed random seed so the content is the same each time. The
+generated accounts have a deliberately unusable password — they exist to be
+listed, searched and paged through, not signed in to.
+
 To build a jar instead:
 
 ```bash
