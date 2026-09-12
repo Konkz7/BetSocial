@@ -60,4 +60,14 @@ public interface CommentRepository extends ListCrudRepository<Comment_,Long> {
             @Param("id") Long id,
             @Param("time") Long time);
 
+    /**
+     * Everything one person has written, for their data export.
+     *
+     * Includes soft-deleted rows on purpose: a comment somebody deleted is still
+     * data held about them, and an export that quietly leaves things out is worse
+     * than no export at all.
+     */
+    @Query("SELECT * FROM Comment_ WHERE uid = :uid ORDER BY created_at ASC")
+    List<Comment_> findAllByUser(@Param("uid") Long uid);
+
 }

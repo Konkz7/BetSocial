@@ -52,6 +52,13 @@ public interface MessageRepository extends ListCrudRepository<Message_,Long> {
     @Query("UPDATE Message_ SET description = 'This message was deleted' , deleted_at = :time , media_type = 0 WHERE mid = :mid")
     int softDelete(@Param("mid") Long mid,@Param("time") Long time);
 
+    /**
+     * Everything one person has sent, for their data export. Soft-deleted rows
+     * included - see CommentRepository.findAllByUser for why.
+     */
+    @Query("SELECT * FROM Message_ WHERE uid = :uid ORDER BY created_at ASC")
+    List<Message_> findAllByUser(@Param("uid") Long uid);
+
 
 
 

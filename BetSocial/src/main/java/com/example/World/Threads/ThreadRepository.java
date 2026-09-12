@@ -50,7 +50,7 @@ public interface ThreadRepository extends ListCrudRepository<Thread_, Long> {
      */
     @Query("""
     SELECT t.* FROM Thread_ t
-    JOIN User_ u ON u.uid = t.uid AND u.deleted_at IS NULL
+    JOIN User_ u ON u.uid = t.uid
     WHERE t.deleted_at IS NULL
       AND t.uid = :target
       AND NOT EXISTS (
@@ -80,7 +80,6 @@ public interface ThreadRepository extends ListCrudRepository<Thread_, Long> {
      * and the cursor is always right.
      *
      * The rules, in order:
-     *   - the author's account is live, so a suspended account stops publishing
      *   - neither party has blocked the other, in either direction
      *   - a private thread needs a mutual follow, unless it is the viewer's own
      *
@@ -92,10 +91,18 @@ public interface ThreadRepository extends ListCrudRepository<Thread_, Long> {
      * one of them.
      *
      * A null cursor means the first page.
+     *
+     * The join no longer requires the author's account to be live, because
+     * deleted_at now means two different things. A suspended account has every
+     * one of its threads soft-deleted by the moderator action itself, so it is
+     * already excluded by t.deleted_at - whereas somebody who deleted their own
+     * account keeps their content, attributed to a tombstone, which is the whole
+     * point of scrubbing rather than erasing. Filtering on the author here would
+     * have made the second case behave like the first.
      */
     @Query("""
     SELECT t.* FROM Thread_ t
-    JOIN User_ u ON u.uid = t.uid AND u.deleted_at IS NULL
+    JOIN User_ u ON u.uid = t.uid
     WHERE t.deleted_at IS NULL
       AND NOT EXISTS (
           SELECT 1 FROM Block_ b

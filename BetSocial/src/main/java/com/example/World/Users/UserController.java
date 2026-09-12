@@ -4,6 +4,7 @@ package com.example.World.Users;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.example.World.Blocks.BlockService;
+import java.util.Map;
 import java.util.Set;
 import com.example.World.Bets.DecisionDTO;
 import com.example.World.Users.User_;
@@ -26,12 +27,14 @@ public class UserController {
     private final UserRepository userRepository;
     private final UserService userService;
     private final BlockService blockService;
+    private final AccountDataService accountDataService;
 
     public UserController(UserRepository userRepository, UserService userService,
-                          BlockService blockService) {
+                          BlockService blockService, AccountDataService accountDataService) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.blockService = blockService;
+        this.accountDataService = accountDataService;
     }
 
     /**
@@ -168,11 +171,33 @@ public class UserController {
 
 
 
+    /**
+     * A copy of everything held about the caller. UK GDPR, right of access.
+     *
+     * Their own only - there is no parameter for whose data to fetch, because
+     * that is the one mistake this endpoint could make that would matter.
+     */
+    @GetMapping("/my-data")
+    Map<String, Object> myData(HttpSession session){
+        return accountDataService.export(requireUserId(session));
+    }
+
+    /**
+     * Deletes the caller's account. UK GDPR, right to erasure.
+     *
+     * The password is required in the body: this cannot be undone, and a session
+     * is easier to come by than a password.
+     *
+     * What this replaces hard-deleted the row. Almost every table referencing
+     * user_ cascades, so it took their threads, comments, messages, predictions,
+     * follows and ledger entries with it - and failed outright for anybody who
+     * had ever decided a bet outcome, because decision_log does not cascade.
+     */
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/delete")
-    void delete(HttpSession session){
-        Long userId = (Long) session.getAttribute("userId");
-        userRepository.delete(userRepository.findById(userId).get());
+    void delete(@RequestBody DeleteAccountDTO confirmation, HttpSession session){
+        accountDataService.deleteAccount(requireUserId(session), confirmation.pass_word());
+        session.invalidate();
     }
 }
 

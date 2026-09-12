@@ -135,4 +135,42 @@ public interface UserRepository extends ListCrudRepository<User_, Long> {
     @Transactional
     @Query("UPDATE User_ SET deleted_at = :time WHERE uid = :id AND deleted_at IS NULL")
     int suspend(@Param("id") Long id, @Param("time") Long time);
+
+    /**
+     * Removes the person from the account, leaving the account.
+     *
+     * One statement rather than a read-modify-write, so there is no window in
+     * which half the fields are scrubbed. The row itself stays because every
+     * retained thread, comment, message and ledger entry points at this uid -
+     * deleting it cascades through all of them, which is what the old endpoint
+     * did.
+     *
+     * Everything nulled here is personal data: the verification token and push
+     * token are credentials, the picture and bio are content about the person,
+     * and the password is replaced with a value no hash can match so the account
+     * cannot be signed into even if deleted_at were ever cleared by hand.
+     */
+    @Modifying
+    @Transactional
+    @Query("""
+    UPDATE User_ SET
+        user_name = :scrubbedName,
+        email = :scrubbedEmail,
+        phone_number = :scrubbedPhone,
+        pass_word = 'deleted-account-no-login',
+        bio = '',
+        profile_picture = NULL,
+        verification_token = NULL,
+        fb_notification_token = NULL,
+        wallet_address = NULL,
+        status = 'offline',
+        is_verified = false,
+        deleted_at = :time
+    WHERE uid = :id AND deleted_at IS NULL
+    """)
+    int scrubPersonalData(@Param("id") Long id,
+                          @Param("scrubbedName") String scrubbedName,
+                          @Param("scrubbedEmail") String scrubbedEmail,
+                          @Param("scrubbedPhone") String scrubbedPhone,
+                          @Param("time") Long time);
 }

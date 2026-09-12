@@ -1,9 +1,13 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
+  Modal,
+  TextInput,
+  Alert,
+  Share,
   StyleSheet,
 } from 'react-native';
 // Replace these with your preferred RN icon library or custom icons
@@ -15,6 +19,8 @@ import {
   Lock,
   Wallet,
   UserX,
+  Download,
+  Trash2,
   HelpCircle,
   LogOut,
   Languages,
@@ -24,6 +30,7 @@ import {
 } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { screenStore } from './GlobalFlags';
+import { exportMyData, deleteMyAccount } from './API';
 
 
 
@@ -74,6 +81,10 @@ const SettingItem: React.FC<SettingItemProps> = ({
 
 const SettingsScreen = ({navigation}: any) => {
 
+  const [askingPassword, setAskingPassword] = useState(false);
+  const [password, setPassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
   useFocusEffect(
     useCallback(() => {
       screenStore.set("Settings");
@@ -83,7 +94,72 @@ const SettingsScreen = ({navigation}: any) => {
       };
     }, [])
   );
-  
+
+  /**
+   * Hands the export to the platform share sheet.
+   *
+   * Not a file download: there is no file picker here and no filesystem library
+   * installed, and sharing is what a phone does instead. It is enough for the
+   * right of access - the data reaches the person - but a proper file would be
+   * better for a large account, and this will read badly for one.
+   */
+  const shareMyData = async () => {
+    const data = await exportMyData();
+    if (!data) { return; }
+
+    try {
+      await Share.share({
+        title: 'My BetSocial data',
+        message: JSON.stringify(data, null, 2),
+      });
+    } catch (error) {
+      // Dismissing the share sheet throws on some platforms. Not a failure.
+    }
+  };
+
+  /**
+   * Two steps, then a password.
+   *
+   * The first alert says what happens, because "your posts stay, your name does
+   * not" is not what people assume the word delete means, and finding out
+   * afterwards is too late. The password is the server's requirement, not this
+   * screen's - see AccountDataService.
+   */
+  const confirmDelete = () => {
+    Alert.alert(
+      'Delete your account?',
+      'Your name, email, phone number, bio and picture are removed and you will '
+        + 'not be able to sign in again.\n\n'
+        + 'Your posts, comments and messages stay, shown as "Deleted user" - they '
+        + 'are part of other people\'s threads and conversations.\n\n'
+        + 'This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          // A modal rather than Alert.prompt, which is iOS-only. Using it would
+          // have left Android with a button that does nothing - and being able to
+          // delete your account from inside the app is the requirement.
+          onPress: () => setAskingPassword(true),
+        },
+      ],
+    );
+  };
+
+  const submitDelete = async () => {
+    setDeleting(true);
+    const ok = await deleteMyAccount(password);
+    setDeleting(false);
+
+    if (ok) {
+      setAskingPassword(false);
+      setPassword('');
+      Alert.alert('Account deleted', 'Your personal data has been removed.');
+      navigation.navigate('Login');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -109,6 +185,22 @@ const SettingsScreen = ({navigation}: any) => {
           />
           <SettingItem icon={<Bookmark size={24} color="#6B7280" />} label="Saved Bets" />
 
+        </SettingGroup>
+
+        {/* UK GDPR gives both of these, and Apple requires an app that lets
+            people create an account to let them delete it from inside the app -
+            a link to an email address does not count. */}
+        <SettingGroup title="Your Data">
+          <SettingItem
+            icon={<Download size={24} color="#6B7280" />}
+            label="Download My Data"
+            onClick={shareMyData}
+          />
+          <SettingItem
+            icon={<Trash2 size={24} color="#9E3B34" />}
+            label="Delete My Account"
+            onClick={confirmDelete}
+          />
         </SettingGroup>
         <SettingGroup title="Preferences">
           <SettingItem
@@ -143,11 +235,87 @@ const SettingsScreen = ({navigation}: any) => {
           />
         </SettingGroup>
       </ScrollView>
+
+      <Modal
+        visible={askingPassword}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAskingPassword(false)}
+      >
+        <View style={styles.backdrop}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>Enter your password</Text>
+            <Text style={styles.sheetBody}>
+              This confirms it is you. Deleting cannot be undone.
+            </Text>
+
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Password"
+              placeholderTextColor="#9CA3AF"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoFocus
+            />
+
+            <View style={styles.sheetActions}>
+              <TouchableOpacity
+                style={[styles.sheetButton, styles.sheetCancel]}
+                disabled={deleting}
+                onPress={() => { setAskingPassword(false); setPassword(''); }}
+              >
+                <Text style={styles.sheetCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sheetButton, styles.sheetDelete]}
+                disabled={deleting || password.length === 0}
+                onPress={submitDelete}
+              >
+                <Text style={styles.sheetDeleteText}>
+                  {deleting ? 'Deleting…' : 'Delete'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  sheet: {
+    backgroundColor: 'white',
+    borderRadius: 14,
+    padding: 20,
+  },
+  sheetTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
+  sheetBody: { fontSize: 13, color: '#6b7280', marginTop: 6, lineHeight: 18 },
+  passwordInput: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#111827',
+  },
+  sheetActions: { flexDirection: 'row', marginTop: 18 },
+  sheetButton: { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
+  sheetCancel: { backgroundColor: '#f3f4f6', marginRight: 8 },
+  sheetDelete: { backgroundColor: '#9E3B34' },
+  sheetCancelText: { color: '#374151', fontWeight: '600' },
+  sheetDeleteText: { color: 'white', fontWeight: '600' },
+
   container: {
     flex: 1,
     backgroundColor: '#fcfcf7',

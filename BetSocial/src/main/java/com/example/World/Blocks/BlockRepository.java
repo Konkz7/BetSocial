@@ -42,4 +42,15 @@ public interface BlockRepository extends ListCrudRepository<Block_, Long> {
     @Transactional
     @Query("DELETE FROM Block_ WHERE blocker_uid = :blocker AND blocked_uid = :blocked")
     int unblock(@Param("blocker") Long blocker, @Param("blocked") Long blocked);
+
+    /**
+     * Every block this person is either side of, for account deletion.
+     *
+     * Both directions: theirs are about a person who is no longer here, and other
+     * people's blocks of them have nothing left to protect against.
+     */
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Block_ WHERE blocker_uid = :uid OR blocked_uid = :uid")
+    int deleteAllFor(@Param("uid") Long uid);
 }
