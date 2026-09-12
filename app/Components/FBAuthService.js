@@ -1,4 +1,4 @@
-import { initializeAuth, inMemoryPersistence, signInWithCustomToken, signOut } from "firebase/auth";
+import { initializeAuth, getAuth, inMemoryPersistence, signInWithCustomToken, signOut } from "firebase/auth";
 import axios from "axios";
 import { firebaseApp, IP_STRING } from "../Constants";
 
@@ -20,11 +20,40 @@ import { firebaseApp, IP_STRING } from "../Constants";
  * share a signed-in user, and this is the one Storage uploads go through.
  */
 
-// In memory on purpose. A Firebase session here is derived from our own, lasts
-// an hour, and costs one request to re-establish - so writing it to disk would
-// persist a credential past the logout that should have ended it, to save a
-// round trip per launch.
-const auth = initializeAuth(firebaseApp, { persistence: inMemoryPersistence });
+let auth = null;
+
+/**
+ * The auth instance, created on first use.
+ *
+ * Not at module scope. Firebase Auth validates the config as it initialises and
+ * throws if the apiKey is missing, and a throw while a module is being evaluated
+ * leaves every one of its exports undefined - so one bad config key turned into
+ * "Cannot read property 'clearUploadIdentity' of undefined" at a call site that
+ * has nothing to do with the cause. Doing it lazily keeps the failure where it
+ * happened and keeps the module importable.
+ *
+ * In memory on purpose. A Firebase session here is derived from our own, lasts
+ * an hour, and costs one request to re-establish - so writing it to disk would
+ * persist a credential past the logout that should have ended it, to save a
+ * round trip per launch.
+ */
+function uploadAuth() {
+  if (auth) {
+    return auth;
+  }
+
+  try {
+    auth = initializeAuth(firebaseApp, { persistence: inMemoryPersistence });
+  } catch (error) {
+    if (error?.code === "auth/already-initialized") {
+      auth = getAuth(firebaseApp);
+    } else {
+      throw error;
+    }
+  }
+
+  return auth;
+}
 
 /** One in-flight exchange, shared. */
 let signingIn = null;
@@ -37,12 +66,14 @@ let signingIn = null;
  * limit on a single post.
  */
 export async function ensureUploadIdentity() {
-  if (auth.currentUser) {
-    return auth.currentUser;
+  const instance = uploadAuth();
+
+  if (instance.currentUser) {
+    return instance.currentUser;
   }
 
   if (!signingIn) {
-    signingIn = exchange().finally(() => {
+    signingIn = exchange(instance).finally(() => {
       signingIn = null;
     });
   }
@@ -50,9 +81,9 @@ export async function ensureUploadIdentity() {
   return signingIn;
 }
 
-async function exchange() {
+async function exchange(instance) {
   const { data } = await axios.post(IP_STRING + "/api/media/token");
-  const credential = await signInWithCustomToken(auth, data.token);
+  const credential = await signInWithCustomToken(instance, data.token);
   return credential.user;
 }
 
@@ -64,7 +95,11 @@ async function exchange() {
  */
 export async function clearUploadIdentity() {
   signingIn = null;
-  if (auth.currentUser) {
+
+  // Nothing to sign out of if auth never came up - which is the normal case on
+  // a device that has not uploaded anything this run, and also the case when the
+  // config is wrong. Logging out must work either way.
+  if (auth?.currentUser) {
     await signOut(auth);
   }
 }
@@ -79,12 +114,39 @@ export async function clearUploadIdentity() {
  * problem still surfaces as an error rather than a loop.
  */
 export async function withUploadIdentity(upload) {
-  await ensureUploadIdentity();
+  let identified = false;
+
+  try {
+    await ensureUploadIdentity();
+    identified = true;
+  } catch (error) {
+    // Attempt the upload anyway rather than refusing it here.
+    //
+    // The client is not what enforces any of this - the Storage rules are. If
+    // they require an identity, the bucket refuses this in a moment and the
+    // screen says so; if they do not, refusing here would break uploading for a
+    // reason the rules do not actually care about. Either way the useful thing
+    // is to say why the identity is missing, because "no default bucket" and
+    // "invalid api key" both point at the same file.
+    console.error(
+      "Uploading without an identity - the Storage rules will refuse this if " +
+      "they require one. Cause:", error?.code || error?.message || error,
+      "\nThis usually means app/Secrets.js is not the web app config: Auth " +
+      "needs apiKey, appId, authDomain and messagingSenderId, which a " +
+      "service-account JSON does not have. See app/Secrets.example.js."
+    );
+  }
 
   try {
     return await upload();
   } catch (error) {
-    if (error?.code !== "storage/unauthorized" && error?.code !== "storage/unauthenticated") {
+    const refused = error?.code === "storage/unauthorized"
+      || error?.code === "storage/unauthenticated";
+
+    // Only worth retrying if we had an identity that might have gone stale.
+    // Without one, a refusal is the rules working as intended and a second
+    // attempt would be refused identically.
+    if (!refused || !identified) {
       throw error;
     }
 
