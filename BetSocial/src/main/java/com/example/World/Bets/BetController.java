@@ -107,9 +107,62 @@ public class BetController {
         return uid;
     }
 
+    /**
+     * The caller's own bets that have closed and are waiting on them to say what
+     * happened.
+     *
+     * This is the step that had no screen. A bet closes, the sweep moves it to
+     * PENDING, and until its owner declares an outcome it is invisible to
+     * everybody: off the staking screen because it is not active, and out of the
+     * approval queue because that filters on outcome IS NOT NULL. Nothing told
+     * the owner they were holding it up.
+     *
+     * Returns the same view as the approval queue - the owner wants the pools and
+     * the stake count in front of them too, and the outcome field is simply null
+     * here, which is the whole reason the row is in this list.
+     */
+    @GetMapping("/awaiting-my-decision")
+    List<PendingBetView> awaitingMyDecision(HttpSession session){
+        return betRepository
+                .findAwaitingOwnerDecision(requireUserId(session), Status.PENDING.toInt())
+                .stream()
+                .map(this::describe)
+                .toList();
+    }
+
+    /** Bet plus the thread title and staking totals a decision is made against. */
+    private PendingBetView describe(Bet_ bet) {
+        List<Prediction_> predictions = predictionRepository.findByBid(bet.bid());
+
+        return new PendingBetView(
+                bet.bid(),
+                bet.description(),
+                threadRepository.findById(bet.tid())
+                        .map(Thread_::title)
+                        .orElse("(thread removed)"),
+                bet.outcome(),
+                bet.amount_for(),
+                bet.amount_against(),
+                predictions.size(),
+                predictions.stream().mapToLong(Prediction_::amount_bet).sum(),
+                bet.ends_at());
+    }
+
+    /**
+     * The owner records what happened. An approver signs it off separately.
+     *
+     * Transactional because it writes twice - the outcome and the decision record -
+     * and a bet carrying one without the other is a bet nobody can move on: the
+     * approval queue looks for an outcome, and this endpoint refuses a bet that
+     * already has one. Public for the same reason: Spring ignores @Transactional
+     * on a non-public method. See TransactionalVisibilityTest.
+     */
+    @Transactional
     @PostMapping("/decide")
-    void decideOutcome(@Valid @RequestBody DecisionDTO decision, HttpSession session){
-        Long userId = (Long) session.getAttribute("userId");
+    public void decideOutcome(@Valid @RequestBody DecisionDTO decision, HttpSession session){
+        // requireUserId, not a raw attribute read: this used to NPE on the
+        // ownership check rather than answering 401 when nobody was logged in.
+        Long userId = requireUserId(session);
         Optional<Bet_> optionalBet = betRepository.findById(decision.bid());
         Bet_ bet;
         if(optionalBet.isEmpty()){

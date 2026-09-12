@@ -29,7 +29,7 @@ import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient 
 // getBalance, getCircleSecret and getIpAddress are gone with the /circle
 // endpoints they called - deleted along with CircleService, and 404ing ever
 // since. Only the commented-out queries below ever referenced them.
-import {getProfile,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads, getActiveNotifications, getConversations, getFollows, getWallet} from "./API";
+import {getProfile,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads, getActiveNotifications, getConversations, getFollows, getWallet, getBetsAwaitingMyDecision} from "./API";
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { getProfilePictureUrl, IP_STRING } from "./Constants";
@@ -71,6 +71,15 @@ const HomeScreen = ({navigation,route}:any) => {
     queryKey: ["wallet"],
     queryFn: () => getWallet({ silent: true }),
   });
+  // Your own closed bets, waiting on you to say what happened. Surfaced here
+  // because the whole problem was that nothing surfaced it: a closed bet left
+  // the staking screen and did not reach the approval queue until its owner
+  // declared an outcome, and nobody told the owner that.
+  const { data: awaitingMyDecision, refetch: refetchAwaiting } = useQuery({
+    queryKey: ["awaitingMyDecision"],
+    queryFn: () => getBetsAwaitingMyDecision({ silent: true }),
+  });
+
   const { data: notifications, isLoading: notificationsLoading } = useQuery({
     queryKey: ["activeNotifications"],
     queryFn: getActiveNotifications
@@ -225,6 +234,7 @@ const HomeScreen = ({navigation,route}:any) => {
       console.log("Screen focused → refresh threads" + route.params?.params);
       screenStore.set("Home");
       refetchWallet();
+      refetchAwaiting();
 
       (async () => {
         if (route.params?.refresh) {
@@ -308,7 +318,24 @@ const HomeScreen = ({navigation,route}:any) => {
       </View>
 
 
-      {/* Main Content */}  
+      {/* The prompt that was missing entirely. A bet of yours that has closed
+          goes nowhere until you say what happened, and until this banner there
+          was nothing anywhere telling you so. */}
+      {awaitingMyDecision?.length > 0 && (
+        <TouchableOpacity
+          style={styles.decisionBanner}
+          onPress={() => navigation.navigate("DeclareOutcome_H")}
+        >
+          <Text style={styles.decisionText}>
+            {awaitingMyDecision.length === 1
+              ? "1 of your bets has closed and is waiting on you"
+              : `${awaitingMyDecision.length} of your bets have closed and are waiting on you`}
+          </Text>
+          <Text style={styles.decisionAction}>Say what happened →</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Main Content */}
       {threadList(threads, refetchThreads, loading, navigation, "Thread_H", setActiveThreads,"non")}
       
      
@@ -416,6 +443,21 @@ const styles = StyleSheet.create({
     fontSize:12,
     marginLeft: 5,
     fontWeight:"bold",
+  },decisionBanner:{
+    backgroundColor: "#e6f4ea",
+    borderLeftWidth: 4,
+    borderLeftColor: "green",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },decisionText:{
+    fontSize: 14,
+    color: "#111827",
+    fontWeight: "500",
+  },decisionAction:{
+    fontSize: 13,
+    color: "green",
+    fontWeight: "600",
+    marginTop: 2,
   },balanceText:{
     fontSize: 16,
     marginLeft: 6,
