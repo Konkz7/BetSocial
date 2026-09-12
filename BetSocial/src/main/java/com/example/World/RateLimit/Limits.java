@@ -64,6 +64,16 @@ public final class Limits {
     /** Placing a stake. Not abuse-prone - the wallet limits it - but a script should not be able to drain one. */
     public static final RateLimit PREDICTIONS = new RateLimit(60, Duration.ofHours(1));
 
+    /**
+     * Asking for an upload identity.
+     *
+     * A token lasts an hour and the client refreshes its Firebase session by
+     * itself afterwards, so one launch needs one. Sixty covers a day of
+     * restarts and still refuses a script collecting tokens to write to the
+     * bucket with.
+     */
+    public static final RateLimit UPLOAD_TOKENS = new RateLimit(60, Duration.ofHours(1));
+
     private Limits() {
     }
 }
