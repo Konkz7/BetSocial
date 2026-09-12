@@ -82,8 +82,14 @@ cd BetSocial
 ```
 
 The API listens on `http://localhost:8080`. On first run against an empty
-database, `Startup` seeds eleven development users (`admin`, `john`, `jane`, …),
-all with the password `password`.
+database, `Startup` seeds ten development users (`john`, `jane`, …), all with
+the password `password`.
+
+The `admin` account is seeded separately, on **every** start rather than only
+against an empty database, so there is always a privileged login to test with.
+It has `user_role = 2` (ADMIN) and the same password `password`, and signing in
+with it lands on the admin approval queue instead of the social feed. These are
+development seeds; anything deployed publicly needs them changed.
 
 To build a jar instead:
 
@@ -179,6 +185,7 @@ is no other setup, and no need for a local database.
 | `ThreadProfileViewerTest` | the liked flag reflects the viewer, not the thread's author |
 | `FeedVisibilityTest` | private threads need a mutual follow; authors always see their own; liked flag and comment count are per viewer |
 | `FeedQueryCountTest` | the feed's query count does not grow with the number of threads |
+| `AdminSeedingTest` | an admin account is always seeded, including into a database that already has users, and never duplicated |
 
 A container is started once and shared across the suite; the first run pulls
 `postgres:17-alpine`, so expect it to take a little longer.
