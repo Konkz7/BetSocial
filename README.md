@@ -211,6 +211,41 @@ CI runs the same command on every pull request touching `BetSocial/` — see
 
 ---
 
+## Logging
+
+Every line carries the request it belongs to and who was making it:
+
+```
+INFO [3f9a1c22/7] c.e.World.Bets.BetService : Closing 2 expired bets
+```
+
+The bracketed pair is `requestId/userId`, put there by `LogContextFilter`. Empty
+brackets mean there was no request in progress — a scheduled sweep, or startup.
+The same id comes back on every response as `X-Request-Id`, so a report of "it
+failed around four o'clock" can be turned into one exact request.
+
+The class is not called `RequestContextFilter`, which is the obvious name: Spring
+Boot already registers a bean by that name, bean overriding is off by default,
+and the collision stops the application starting.
+
+Levels are `INFO` by default. To chase an authorisation problem:
+
+```bash
+LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG ./mvnw spring-boot:run
+```
+
+That was previously the default, and it wrote the entire security context on
+every request — which buried everything worth reading.
+
+For anything that ships logs to an aggregator, `LOG_FORMAT` switches them to
+JSON (`ecs`, `logstash` or `gelf`):
+
+```bash
+LOG_FORMAT=ecs ./mvnw spring-boot:run
+```
+
+Off by default, because a person reading a terminal wants the readable form.
+
 ## Troubleshooting
 
 **`release version 23 not supported`** — you are on an older JDK than the build

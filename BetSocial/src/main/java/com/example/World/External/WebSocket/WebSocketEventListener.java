@@ -2,6 +2,8 @@ package com.example.World.External.WebSocket;
 
 
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.example.World.Messages.GroupStatus;
 import com.example.World.Messages.Message_;
 import com.example.World.Groups.GroupService;
@@ -19,6 +21,8 @@ import java.util.Objects;
 
 @Component
 public class WebSocketEventListener {
+
+    private static final Logger log = LoggerFactory.getLogger(WebSocketEventListener.class);
 
     private final SimpMessageSendingOperations messageOperations;
     private final UserRepository userRepository;
@@ -38,7 +42,7 @@ public class WebSocketEventListener {
         Long gid = (Long) headerAccessor.getSessionAttributes().get("chatId");
 
         if (id != null && gid != null) {
-            System.out.println("User " + id + " disconnected from chat " + gid);
+            log.debug("User {} disconnected from chat {}", id, gid);
             userRepository.changeStatus(id,"online");
 
             GroupStatus gp = new GroupStatus(id, gid, false , true);
@@ -66,14 +70,16 @@ public class WebSocketEventListener {
         // topic this user's presence is broadcast to - so it must be a conversation
         // they actually belong to.
         if (!groupService.isMember(gid, id)) {
-            System.out.println("Rejected presence for user " + id + " on chat " + gid + ": not a member");
+            // Warn rather than debug: this is somebody asking for a conversation
+            // they are not in, which is worth seeing without turning debug on.
+            log.warn("Rejected presence for user {} on chat {}: not a member", id, gid);
             return;
         }
 
         headerAccessor.getSessionAttributes().put("userId", id);
         headerAccessor.getSessionAttributes().put("chatId", gid);
 
-        System.out.println("User " + id + " connected to chat " + gid);
+        log.debug("User {} connected to chat {}", id, gid);
         userRepository.changeStatus(id,"online/chat/" + gid);
 
         GroupStatus gp = new GroupStatus(id, gid, true , true);

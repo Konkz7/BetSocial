@@ -6,10 +6,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.security.SecureRandom;
-import java.util.HexFormat;
 
 
 @SpringBootApplication
@@ -17,29 +16,19 @@ import java.util.HexFormat;
 @EnableTransactionManagement
 public class WorldApplication {
 
-	private static final Logger logger = Logger.getLogger(WorldApplication.class.getName());
+	// SLF4J, like everything else. java.util.logging went through a bridge and
+	// ignored the Logback configuration this application actually uses, so this
+	// one line was formatted differently from every other line in the log.
+	private static final Logger logger = LoggerFactory.getLogger(WorldApplication.class);
+
 	public static void main(String[] args) {
 		SpringApplication.run(WorldApplication.class, args);
 		logger.info("WorldApplication started successfully!");
-
-/*
-		SecureRandom random = new SecureRandom();
-		byte[] secret = new byte[32];
-		random.nextBytes(secret);
-
-		String hexSecret = HexFormat.of().formatHex(secret);
-		System.out.println("Generated Secret: " + hexSecret);
-
- */
-/*
-		String circleEntitySecret = System.getenv("CIRCLE_SECRET");
-		System.out.println("Secret: " + circleEntitySecret);
-
- */
-
-
-
-
 	}
+
+	// Two commented-out blocks stood here, printing a generated secret and
+	// CIRCLE_SECRET to standard out. Gone with the Circle integration they
+	// belonged to - and printing a secret is not something to leave lying around
+	// as a comment somebody might uncomment.
 
 }

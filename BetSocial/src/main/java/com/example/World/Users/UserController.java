@@ -1,6 +1,8 @@
 package com.example.World.Users;
 
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.example.World.Blocks.BlockService;
 import java.util.Set;
 import com.example.World.Bets.DecisionDTO;
@@ -19,6 +21,8 @@ import java.util.Optional;
 @RequestMapping("/api/users")
 @RestController
 public class UserController {
+
+    private static final Logger log = LoggerFactory.getLogger(UserController.class);
     private final UserRepository userRepository;
     private final UserService userService;
     private final BlockService blockService;
@@ -124,7 +128,7 @@ public class UserController {
     ResponseEntity<String> changeProfilePicture(@RequestParam String pfp, HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
 
-        System.out.println(pfp);
+        log.debug("User {} changed profile picture", uid);
         userRepository.changeProfilePicture(uid,pfp);
 
 
@@ -154,7 +158,7 @@ public class UserController {
     ResponseEntity<String> refreshFBN(@RequestParam String FBNtoken, HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
 
-        System.out.println("DONE");
+        log.debug("User {} registered a push token", uid);
 
         return userService.uniqueFBNLog(uid,FBNtoken) ? ResponseEntity.ok().body("FBN changed!") :
                 ResponseEntity.badRequest().body("FBN couldnt be saved");

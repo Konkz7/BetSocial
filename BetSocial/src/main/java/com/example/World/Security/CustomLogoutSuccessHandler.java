@@ -1,5 +1,9 @@
 package com.example.World.Security;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.example.World.Users.UserService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,6 +16,8 @@ import java.io.IOException;
 
 @Component
 public class CustomLogoutSuccessHandler implements LogoutSuccessHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(CustomLogoutSuccessHandler.class);
 
     private final UserService userService;
 
@@ -32,7 +38,7 @@ public class CustomLogoutSuccessHandler implements LogoutSuccessHandler {
 
         if (session != null) {
             Long uid = user.getUserId();
-            System.out.println("session isnt null" + uid);
+            log.debug("Signing out user {}", uid);
 
             userService.changeStatus(uid,false);
             userService.notifyGroupsOnStatus(uid, false);
