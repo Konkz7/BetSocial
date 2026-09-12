@@ -30,10 +30,15 @@ public class ThreadController {
         this.threadService = threadService;
     }
 
-    @GetMapping("/all")
-    List<Thread_>findAll(){
-        return threadRepository.findAll();
-    }
+    // GET /all and GET /{tid} are deliberately absent. Both returned raw rows
+    // straight from the repository, so neither applied the privacy rule nor - now
+    // - blocking: /all handed every thread in the database, private ones
+    // included, to any authenticated caller, and /{tid} did the same one id at a
+    // time. Adding a block filter to the feed while leaving these in place would
+    // have made blocking look implemented rather than be implemented.
+    //
+    // Neither had a client caller. /active and /thread-profile/{tid} are the
+    // filtered equivalents and are what the app actually uses.
 
     @GetMapping("/active")
     List<ThreadProfile>findAllActive(HttpSession session){

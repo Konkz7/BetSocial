@@ -1,5 +1,6 @@
 package com.example.World.Follows;
 
+import com.example.World.Blocks.BlockService;
 import com.example.World.Notifications.NotificationDTO;
 import com.example.World.Notifications.NotificationService;
 import com.example.World.Users.UserRepository;
@@ -16,13 +17,20 @@ public class FollowService {
     private final FollowRepository followRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final BlockService blockService;
 
-    FollowService(FollowRepository followRepository, UserRepository userRepository, NotificationService notificationService){
+    FollowService(FollowRepository followRepository, UserRepository userRepository, NotificationService notificationService,
+                  BlockService blockService){
         this.followRepository = followRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.blockService = blockService;
     }
     public ResponseEntity<String> sendFollow(Long requesterId, Long receiverId) {
+        // Answers "user not found" rather than "you are blocked" - see
+        // BlockService.requireNotBlocked for why.
+        blockService.requireNotBlocked(requesterId, receiverId);
+
         if (followRepository.existsByRequestIdAndReceiveId(requesterId, receiverId)) {
             return ResponseEntity.badRequest().body("Friend request already sent!");
         }

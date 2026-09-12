@@ -16,7 +16,7 @@ import {
   } 
     from "lucide-react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getFollow, getUserThreads, follow, unfollow , DMCheck , makePrivateGroup, fillReadMarkers, 
+import { getFollow, getUserThreads, follow, unfollow , DMCheck , makePrivateGroup, fillReadMarkers, blockUser, 
     getThreadLikes, registerThreadLike, getOtherFollow, getFollowsByID, getFollowersByID} from "../API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import threadList from "../Components/ThreadList";
@@ -188,7 +188,37 @@ const ProfileScreen = ({navigation , route}: any) => {
         } 
         
         queryClient.invalidateQueries({queryKey: ["follow"]});
-        
+
+    }
+
+    /**
+     * Blocking is mutual and takes effect immediately, so this screen is about to
+     * be showing a profile the server will no longer serve. Going back rather
+     * than staying put avoids a refresh landing on a 404, and matches what the
+     * action means: you asked not to see this person.
+     */
+    const handleBlock = () => {
+        Alert.alert(
+            `Block ${user.user_name}?`,
+            "You will not see each other's posts or comments, neither of you can "
+              + "follow or message the other, and any follow between you is removed. "
+              + "You can undo this in Settings.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Block",
+                    style: "destructive",
+                    onPress: async () => {
+                        if (await blockUser(user.uid)) {
+                            // The feed, the user list and the follow counts all
+                            // change, and every one of them is cached.
+                            queryClient.invalidateQueries();
+                            navigation.goBack();
+                        }
+                    },
+                },
+            ],
+        );
     }
 
 
@@ -220,7 +250,10 @@ const ProfileScreen = ({navigation , route}: any) => {
                         <Send color={"green"}></Send>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style = {styles.button}>
+                    {/* This button has been here with no onPress since the
+                        revival. Blocking is what it was shaped for, and Apple
+                        require it to exist somewhere a person can find. */}
+                    <TouchableOpacity style = {styles.button} onPress={() => handleBlock()}>
                         <CircleAlert color={"red"}></CircleAlert>
                     </TouchableOpacity>
 

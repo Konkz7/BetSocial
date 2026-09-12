@@ -1,5 +1,6 @@
 package com.example.World.Messages;
 
+import com.example.World.Blocks.BlockService;
 import com.example.World.Groups.*;
 import com.example.World.Notifications.NotificationDTO;
 import com.example.World.Notifications.NotificationService;
@@ -28,14 +29,17 @@ public class MessageService {
     private final GroupUserRepository groupUserRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final BlockService blockService;
 
-    public MessageService(MessageRepository messageRepository, GroupService groupService, GroupUserRepository groupUserRepository, UserRepository userRepository, NotificationService notificationService) {
+    public MessageService(MessageRepository messageRepository, GroupService groupService, GroupUserRepository groupUserRepository, UserRepository userRepository, NotificationService notificationService,
+                          BlockService blockService) {
         this.messageRepository = messageRepository;
         this.groupService = groupService;
         // Injected but never assigned before, so the field did not exist at all.
         this.groupUserRepository = groupUserRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.blockService = blockService;
     }
 
     /**
@@ -67,6 +71,17 @@ public class MessageService {
                 .map(userRepository::findById)
                 .flatMap(Optional::stream)
                 .toList();
+
+        // A block stops a one-to-one conversation, which is the case it exists
+        // for. A larger group is left alone deliberately: silently dropping a
+        // message to everybody because one member is blocked, or removing people
+        // from a conversation they were invited to, are both worse than the
+        // problem - and neither is what blocking was asked to mean here.
+        if (recipients.size() == 1
+                && blockService.blockedBetween(senderId, recipients.get(0).uid())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You cannot message this person");
+        }
 
         Message_ message = new Message_(
            null,

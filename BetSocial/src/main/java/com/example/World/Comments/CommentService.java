@@ -1,5 +1,6 @@
 package com.example.World.Comments;
 
+import com.example.World.Blocks.BlockService;
 import com.example.World.Follows.Follow_;
 import com.example.World.Notifications.NotificationDTO;
 import com.example.World.Notifications.NotificationService;
@@ -20,13 +21,15 @@ public class CommentService {
     private final CommentLikeRepository commentLikeRepository;
     private final ThreadRepository threadRepository;
     private final NotificationService notificationService;
+    private final BlockService blockService;
 
-    public CommentService(UserRepository userRepository, CommentRepository commentRepository, CommentLikeRepository commentLikeRepository, ThreadRepository threadRepository, NotificationService notificationService) {
+    public CommentService(UserRepository userRepository, CommentRepository commentRepository, CommentLikeRepository commentLikeRepository, ThreadRepository threadRepository, NotificationService notificationService, BlockService blockService) {
         this.userRepository = userRepository;
         this.commentRepository = commentRepository;
         this.commentLikeRepository = commentLikeRepository;
         this.threadRepository = threadRepository;
         this.notificationService = notificationService;
+        this.blockService = blockService;
     }
 
     public Comment_ makeComment(CommentDTO comment,Long uid){
@@ -56,16 +59,27 @@ public class CommentService {
         List<CommentProfile> rootComments = new ArrayList<>();
         Map<Long, CommentProfile> allComments = new HashMap<>();
 
+        Set<Long> invisible = blockService.invisibleTo(userID);
+
 // Pass 1: build all profiles
         for (Comment_ c : comments) {
             User_ user = userRepository.findById(c.uid()).orElseThrow();
+
+            // A blocked author's comment becomes a tombstone rather than
+            // disappearing. Dropping the node outright would orphan its replies,
+            // which are other people's and should still be readable - the same
+            // reason a deleted comment is already kept as an empty shell.
+            boolean hidden = invisible.contains(c.uid());
+
             CommentProfile profile = new CommentProfile(
                     c.cid(), tid, c.uid(), new ArrayList<>(),
-                    user.user_name(), user.profile_picture(),
-                    c.parent_cid(), c.description(),
+                    hidden ? "Blocked user" : user.user_name(),
+                    hidden ? null : user.profile_picture(),
+                    c.parent_cid(),
+                    hidden ? "" : c.description(),
                     c.likes(),
-                    commentLikeRepository.findByCommentAndUser(c.cid(), userID).isPresent(),
-                    c.created_at(), c.deleted_at() != null
+                    !hidden && commentLikeRepository.findByCommentAndUser(c.cid(), userID).isPresent(),
+                    c.created_at(), hidden || c.deleted_at() != null
             );
             allComments.put(c.cid(), profile);
         }

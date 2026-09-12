@@ -14,6 +14,7 @@ import {
   Bell,
   Lock,
   Wallet,
+  UserX,
   HelpCircle,
   LogOut,
   Languages,
@@ -98,10 +99,13 @@ const SettingsScreen = ({navigation}: any) => {
             label="Personal Information"
             onClick={() => console.log('Navigate to profile')}
           />
+          {/* "Payment Methods - Visa ****4242" stood here: a hardcoded card that
+              never existed, left from the deprecated card screen. Coins cannot be
+              bought, so there is no payment method to show. */}
           <SettingItem
-            icon={<Wallet size={24} color="#6B7280" />}
-            label="Payment Methods"
-            value="Visa ****4242"
+            icon={<UserX size={24} color="#6B7280" />}
+            label="Blocked Accounts"
+            onClick={() => navigation.navigate('BlockedUsers_SP')}
           />
           <SettingItem icon={<Bookmark size={24} color="#6B7280" />} label="Saved Bets" />
 
