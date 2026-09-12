@@ -21,6 +21,7 @@ import { getFollow, getUserThreads, follow, unfollow , DMCheck , makePrivateGrou
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import threadList from "../Components/ThreadList";
 import { screenStore } from "../GlobalFlags";
+import { promptReport } from "../Components/ReportPrompt";
 
 
 
@@ -192,6 +193,23 @@ const ProfileScreen = ({navigation , route}: any) => {
     }
 
     /**
+     * Report and Block are different things and the guideline asks for both, so
+     * this offers the choice rather than picking one. Reporting sends it to a
+     * moderator; blocking is private and immediate.
+     */
+    const handleModerate = () => {
+        Alert.alert(
+            user.user_name,
+            "What would you like to do?",
+            [
+                { text: "Cancel", style: "cancel" },
+                { text: "Report this account", onPress: () => promptReport("USER", user.uid, "account") },
+                { text: "Block", style: "destructive", onPress: () => handleBlock() },
+            ],
+        );
+    }
+
+    /**
      * Blocking is mutual and takes effect immediately, so this screen is about to
      * be showing a profile the server will no longer serve. Going back rather
      * than staying put avoids a refresh landing on a 404, and matches what the
@@ -253,7 +271,7 @@ const ProfileScreen = ({navigation , route}: any) => {
                     {/* This button has been here with no onPress since the
                         revival. Blocking is what it was shaped for, and Apple
                         require it to exist somewhere a person can find. */}
-                    <TouchableOpacity style = {styles.button} onPress={() => handleBlock()}>
+                    <TouchableOpacity style = {styles.button} onPress={() => handleModerate()}>
                         <CircleAlert color={"red"}></CircleAlert>
                     </TouchableOpacity>
 

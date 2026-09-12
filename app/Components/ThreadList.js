@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { promptReport } from "./ReportPrompt";
 import {
   View,
   Text,
@@ -83,7 +84,10 @@ const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,p
             renderItem={({ item }) => (
 
             <View style={styles.post}>
-                <TouchableOpacity onPress={() => navigation.navigate(nav,item)} onLongPress={page === "self" ? () => deleteThread(item.tid) : null}>
+                {/* Long press deletes your own thread on your profile, and
+                    reports somebody else's anywhere else - it previously did
+                    nothing at all off the "self" page. */}
+                <TouchableOpacity onPress={() => navigation.navigate(nav,item)} onLongPress={page === "self" ? () => deleteThread(item.tid) : () => promptReport("THREAD", item.tid, "post")}>
                     <View style = {{flexDirection:"row", alignItems:"center",justifyContent:"space-between", marginBottom:10}}>
                         <View >
                             <View style={styles.postHeader}>

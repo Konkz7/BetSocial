@@ -186,6 +186,14 @@ public class ThreadService {
                 continue;
             }
 
+            // A suspended or deleted account's posts go with it. findAllById is a
+            // plain CRUD lookup and does not filter deleted_at the way every
+            // query in UserRepository does, so without this a suspended account
+            // keeps publishing.
+            if(author.deleted_at() != null){
+                continue;
+            }
+
             // Checked before the privacy rule, because a block is the stronger
             // statement of the two: it does not matter whether a blocked person's
             // thread was public.
