@@ -53,6 +53,12 @@ const HomeScreen = ({navigation,route}:any) => {
   const [threads, setActiveThreads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true); // Show loading indicator
   const [trueThreads , setTrueThreads] = useState<any[]>([]);
+
+  // Where the next page starts, or null at the end of the feed. Always set in
+  // the same place as trueThreads - a cursor pointing deeper than the list it
+  // belongs to would append page five after page one and leave a hole.
+  const [cursor, setCursor] = useState<any>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
  
   
   // Fetch data using React Query
@@ -90,9 +96,12 @@ const HomeScreen = ({navigation,route}:any) => {
     queryFn: getFollows
   });
 
+  // Wrapped, not passed directly: react-query calls queryFn with its own context
+  // object, which would arrive as the cursor and send cursor_created_at=undefined.
+  // The same mistake getWallet was written to avoid.
   const { data: threadData, isLoading, refetch: refetchThreads } = useQuery({
     queryKey: ["threads"+ profile?.uid],
-    queryFn: getThreads,
+    queryFn: () => getThreads(),
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -218,13 +227,60 @@ const HomeScreen = ({navigation,route}:any) => {
     })(); 
   }, [notifications]);
 
+  /**
+   * Takes a first page and makes it the whole feed.
+   *
+   * The list and the cursor are set together, always. Replacing the list while
+   * leaving an old cursor in place is how you end up appending page five to page
+   * one, with everything between them missing and no way to tell from the screen.
+   */
+  const applyFirstPage = async (page: any) => {
+    const updated = await updateThreadLikes(page?.threads ?? []);
+    setTrueThreads(updated);
+    setCursor(page?.has_more
+      ? { created_at: page.next_cursor_created_at, tid: page.next_cursor_tid }
+      : null);
+    return updated;
+  };
+
+  /**
+   * Appends the next page.
+   *
+   * Guarded on loadingMore because FlatList fires onEndReached more than once
+   * for a single scroll to the bottom, and two requests with the same cursor
+   * would append the same threads twice.
+   */
+  const loadMore = async () => {
+    if (!cursor || loadingMore) return;
+
+    setLoadingMore(true);
+    try {
+      const page = await getThreads(cursor);
+      const withLikes = await updateThreadLikes(page.threads ?? []);
+
+      setTrueThreads(prev => {
+        // The server pages by (created_at, tid) so it will not hand back a
+        // thread twice, but a refresh landing mid-scroll can, and a duplicate
+        // key in a FlatList is a crash rather than a cosmetic problem.
+        const seen = new Set(prev.map(t => t.tid));
+        const merged = [...prev, ...withLikes.filter(t => !seen.has(t.tid))];
+        updateThreadCat(activeCategory, merged, false);
+        return merged;
+      });
+
+      setCursor(page.has_more
+        ? { created_at: page.next_cursor_created_at, tid: page.next_cursor_tid }
+        : null);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   useEffect(() => {
     if (!threadData) return;
     (async () => {
-      const updated = await updateThreadLikes(threadData);    
-      setTrueThreads(updated);
+      await applyFirstPage(threadData);
       setLoading(false);
-
     })();
   }, [threadData]);
 
@@ -245,11 +301,14 @@ const HomeScreen = ({navigation,route}:any) => {
           return;
         }
 
-        if (threadData) {     
-          const updated = await updateThreadLikes(threadData);          
-          setTrueThreads(updated);    
-          updateThreadCat(activeCategory,updated,false)   
-        } else { 
+        if (threadData) {
+          // Back to the first page, cursor and all. Coming back to Home is a
+          // refresh, and keeping pages loaded while re-reading page one from
+          // cache is the combination that puts the cursor out of step with the
+          // list.
+          const updated = await applyFirstPage(threadData);
+          updateThreadCat(activeCategory,updated,false)
+        } else {
           await refetchThreads();
         }
       })();
@@ -336,7 +395,7 @@ const HomeScreen = ({navigation,route}:any) => {
       )}
 
       {/* Main Content */}
-      {threadList(threads, refetchThreads, loading, navigation, "Thread_H", setActiveThreads,"non")}
+      {threadList(threads, refetchThreads, loading, navigation, "Thread_H", setActiveThreads, "non", loadMore, loadingMore)}
       
      
     </SafeAreaView>

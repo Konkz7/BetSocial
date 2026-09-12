@@ -29,7 +29,7 @@ import { timeAgo, getProfilePictureUrl } from "../Constants";
 
 
 
-const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,page) =>  {
+const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,page, onEndReached, loadingMore) =>  {
     
 
     const threadLikeAction = async (tid, likeResult) => {
@@ -81,6 +81,16 @@ const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,p
             removeClippedSubviews={false}
             onRefresh={getthreads} // Enable pull-to-refresh
             refreshing={loading} // Show loading state during refresh
+            // Paging is opt-in: the profile and search lists pass nothing and
+            // keep behaving exactly as they did.
+            onEndReached={onEndReached ?? null}
+            // 0.5 rather than the default 2: at 2 this fires while the first
+            // page is still being laid out, which spends a request before the
+            // reader has scrolled at all.
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={loadingMore
+                ? <ActivityIndicator size="small" color="green" style={{ marginVertical: 16 }} />
+                : null}
             renderItem={({ item }) => (
 
             <View style={styles.post}>

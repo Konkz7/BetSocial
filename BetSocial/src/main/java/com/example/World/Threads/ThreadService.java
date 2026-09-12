@@ -132,12 +132,62 @@ public class ThreadService {
                 ,isThreadLike(viewerUid,t.tid()),(long) commentRepository.findByThread(t.tid()).size(),t.created_at(), t.is_private());
     }
 
-    public List<ThreadProfile> threadProfileList(Long uid){
-        return assemble(threadRepository.findAllActiveThreads(), uid);
+    /**
+     * How many threads a feed request returns.
+     *
+     * Enough to fill a phone screen several times over, so scrolling stays ahead
+     * of the network, and small enough that the first paint does not wait on
+     * media for threads nobody has reached yet.
+     */
+    static final int FEED_PAGE_SIZE = 20;
+
+    // There is no unpaginated feed any more. It returned every thread in the
+    // database on every app launch, and keeping it alongside feedPage would mean
+    // two answers to "what may this person see" - the thing this change exists to
+    // stop.
+
+    /**
+     * One page of the feed.
+     *
+     * Visibility is decided in SQL rather than here - see
+     * ThreadRepository.findFeedPage. Filtering after a LIMIT would hand back
+     * fewer threads than the page asked for and, worse, could return an empty
+     * page while more threads existed, which the client cannot tell apart from
+     * the end of the feed.
+     *
+     * One extra row is fetched beyond the page size to answer "is there more"
+     * without a second count query. It is dropped before the page is returned.
+     */
+    public FeedPage feedPage(Long viewerUid, Long cursorCreatedAt, Long cursorTid){
+        // A cursor needs both halves or neither; half a cursor would silently
+        // become "start from the beginning" and loop the client forever.
+        if((cursorCreatedAt == null) != (cursorTid == null)){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "A cursor needs both cursor_created_at and cursor_tid");
+        }
+
+        List<Thread_> rows = threadRepository.findFeedPage(viewerUid, cursorCreatedAt,
+                cursorTid, FEED_PAGE_SIZE + 1);
+
+        boolean hasMore = rows.size() > FEED_PAGE_SIZE;
+        List<Thread_> page = hasMore ? rows.subList(0, FEED_PAGE_SIZE) : rows;
+
+        if(page.isEmpty()){
+            return new FeedPage(List.of(), null, null, false);
+        }
+
+        Thread_ last = page.get(page.size() - 1);
+
+        // assemble still joins the likes, comment counts and author views; it no
+        // longer decides who may see what.
+        return new FeedPage(assemble(page, viewerUid),
+                hasMore ? last.created_at() : null,
+                hasMore ? last.tid() : null,
+                hasMore);
     }
 
     public List<ThreadProfile> threadProfileList(Long user_uid,Long target_uid){
-        return assemble(threadRepository.findAllUserThreads(target_uid), user_uid);
+        return assemble(threadRepository.findUserThreadsVisibleTo(user_uid, target_uid), user_uid);
     }
 
     /**
@@ -149,8 +199,14 @@ public class ThreadService {
      * cost grew linearly with the number of threads on screen. Everything the loop
      * needs is now fetched once up front and matched in memory.
      *
-     * Visibility, ordering and comment counting are unchanged - including that the
-     * count still includes soft-deleted comments, exactly as findByThread did.
+     * Visibility is no longer decided here. It moved into the two feed queries,
+     * because filtering in Java after a LIMIT hands back fewer threads than the
+     * page asked for and can return an empty page while more threads exist. Both
+     * callers now pass in rows the viewer is already entitled to see, and this
+     * only joins on the likes, comment counts and author views.
+     *
+     * Ordering and comment counting are unchanged - including that the count
+     * still includes soft-deleted comments, exactly as findByThread did.
      */
     private List<ThreadProfile> assemble(List<Thread_> threads, Long viewerUid){
         if(threads.isEmpty()){
@@ -160,17 +216,6 @@ public class ThreadService {
         Map<Long, User_> authors = new HashMap<>();
         userRepository.findAllById(threads.stream().map(Thread_::uid).distinct().toList())
                 .forEach(u -> authors.put(u.uid(), u));
-
-        // Who the viewer follows, and who follows the viewer: two queries covering
-        // every thread, rather than up to two per thread.
-        Set<Long> viewerFollows = followService.getFollows(viewerUid).stream()
-                .map(Follow_::receive_id).collect(Collectors.toSet());
-        Set<Long> followsViewer = followService.getFollowers(viewerUid).stream()
-                .map(Follow_::request_id).collect(Collectors.toSet());
-
-        // Everybody blocked in either direction, fetched once for the whole feed
-        // rather than asked per thread.
-        Set<Long> invisible = blockService.invisibleTo(viewerUid);
 
         Set<Long> likedThreads = threadLikeRepository.findByUser(viewerUid).stream()
                 .map(Threadlike_::tid).collect(Collectors.toSet());
@@ -183,27 +228,6 @@ public class ThreadService {
         for(Thread_ t : threads){
             User_ author = authors.get(t.uid());
             if(author == null){
-                continue;
-            }
-
-            // A suspended or deleted account's posts go with it. findAllById is a
-            // plain CRUD lookup and does not filter deleted_at the way every
-            // query in UserRepository does, so without this a suspended account
-            // keeps publishing.
-            if(author.deleted_at() != null){
-                continue;
-            }
-
-            // Checked before the privacy rule, because a block is the stronger
-            // statement of the two: it does not matter whether a blocked person's
-            // thread was public.
-            if(invisible.contains(author.uid())){
-                continue;
-            }
-
-            boolean mutualFollow = viewerFollows.contains(author.uid())
-                    && followsViewer.contains(author.uid());
-            if(!mutualFollow && t.is_private() && !t.uid().equals(viewerUid)){
                 continue;
             }
 
