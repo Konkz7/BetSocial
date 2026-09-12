@@ -43,6 +43,7 @@ import GroupMembersScreen from './app/groupMembersPage';
 import AdminScreen from './app/adminPage';
 import { activitySeenStore, messageSeenStore } from './app/GlobalFlags';
 import { BannerProvider } from './app/Components/BannerProvider';
+import { ReportSheet } from './app/Components/ReportPrompt';
 import notifee, {AndroidImportance} from '@notifee/react-native';
 
 
@@ -229,6 +230,9 @@ function App(): React.JSX.Element {
               gets in its way. */}
           <LoginStack.Screen name="AdminApp" component={AdminScreen} />
         </LoginStack.Navigator>  
+        {/* App-wide, so any screen can report without carrying the sheet.
+            Inside QueryClientProvider because reporting invalidates caches. */}
+        <ReportSheet />
        </QueryClientProvider>
       </NavigationContainer>
     </BannerProvider>
