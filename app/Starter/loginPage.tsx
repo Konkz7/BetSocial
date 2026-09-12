@@ -6,6 +6,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { IP_STRING } from "../Constants";
 import { removeFBNToken, requestFBNPermission } from "../Components/FBCloudMessagingService";
+import { clearUploadIdentity } from "../Components/FBAuthService";
 import { LoginStore, screenStore } from "../GlobalFlags";
 import {useNotificationListener } from "../Components/FBCloudMessagingService";
 import { requestPasswordReset } from "../API";
@@ -33,6 +34,16 @@ const LoginScreen = ({navigation}:any) => {
       } else {
         console.error("Unexpected error:", (error as Error).message);
         Alert.alert("Error", "Something went wrong.");
+      }
+    } finally {
+      // Uploads have their own Firebase session, derived from this one. Ending
+      // ours without ending that leaves the next person on the device able to
+      // upload as whoever was signed in last. In finally because that is most
+      // true when the logout call itself failed.
+      try {
+        await clearUploadIdentity();
+      } catch (e) {
+        console.warn("Could not clear the upload identity:", e);
       }
     }
   };

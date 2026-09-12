@@ -267,44 +267,62 @@ service firebase.storage {
   match /b/{bucket}/o {
     match /images/{file} {
       allow read;
-      allow write: if request.resource.size < 15 * 1024 * 1024
+      allow write: if request.auth != null
+                   && request.resource.size < 15 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
     match /videos/{file} {
       allow read;
-      allow write: if request.resource.size < 100 * 1024 * 1024
+      allow write: if request.auth != null
+                   && request.resource.size < 100 * 1024 * 1024
                    && request.resource.contentType.matches('video/.*');
     }
     match /profile_pictures/{file} {
       allow read;
-      allow write: if request.resource.size < 15 * 1024 * 1024
+      // Only the owner. The file is named after the uid, and the token says
+      // which uid the caller is, so one cannot overwrite another's picture.
+      allow write: if request.auth != null
+                   && file == request.auth.uid + '.jpg'
+                   && request.resource.size < 15 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
   }
 }
 ```
 
-#### Why there is no `request.auth != null` in there
+### How an upload gets an identity
 
-The obvious line to add is `request.auth != null`, and it would reject every
-upload this app makes. There are **two Firebase SDKs** in the client and they do
-not share a signed-in user:
+Signing in to this app is a session against our own database — Firebase is not
+part of it, and for a long time that meant every upload reached the bucket
+anonymous. `request.auth` was null, so the rules above could not have been
+written: anyone holding the client config, which ships inside the app, could
+write to the bucket.
 
-| SDK | Used for | Signed in? |
+There are also **two Firebase SDKs** in the client, and they do not share a
+signed-in user:
+
+| SDK | Used for | Signed in by |
 |---|---|---|
-| `@react-native-firebase/*` | phone OTP at registration, push messaging | during registration only |
-| `firebase` (JS SDK) | **Storage uploads**, via `initializeApp` in `Constants.js` | never |
+| `@react-native-firebase/*` | phone OTP at registration, push messaging | the OTP flow |
+| `firebase` (JS SDK) | **Storage uploads** | `FBAuthService` |
 
-`FBStorageService` uploads through the JS SDK instance, which nothing ever
-authenticates — and ordinary login goes to this application's own session, not to
-Firebase at all. So `request.auth` is null on every upload, and a rule requiring
-it fails with `storage/unauthorized`.
+So `FBAuthService` gives the JS SDK instance an identity of its own:
 
-The rules above are therefore what the app can satisfy today: they stop the
-things that actually hurt an open bucket — arbitrary size, arbitrary file type —
-but **anyone holding the client config can still write to it**, and that config
-ships inside the app. Closing that needs the upload path to carry an identity;
-see the note in `FBStorageService`.
+```
+POST /api/media/token   →  a custom token, signed with the service-account key
+                           the backend already holds, asserting "this is user 7"
+signInWithCustomToken   →  a Firebase session whose uid is 7
+```
+
+The uid is our own user id, which is why `profile_pictures/7.jpg` can be pinned
+to its owner without a second mapping to keep in step. The token is minted from
+the **session** and never from anything in the request — issuing one for a uid a
+caller supplied would let anybody upload as anybody, and the rules would then be
+enforcing an identity the caller chose.
+
+The Firebase session is held in memory and dropped on logout, so it cannot
+outlive the session it came from. If it expires mid-upload, `withUploadIdentity`
+re-mints once and retries.
 
 **Check what the rules currently are before going public.** A bucket left on the
 default test rules is writable by anyone who has the project's client config,

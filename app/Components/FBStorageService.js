@@ -4,6 +4,7 @@ import uuid from 'react-native-uuid';
 import { launchImageLibrary } from 'react-native-image-picker';
 import {firebaseApp} from "../Constants";
 import { firebaseConfig } from "../Secrets";
+import { withUploadIdentity } from "./FBAuthService";
 import { Image, Video } from 'react-native-compressor';
 import RNFS from "react-native-fs";
 
@@ -34,21 +35,10 @@ if (firebaseConfig?.type === "service_account" || firebaseConfig?.private_key) {
   );
 }
 
-// Uploads here are unauthenticated, and the Storage rules cannot ask for an
-// identity that does not exist.
-//
-// There are two Firebase SDKs in this app. Phone OTP and push use the native one
-// (@react-native-firebase), and this file uses the JS one - separate instances
-// with separate auth state. Nothing signs into the JS instance, and ordinary
-// login goes to our own session rather than to Firebase, so request.auth is null
-// in every rule evaluated for an upload. A rule requiring it rejects the whole
-// app with storage/unauthorized.
-//
-// The consequence is that the bucket's write rules can only constrain what is
-// uploaded, not who uploads it. Fixing that means giving this instance a real
-// identity - a custom token minted from the session by the Admin SDK the backend
-// already carries - which would also let the rules pin profile_pictures/<uid> to
-// its owner. See the Media section of the README.
+// Uploads carry an identity, which is what lets the Storage rules ask who is
+// writing rather than only how big the file is. See FBAuthService: there are two
+// Firebase SDKs in this app with separate auth state, and this file uses the JS
+// one, which nothing else signs into.
 const storage = getStorage(firebaseApp);
 
 const IMAGE_SOFT_LIMIT = 3 * 1024 * 1024;   // 3MB
@@ -79,8 +69,10 @@ export async function uploadImage(uri) {
   const blob = await response.blob();
 
   const fileRef = ref(storage, `images/${uuid.v4()}.jpg`);
-  await uploadBytes(fileRef, blob);
-  return await getDownloadURL(fileRef); // public URL
+  return withUploadIdentity(async () => {
+    await uploadBytes(fileRef, blob);
+    return await getDownloadURL(fileRef); // public URL
+  });
 }
 
 export async function uploadPFP(uri,uid) {
@@ -99,9 +91,13 @@ export async function uploadPFP(uri,uid) {
   const response = await fetch(compressedUri);
   const blob = await response.blob();
 
+  // The name is the uid on purpose: it is what lets the rules require that the
+  // person writing profile_pictures/7.jpg is user 7.
   const fileRef = ref(storage, `profile_pictures/${uid}.jpg`);
-  await uploadBytes(fileRef, blob);
-  return await getDownloadURL(fileRef); // public URL
+  return withUploadIdentity(async () => {
+    await uploadBytes(fileRef, blob);
+    return await getDownloadURL(fileRef); // public URL
+  });
 }
 
 
@@ -133,8 +129,10 @@ export async function uploadVideo(uri) {
   const blob = await response.blob();
 
   const fileRef = ref(storage, `videos/${uuid.v4()}.mp4`);
-  await uploadBytes(fileRef, blob);
-  return await getDownloadURL(fileRef); 
+  return withUploadIdentity(async () => {
+    await uploadBytes(fileRef, blob);
+    return await getDownloadURL(fileRef);
+  });
 }
 
 
