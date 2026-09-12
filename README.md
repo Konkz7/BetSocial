@@ -223,17 +223,33 @@ videos/<uuid>.mp4          thread and message videos
 profile_pictures/<uid>.jpg profile pictures, one per account, overwritten
 ```
 
-Set the bucket so the server knows which files are ours:
+### There are two bucket settings, and they are not the same one
+
+| Setting | Side | Does what |
+|---|---|---|
+| `storageBucket` in `app/Secrets.js` | client | **where uploads go.** Without it, `getStorage()` has no bucket and every upload fails with `storage/no-default-bucket` — the app shows *"Apologies! Image couldnt be Uploaded"* |
+| `FIREBASE_STORAGE_BUCKET` | server | **which files are recognised as ours**, for validating references and deleting them later |
+
+Setting the server one does not fix an upload, and setting the client one does
+not make the server check anything. Both need the same bucket.
+
+The authoritative value is in the Firebase console under *Storage* — the
+`gs://…` name at the top of the Files tab. Copy the part after `gs://`.
 
 ```bash
-FIREBASE_STORAGE_BUCKET=betsocial-e7e93.appspot.com ./mvnw spring-boot:run
+FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app ./mvnw spring-boot:run
 ```
+
+Bucket names come in two shapes: projects made before late 2024 have
+`<project>.appspot.com`, newer ones `<project>.firebasestorage.app`. Only one
+exists for any given project, so the server accepts either spelling of the name
+it is given rather than making the choice matter.
 
 With it set, the server refuses any media URL that does not name an object in
 that bucket under one of those prefixes, and deletes the object when its thread
 or message is removed. **Without it, neither happens** — references are stored
 unchecked and files are never cleaned up. The application warns at startup when
-it is unset.
+it is unset, and logs the bucket it expected whenever it refuses a reference.
 
 ### The limits are not enforced here
 
@@ -330,6 +346,16 @@ you have not created `app/Secrets.js`, or it declares `firebaseConfig` without
 exporting it. These two errors always appear together: `initializeApp` throws at
 module scope, which aborts `Constants.js` evaluation, so every module importing
 `IP_STRING` from it sees `undefined`. Fix the export and both clear.
+
+**"Apologies! Image couldnt be Uploaded"** — `app/Secrets.js` has no
+`storageBucket`, so the Firebase client has no bucket to upload to
+(`storage/no-default-bucket`). Copy it from the Firebase console and restart
+Metro. The server's `FIREBASE_STORAGE_BUCKET` is a different setting and does
+not affect uploading — see [Media](#media).
+
+**Media uploads succeed but posting fails with "That media reference is not one
+of ours"** — `FIREBASE_STORAGE_BUCKET` names a different bucket than the client
+uploads to. The server log line next to the refusal says which one it expected.
 
 **`Could not find a valid Docker environment` when running the backend tests** —
 Docker is not running, or its Engine API is newer than the Testcontainers

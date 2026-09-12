@@ -52,10 +52,49 @@ public class MediaReference {
      */
     private static final int MAX_LENGTH = 1_000;
 
+    /**
+     * The two shapes a project's default bucket name comes in. Projects created
+     * before late 2024 got {@code <project>.appspot.com}; newer ones get
+     * {@code <project>.firebasestorage.app}.
+     */
+    private static final String LEGACY_SUFFIX = ".appspot.com";
+    private static final String CURRENT_SUFFIX = ".firebasestorage.app";
+
     private final String bucket;
 
+    /**
+     * The configured bucket and the other spelling of the same project's name.
+     *
+     * Naming the wrong one of the two fails in the most confusing way available:
+     * the client uploads successfully to the bucket in app/Secrets.js, and the
+     * server then refuses the URL it produced as somebody else's. Accepting the
+     * counterpart costs nothing, because both names are derived from a globally
+     * unique project id and neither can be registered by anyone but its owner -
+     * so the alias cannot point at storage that is not ours.
+     */
+    private final List<String> acceptedBuckets;
+
     public MediaReference(@Value("${firebase.storage-bucket:}") String bucket) {
-        this.bucket = bucket;
+        this.bucket = bucket == null ? "" : bucket.trim();
+        this.acceptedBuckets = namesFor(this.bucket);
+    }
+
+    private static List<String> namesFor(String bucket) {
+        if (bucket.isBlank()) {
+            return List.of();
+        }
+        if (bucket.endsWith(LEGACY_SUFFIX)) {
+            return List.of(bucket, withoutSuffix(bucket, LEGACY_SUFFIX) + CURRENT_SUFFIX);
+        }
+        if (bucket.endsWith(CURRENT_SUFFIX)) {
+            return List.of(bucket, withoutSuffix(bucket, CURRENT_SUFFIX) + LEGACY_SUFFIX);
+        }
+        // A custom bucket name, which has no counterpart to guess at.
+        return List.of(bucket);
+    }
+
+    private static String withoutSuffix(String value, String suffix) {
+        return value.substring(0, value.length() - suffix.length());
     }
 
     /**
@@ -74,7 +113,7 @@ public class MediaReference {
         // Accepting unchecked is the lesser wrong of the two - but it does mean
         // this whole class is inert until the bucket is set, which is why startup
         // says so out loud.
-        if (bucket.isBlank()) {
+        if (acceptedBuckets.isEmpty()) {
             return media;
         }
 
@@ -83,10 +122,27 @@ public class MediaReference {
         }
 
         if (objectPathOf(media).isEmpty()) {
+            // Said out loud because the response deliberately is not: the one
+            // likely innocent cause of a refusal is firebase.storage-bucket
+            // naming a different bucket than the client uploads to, and without
+            // this there is nothing to tell that apart from an attack.
+            log.warn("Refused a media reference that does not name an object in {}: {}",
+                    bucket, forLogging(media));
             throw refuse();
         }
 
         return media;
+    }
+
+    /**
+     * Enough of a refused reference to recognise it, minus the query string - a
+     * Firebase download URL carries an access token there, and a log file is not
+     * somewhere to leave one.
+     */
+    private static String forLogging(String media) {
+        int query = media.indexOf('?');
+        String withoutToken = query < 0 ? media : media.substring(0, query);
+        return withoutToken.length() > 200 ? withoutToken.substring(0, 200) + "..." : withoutToken;
     }
 
     /**
@@ -98,7 +154,7 @@ public class MediaReference {
      */
     @PostConstruct
     void warnIfUnconfigured() {
-        if (bucket.isBlank()) {
+        if (acceptedBuckets.isEmpty()) {
             log.warn("firebase.storage-bucket is not set: media references are accepted "
                     + "without checking, and files are not deleted when their content is "
                     + "removed. Set FIREBASE_STORAGE_BUCKET before this is public.");
@@ -113,7 +169,7 @@ public class MediaReference {
      * definition of "ours", rather than two that can disagree.
      */
     public Optional<String> objectPathOf(String media) {
-        if (media == null || media.isBlank() || bucket.isBlank()) {
+        if (media == null || media.isBlank() || acceptedBuckets.isEmpty()) {
             return Optional.empty();
         }
 
@@ -130,17 +186,27 @@ public class MediaReference {
         }
 
         // https://firebasestorage.googleapis.com/v0/b/<bucket>/o/<url-encoded path>
-        String expectedPrefix = "/v0/b/" + bucket + "/o/";
         String path = uri.getRawPath();
-        if (path == null || !path.startsWith(expectedPrefix)) {
+        if (path == null) {
+            return Optional.empty();
+        }
+
+        String encodedObjectPath = null;
+        for (String name : acceptedBuckets) {
+            String expectedPrefix = "/v0/b/" + name + "/o/";
+            if (path.startsWith(expectedPrefix)) {
+                encodedObjectPath = path.substring(expectedPrefix.length());
+                break;
+            }
+        }
+        if (encodedObjectPath == null) {
             return Optional.empty();
         }
 
         // The object path is percent-encoded in the URL - "images/x.jpg" arrives
         // as "images%2Fx.jpg" - so it has to be decoded before the prefix can be
         // recognised, and before it can be handed to the bucket.
-        String objectPath = URLDecoder.decode(
-                path.substring(expectedPrefix.length()), StandardCharsets.UTF_8);
+        String objectPath = URLDecoder.decode(encodedObjectPath, StandardCharsets.UTF_8);
 
         // No traversal. The bucket API treats the path as a key rather than a
         // filesystem path, so ".." is not the hazard it would be on disk - but a
