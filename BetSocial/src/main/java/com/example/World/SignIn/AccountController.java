@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.BindingResult;
@@ -36,18 +37,114 @@ public class AccountController {
     private  final EmailService emailService;
     private final LedgerService ledgerService;
     private final RateLimiter rateLimiter;
+    private final PasswordResetService passwordResetService;
 
 
     public AccountController(PasswordEncoder passwordEncoder, UserRepository userRepository, AuthService authService, EmailService emailService, LedgerService ledgerService,
-                             RateLimiter rateLimiter) {
+                             RateLimiter rateLimiter, PasswordResetService passwordResetService) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.authService = authService;
         this.emailService = emailService;
         this.ledgerService = ledgerService;
         this.rateLimiter = rateLimiter;
+        this.passwordResetService = passwordResetService;
     }
 
+
+    /**
+     * Asks for a reset link. Always answers the same way.
+     *
+     * Whether that address has an account is not in the response, because
+     * answering would turn this into a way to ask whether somebody is a user -
+     * worth more to whoever is asking than to the person who mistyped their own
+     * address.
+     *
+     * Rate limited by address rather than account, since there is no session
+     * here: without it this is an open relay for sending mail to any address
+     * somebody likes.
+     */
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @PostMapping("/forgot-password")
+    public String forgotPassword(@Valid @RequestBody ForgotPasswordDTO request,
+                                 HttpServletRequest servletRequest) {
+        rateLimiter.require(RateLimiter.scopeOf("forgot-password", servletRequest.getRemoteAddr()),
+                Limits.FORGOT_PASSWORD);
+
+        passwordResetService.requestReset(request.email());
+        return "If that address has an account, a reset link is on its way.";
+    }
+
+    /**
+     * The page the emailed link lands on.
+     *
+     * A link in an email is opened by a browser, and the endpoint below only
+     * answers POST - so without this, tapping the link gives a 405 and the
+     * feature does not work at all. The alternative is a deep link into the app,
+     * which needs native URL-scheme configuration on both platforms and still
+     * fails for anybody reading their email on a laptop.
+     *
+     * Deliberately plain and self-contained: no stylesheet, no framework, one
+     * field. The token is written into a script constant and posted as JSON, so
+     * there is one POST endpoint rather than two.
+     */
+    @GetMapping(value = "/reset-password", produces = MediaType.TEXT_HTML_VALUE)
+    public String resetPasswordPage(@RequestParam("token") String token) {
+        // Rejected outright rather than escaped. This value is reflected into a
+        // <script> block, where HTML escaping does nothing useful - entities are
+        // not decoded there, so htmlEscape would neither protect the page nor
+        // survive a legitimate token. Tokens are Base64url by construction, so
+        // anything outside that alphabet did not come from us and there is
+        // nothing to render for it.
+        if (token == null || !token.matches("[A-Za-z0-9_-]{1,256}")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That is not a reset link");
+        }
+
+        return """
+        <!doctype html>
+        <html lang="en"><head><meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>Reset your password</title></head>
+        <body style="font-family:system-ui,sans-serif;max-width:24rem;margin:3rem auto;padding:0 1rem">
+          <h1 style="font-size:1.25rem">Reset your password</h1>
+          <p id="msg" style="color:#6b7280"></p>
+          <input id="pw" type="password" placeholder="New password" autocomplete="new-password"
+                 style="width:100%%;padding:.6rem;font-size:1rem;box-sizing:border-box">
+          <button id="go" style="width:100%%;padding:.7rem;margin-top:.6rem;font-size:1rem;
+                 background:#10B981;color:#fff;border:0;border-radius:.4rem">Set password</button>
+          <script>
+            const token = "%s";
+            document.getElementById('go').onclick = async () => {
+              const msg = document.getElementById('msg');
+              msg.textContent = 'Working...';
+              const res = await fetch('/req/reset-password', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({token: token, new_password: document.getElementById('pw').value})
+              });
+              const text = await res.text();
+              msg.textContent = res.ok ? 'Done. Open the app and sign in.' : text;
+            };
+          </script>
+        </body></html>
+        """.formatted(token);
+    }
+
+    /**
+     * Sets a new password from a reset link.
+     *
+     * Rate limited as well: the token is 32 random bytes, so guessing is not a
+     * realistic attack, but nothing here should be free to hammer.
+     */
+    @PostMapping("/reset-password")
+    public String resetPassword(@Valid @RequestBody ResetPasswordDTO request,
+                                HttpServletRequest servletRequest) {
+        rateLimiter.require(RateLimiter.scopeOf("reset-password", servletRequest.getRemoteAddr()),
+                Limits.RESET_PASSWORD);
+
+        passwordResetService.resetPassword(request.token(), request.new_password());
+        return "Your password has been changed. Sign in with it now.";
+    }
 
     @GetMapping("/verify-email")
     public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {

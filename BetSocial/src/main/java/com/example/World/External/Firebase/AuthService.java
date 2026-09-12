@@ -8,9 +8,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthService {
 
-    public String sendPasswordResetEmail(String email) throws FirebaseAuthException {
-        return FirebaseAuth.getInstance().generatePasswordResetLink(email);
-    }
+    // sendPasswordResetEmail is gone. It asked Firebase Auth to reset a Firebase
+    // password, and sign-in does not go through Firebase - it goes through
+    // DaoAuthenticationProvider against the BCrypt hash in user_. Anybody who
+    // followed the link it produced would have set a new password and still been
+    // locked out. It had never been called, which is the only reason nobody hit
+    // that. PasswordResetService does this properly.
 
     public String sendEmailVerification(String email) throws FirebaseAuthException {
         UserRecord user = FirebaseAuth.getInstance().getUserByEmail(email);

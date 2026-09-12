@@ -8,6 +8,7 @@ import { IP_STRING } from "../Constants";
 import { removeFBNToken, requestFBNPermission } from "../Components/FBCloudMessagingService";
 import { LoginStore, screenStore } from "../GlobalFlags";
 import {useNotificationListener } from "../Components/FBCloudMessagingService";
+import { requestPasswordReset } from "../API";
 import { getProfile } from "../API";
 import { isPrivileged } from "../Roles";
 
@@ -87,6 +88,27 @@ const LoginScreen = ({navigation}:any) => {
     }
   };
 
+  /**
+   * Sends a reset link to whatever is in the email field.
+   *
+   * Uses the field already on screen rather than opening a second one: somebody
+   * who has just failed to sign in has usually typed their address already, and
+   * the alert says which address it went to so a typo is visible.
+   */
+  const forgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert("Your email first", "Type the address you signed up with, then tap this again.");
+      return;
+    }
+
+    const answer = await requestPasswordReset(email.trim());
+    if (answer) {
+      // The server deliberately does not say whether the address has an account,
+      // so neither does this.
+      Alert.alert("Check your email", answer + "\n\nSent to " + email.trim());
+    }
+  };
+
   const toRegister =  () => {
     navigation.navigate("Register");
   };
@@ -111,6 +133,11 @@ const LoginScreen = ({navigation}:any) => {
       />
       <Button mode="contained" onPress={handleLogin} style={styles.button}>
         Login
+      </Button>
+      {/* Somebody locked out cannot sign in to ask for a way to sign in, so this
+          has to live on the screen they are stuck on. */}
+      <Button style = {styles.rbutton} onPress={forgotPassword}>
+        <Text style = {styles.special} >Forgot your password?</Text>
       </Button>
       <Button style = {styles.rbutton} onPress={toRegister}>
         <Text style = {styles.special} >Don't have an account? Sign Up</Text>
