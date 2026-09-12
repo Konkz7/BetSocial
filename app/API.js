@@ -539,3 +539,37 @@ export const approveBet = async(bid, decision, reason) =>{
     return false;
   }
 }
+
+//BLOCKING
+// Apple's guideline 1.2 requires a way to block other users. A block is mutual:
+// neither party sees the other afterwards.
+export const blockUser = async (uid) =>{
+  try {
+    await axios.post(IP_STRING + "/api/blocks/" + uid);
+    return true;
+  } catch (error) {
+    Alert.alert("Couldnt block them", error.response?.data?.message ?? error.message);
+    return false;
+  }
+}
+
+export const unblockUser = async (uid) =>{
+  try {
+    await axios.delete(IP_STRING + "/api/blocks/" + uid);
+    return true;
+  } catch (error) {
+    Alert.alert("Couldnt unblock them", error.response?.data?.message ?? error.message);
+    return false;
+  }
+}
+
+// Only ever your own - there is no endpoint for anybody else's.
+export const getBlockedUsers = async () =>{
+  try {
+    const blocked = await axios.get(IP_STRING + "/api/blocks");
+    return blocked.data;
+  } catch (error) {
+    Alert.alert("Error!", "Your blocked list couldnt be loaded.");
+    return [];
+  }
+}

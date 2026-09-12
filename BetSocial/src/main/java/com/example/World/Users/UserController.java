@@ -1,6 +1,8 @@
 package com.example.World.Users;
 
 
+import com.example.World.Blocks.BlockService;
+import java.util.Set;
 import com.example.World.Bets.DecisionDTO;
 import com.example.World.Users.User_;
 import com.example.World.Users.UserRepository;
@@ -19,24 +21,34 @@ import java.util.Optional;
 public class UserController {
     private final UserRepository userRepository;
     private final UserService userService;
+    private final BlockService blockService;
 
-    public UserController(UserRepository userRepository, UserService userService) {
+    public UserController(UserRepository userRepository, UserService userService,
+                          BlockService blockService) {
         this.userRepository = userRepository;
         this.userService = userService;
+        this.blockService = blockService;
     }
 
     @GetMapping("/all")
     List<UserView> findAll(HttpSession session){
         Long uid = (Long) session.getAttribute("userId");
-        return userRepository.findAllActiveUsers(uid).stream().map(UserView::from).toList();
+        Set<Long> invisible = blockService.invisibleTo(uid);
+        return userRepository.findAllActiveUsers(uid).stream()
+                .filter(u -> !invisible.contains(u.uid()))
+                .map(UserView::from)
+                .toList();
     }
 
     @GetMapping("/{uid}")
-    UserView findById(@PathVariable Long uid){
+    UserView findById(@PathVariable Long uid, HttpSession session){
         Optional<User_> user = userRepository.findById(uid);
         if(user.isEmpty()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
+        // Same answer as a genuinely missing user, so a profile cannot be reached
+        // by id once either party has blocked the other.
+        blockService.requireNotBlocked((Long) session.getAttribute("userId"), uid);
         return UserView.from(user.get());
     }
 

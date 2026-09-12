@@ -1,5 +1,6 @@
 package com.example.World.Groups;
 
+import com.example.World.Blocks.BlockService;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.User_;
 import org.springframework.http.HttpStatus;
@@ -26,12 +27,14 @@ public class GroupService {
     private final GroupRepository groupRepository;
     private final GroupUserRepository groupUserRepository;
     private final UserRepository userRepository;
+    private final BlockService blockService;
 
     public GroupService(GroupRepository groupRepository, GroupUserRepository groupUserRepository,
-                        UserRepository userRepository) {
+                        UserRepository userRepository, BlockService blockService) {
         this.groupRepository = groupRepository;
         this.groupUserRepository = groupUserRepository;
         this.userRepository = userRepository;
+        this.blockService = blockService;
     }
 
     /**
@@ -67,6 +70,15 @@ public class GroupService {
         // inserted silently and only surface as a member who cannot be rendered.
         for (Long uid : members) {
             requireUserExists(uid);
+        }
+
+        // Starting a direct conversation with somebody who has blocked you, or
+        // whom you have blocked, is refused at creation - otherwise the block
+        // only bites on the first message and the conversation already exists in
+        // both lists by then. A larger group is not refused: see
+        // MessageService.sendMessage for why blocking stops at one-to-one.
+        if (groupName == null && members.size() == 1) {
+            blockService.requireNotBlocked(creatorId, members.get(0));
         }
 
         Long time = new Date().getTime();

@@ -27,6 +27,22 @@ public interface FollowRepository extends ListCrudRepository<Follow_, Long> {
     @Query(value = "SELECT * FROM Follow_ WHERE request_id = :requestId AND receive_id = :receiveId")
     Optional<Follow_> findByRequestIdAndReceiveId(@Param("requestId") Long requestId, @Param("receiveId") Long receiveId);
 
+    /**
+     * Removes any follow between two people, whichever way round it points.
+     *
+     * Used when one blocks the other: leaving the rows in place would mean a
+     * blocked person still appears in your follower count and still counts as a
+     * mutual follow, which is what makes a private thread visible.
+     */
+    @Modifying
+    @Transactional
+    @Query("""
+    DELETE FROM Follow_
+    WHERE (request_id = :a AND receive_id = :b)
+       OR (request_id = :b AND receive_id = :a)
+    """)
+    int deleteBetween(@Param("a") Long a, @Param("b") Long b);
+
 
 
 }

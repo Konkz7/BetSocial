@@ -15,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.World.Blocks.BlockService;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -34,9 +36,11 @@ public class ThreadService {
     private final CommentRepository commentRepository;
     private final NotificationService notificationService;
     private final FollowService followService;
+    private final BlockService blockService;
 
     ThreadService(ThreadRepository threadRepository, BetRepository betRepository, ThreadLikeRepository threadLikeRepository,
-                  UserRepository userRepository, CommentRepository commentRepository, NotificationService notificationService, FollowService followService){
+                  UserRepository userRepository, CommentRepository commentRepository, NotificationService notificationService, FollowService followService,
+                  BlockService blockService){
 
         this.threadRepository = threadRepository;
         this.betRepository = betRepository;
@@ -45,6 +49,7 @@ public class ThreadService {
         this.commentRepository = commentRepository;
         this.notificationService = notificationService;
         this.followService = followService;
+        this.blockService = blockService;
     }
 
     public Thread_ makeThread(ThreadDTO thread , Long uid){
@@ -119,6 +124,10 @@ public class ThreadService {
         Thread_ t = threadRepository.findById(tid).orElseThrow();
         User_ user = userRepository.findById(t.uid()).orElseThrow();
 
+        // The feed filters blocked authors out, but this reads a thread by id and
+        // would otherwise hand it over to anyone holding the number.
+        blockService.requireNotBlocked(viewerUid, t.uid());
+
         return new ThreadProfile(t.tid(),UserView.from(user),t.title(),t.media(),t.media_type(),t.category(),t.likes()
                 ,isThreadLike(viewerUid,t.tid()),(long) commentRepository.findByThread(t.tid()).size(),t.created_at(), t.is_private());
     }
@@ -159,6 +168,10 @@ public class ThreadService {
         Set<Long> followsViewer = followService.getFollowers(viewerUid).stream()
                 .map(Follow_::request_id).collect(Collectors.toSet());
 
+        // Everybody blocked in either direction, fetched once for the whole feed
+        // rather than asked per thread.
+        Set<Long> invisible = blockService.invisibleTo(viewerUid);
+
         Set<Long> likedThreads = threadLikeRepository.findByUser(viewerUid).stream()
                 .map(Threadlike_::tid).collect(Collectors.toSet());
 
@@ -170,6 +183,13 @@ public class ThreadService {
         for(Thread_ t : threads){
             User_ author = authors.get(t.uid());
             if(author == null){
+                continue;
+            }
+
+            // Checked before the privacy rule, because a block is the stronger
+            // statement of the two: it does not matter whether a blocked person's
+            // thread was public.
+            if(invisible.contains(author.uid())){
                 continue;
             }
 

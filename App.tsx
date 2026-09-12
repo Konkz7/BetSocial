@@ -29,6 +29,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WalletScreen from './app/walletPage';
 import DeclareOutcomeScreen from './app/declareOutcomePage';
+import BlockedUsersScreen from './app/blockedUsersPage';
 import MessageScreen from './app/messagePage';
 import SearchScreen from './app/searchPage';
 import ProfileScreen from './app/Profile/profilePage';
@@ -93,6 +94,7 @@ function SelfProfileStackNavigator() {
       <SelfProfileStack.Screen name="SelfProfile_SP" component={SelfProfileScreen}  />
       <SelfProfileStack.Screen name="Thread_SP" component={ThreadScreen} />
       <SelfProfileStack.Screen name="Settings_SP" component={SettingsScreen} />
+      <SelfProfileStack.Screen name="BlockedUsers_SP" component={BlockedUsersScreen} />
     </SelfProfileStack.Navigator>
   );
 };
