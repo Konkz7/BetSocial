@@ -40,10 +40,20 @@ public class ThreadController {
     // Neither had a client caller. /active and /thread-profile/{tid} are the
     // filtered equivalents and are what the app actually uses.
 
+    /**
+     * One page of the feed, newest first.
+     *
+     * Both cursor parameters come from the previous response's
+     * next_cursor_created_at and next_cursor_tid; omit them for the first page.
+     * They are two values rather than one opaque string because the client has no
+     * need to treat them as opaque and a readable cursor is a readable log line.
+     */
     @GetMapping("/active")
-    List<ThreadProfile>findAllActive(HttpSession session){
+    FeedPage findAllActive(HttpSession session,
+                           @RequestParam(required = false) Long cursor_created_at,
+                           @RequestParam(required = false) Long cursor_tid){
         Long uid = (Long) session.getAttribute("userId");
-        return threadService.threadProfileList(uid);
+        return threadService.feedPage(uid, cursor_created_at, cursor_tid);
     }
 
     @GetMapping("/user/{other_uid}")

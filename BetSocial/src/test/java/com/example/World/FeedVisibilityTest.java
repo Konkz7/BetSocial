@@ -4,6 +4,7 @@ import com.example.World.Comments.CommentRepository;
 import com.example.World.Comments.CommentService;
 import com.example.World.Comments.Comment_;
 import com.example.World.Follows.FollowService;
+import com.example.World.Threads.FeedPage;
 import com.example.World.Threads.ThreadProfile;
 import com.example.World.Threads.ThreadRepository;
 import com.example.World.Threads.ThreadService;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -49,7 +51,7 @@ class FeedVisibilityTest extends AbstractIntegrationTest {
         User_ stranger = users.save(user("vis-a2"));
         Thread_ t = thread(author, "public thread", false);
 
-        assertThat(tids(threads.threadProfileList(stranger.uid()))).contains(t.tid());
+        assertThat(tids(wholeFeed(stranger.uid()))).contains(t.tid());
     }
 
     @Test
@@ -59,7 +61,7 @@ class FeedVisibilityTest extends AbstractIntegrationTest {
         User_ stranger = users.save(user("vis-b2"));
         Thread_ t = thread(author, "private thread", true);
 
-        assertThat(tids(threads.threadProfileList(stranger.uid()))).doesNotContain(t.tid());
+        assertThat(tids(wholeFeed(stranger.uid()))).doesNotContain(t.tid());
     }
 
     @Test
@@ -71,11 +73,11 @@ class FeedVisibilityTest extends AbstractIntegrationTest {
 
         follows.sendFollow(viewer.uid(), author.uid());   // one direction only
 
-        assertThat(tids(threads.threadProfileList(viewer.uid()))).doesNotContain(t.tid());
+        assertThat(tids(wholeFeed(viewer.uid()))).doesNotContain(t.tid());
 
         follows.sendFollow(author.uid(), viewer.uid());   // now mutual
 
-        assertThat(tids(threads.threadProfileList(viewer.uid()))).contains(t.tid());
+        assertThat(tids(wholeFeed(viewer.uid()))).contains(t.tid());
     }
 
     @Test
@@ -84,7 +86,7 @@ class FeedVisibilityTest extends AbstractIntegrationTest {
         User_ author = users.save(user("vis-d1"));
         Thread_ t = thread(author, "private thread", true);
 
-        assertThat(tids(threads.threadProfileList(author.uid()))).contains(t.tid());
+        assertThat(tids(wholeFeed(author.uid()))).contains(t.tid());
     }
 
     @Test
@@ -99,7 +101,7 @@ class FeedVisibilityTest extends AbstractIntegrationTest {
         comments.save(comment(liked, author));
         comments.save(comment(liked, author));
 
-        List<ThreadProfile> feed = threads.threadProfileList(viewer.uid());
+        List<ThreadProfile> feed = wholeFeed(viewer.uid());
 
         assertThat(profile(feed, liked.tid()).liked()).isTrue();
         assertThat(profile(feed, liked.tid()).commentCount()).isEqualTo(2L);
@@ -119,12 +121,42 @@ class FeedVisibilityTest extends AbstractIntegrationTest {
         Comment_ removed = comments.save(comment(t, author));
         commentService.deleteComment(removed.cid());
 
-        assertThat(profile(threads.threadProfileList(author.uid()), t.tid()).commentCount())
+        assertThat(profile(wholeFeed(author.uid()), t.tid()).commentCount())
                 .as("findByThread never filtered deleted_at, so the count must not either")
                 .isEqualTo(2L);
     }
 
     // --- helpers ---
+
+    /**
+     * The whole feed for a viewer, walked page by page.
+     *
+     * These assertions are about what a viewer may see, not about where a page
+     * boundary falls, and the container is shared with every other test class -
+     * so a thread created here can easily sit past the first page. Walking the
+     * cursor also means each of these tests exercises pagination for free: a
+     * cursor that failed to advance would hit the page cap below, and one that
+     * skipped rows would lose the thread being asserted on.
+     */
+    private List<ThreadProfile> wholeFeed(Long viewerUid) {
+        List<ThreadProfile> all = new ArrayList<>();
+        Long cursorCreatedAt = null;
+        Long cursorTid = null;
+
+        // Bounded rather than while(true): a cursor that does not advance would
+        // otherwise hang the suite instead of failing it.
+        for (int page = 0; page < 200; page++) {
+            FeedPage current = threads.feedPage(viewerUid, cursorCreatedAt, cursorTid);
+            all.addAll(current.threads());
+
+            if (!current.has_more()) {
+                return all;
+            }
+            cursorCreatedAt = current.next_cursor_created_at();
+            cursorTid = current.next_cursor_tid();
+        }
+        throw new AssertionError("the feed cursor never reached the end - it is not advancing");
+    }
 
     private static List<Long> tids(List<ThreadProfile> feed) {
         return feed.stream().map(ThreadProfile::tid).toList();

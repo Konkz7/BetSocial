@@ -12,12 +12,25 @@ export const getProfile = async() =>{
   }
 
   //THREADS
-export const getThreads = async() =>{
+// One page of the feed. Returns { threads, next_cursor_created_at,
+// next_cursor_tid, has_more }.
+//
+// Pass the cursor from the previous response to get the next page; omit it for
+// the first. The server decides whether there is more rather than leaving the
+// client to infer it from a short page - with visibility rules in play a short
+// page and the end of the feed used to look identical.
+export const getThreads = async(cursor) =>{
   try {
-      const threads = await axios.get(IP_STRING + "/api/threads/active");
+      const query = cursor
+        ? `?cursor_created_at=${cursor.created_at}&cursor_tid=${cursor.tid}`
+        : "";
+      const threads = await axios.get(IP_STRING + "/api/threads/active" + query);
       return threads.data;
   } catch (error) {
     Alert.alert("Error!", "Threads couldnt be obtained.")
+    // An empty page rather than undefined: every caller reads .threads, and a
+    // failed refresh should not look like the feed ending.
+    return { threads: [], next_cursor_created_at: null, next_cursor_tid: null, has_more: false };
   }
 }
 

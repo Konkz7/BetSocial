@@ -59,7 +59,7 @@ class FeedQueryCountTest extends AbstractIntegrationTest {
 
     /** Seeds `extra` more threads, then counts the statements one feed load issues. */
     private int countFeedQueries(User_ viewer, User_ author, int totalThreads) {
-        long existing = threadRepository.findAllActiveThreads().size();
+        long existing = threadRepository.count();
         for (long i = existing; i < totalThreads; i++) {
             Thread_ t = threadRepository.save(new Thread_(
                     null, author.uid(), "perf thread " + i, null, 0,
@@ -69,7 +69,7 @@ class FeedQueryCountTest extends AbstractIntegrationTest {
         }
 
         QueryCounter.reset();
-        List<ThreadProfile> feed = threads.threadProfileList(viewer.uid());
+        List<ThreadProfile> feed = threads.feedPage(viewer.uid(), null, null).threads();
         int queries = QueryCounter.count();
 
         assertThat(feed).as("the feed should actually return threads").isNotEmpty();
