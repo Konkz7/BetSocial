@@ -1,10 +1,11 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
+  ActivityIndicator,
   Image,
   StyleSheet,
   SafeAreaView,
@@ -33,13 +34,36 @@ type Message = {
 };
 
 
+/**
+ * One server row as the shape this screen renders.
+ *
+ * Outside the component and taking the viewer's id as an argument, so it closes
+ * over nothing. Defined inside, it became a new dependency of the focus effect
+ * on every render - which is either a stale closure or a websocket that
+ * reconnects continuously, depending on which way you silence the warning.
+ */
+const toMessage = (item: any, selfUid: number): Message => ({
+  id: item.mid,
+  text: item.description,
+  sent: item.uid === selfUid,
+  time: formatMessageTime(item.created_at),
+  seen: item.is_read,
+  type: item.media_type,
+  deleted: item.deleted_at !== null,
+});
+
 const DMScreen = ({ navigation ,route }:any) => {
   const [newMessage, setNewMessage] = useState('');
+  // Newest first, so index 0 is the most recent. The inverted list renders that
+  // at the bottom, which is where a chat starts.
   const [messages, setMessages] = useState<Message[]>([]);
+
+  // Where the *older* messages continue from, or null at the start of the
+  // conversation. Cleared alongside messages whenever the conversation changes.
+  const [cursor, setCursor] = useState<any>(null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [isReading  , setIsReading] = useState(false);
   const [isOnline  , setIsOnline] = useState(false);
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
-  const scrollViewRef = useRef<ScrollView>(null);
 
 
 
@@ -59,12 +83,41 @@ const DMScreen = ({ navigation ,route }:any) => {
       enabled: false,
   });
 
-  const handleScroll = (event: any) => {
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    const isAtBottom =
-      contentOffset.y + layoutMeasurement.height >= contentSize.height - 20;
-    setIsUserScrolling(!isAtBottom);
+  /**
+   * Loads the messages before the ones on screen.
+   *
+   * Fires from onEndReached, which on an inverted list is the top - where older
+   * messages belong. Guarded on loadingOlder because FlatList fires it more than
+   * once per scroll, and two requests with the same cursor would append the same
+   * page twice.
+   */
+  const loadOlder = async () => {
+    if (!cursor || loadingOlder) return;
+
+    setLoadingOlder(true);
+    try {
+      const page = await getChatMessages(chatGid, cursor);
+
+      setMessages(prev => {
+        // Appended, because the array is newest-first and these are older than
+        // everything already in it. A websocket message arriving mid-fetch can
+        // also land here, so ids are de-duplicated - a repeated key in a
+        // FlatList is a crash, not a cosmetic fault.
+        const seen = new Set(prev.map(m => m.id));
+        return [...prev, ...page.messages.map((m: any) => toMessage(m, self.uid)).filter((m: Message) => !seen.has(m.id))];
+      });
+
+      setCursor(page.has_more
+        ? { created_at: page.next_cursor_created_at, mid: page.next_cursor_mid }
+        : null);
+    } finally {
+      setLoadingOlder(false);
+    }
   };
+
+  // handleScroll and scrollViewRef are gone with the ScrollView. They existed to
+  // decide whether to auto-scroll to the end on a new message; an inverted list
+  // already starts at the newest, so there is nothing to scroll to.
 
  
   const deleteText = (message : any) => {
@@ -163,28 +216,28 @@ const DMScreen = ({ navigation ,route }:any) => {
           type: message.media_type,
           deleted: false,
         };
-        setMessages(prevMessages => [...prevMessages, newMessageObj ]);
+        // Prepended, not appended: the list is newest-first now, so a new
+        // message belongs at index 0. Appending would put it at the far end of
+        // the history, which an inverted list renders at the very top.
+        setMessages(prevMessages => [newMessageObj, ...prevMessages ]);
       });
 
-      // 2) Clear any old messages
+      // 2) Clear any old messages, and the cursor with them - a cursor left over
+      // from another conversation would load that one's history into this one.
       setMessages([]);
-  
-      // 3) Fetch initial messages and *use the returned data*, not the stale chatData
+      setCursor(null);
+
+      // 3) Fetch the newest page and *use the returned data*, not the stale chatData
       refetchChat()
         .then((result) => {
-          const backendMessages = result.data;
-          if (backendMessages) {
-            const initialMessages: Message[] = backendMessages.map((item: any) => ({
-              id: item.mid,
-              text: item.description,
-              sent: item.uid === self.uid,
-              time: formatMessageTime(item.created_at),
-              seen:  item.is_read,
-              type: item.media_type,
-              deleted: item.deleted_at === null ? false : true,
-            }));
-  
-            setMessages(initialMessages);
+          const page = result.data;
+          if (page) {
+            // Already newest-first from the server, which is the order the
+            // inverted list wants.
+            setMessages(page.messages.map((m: any) => toMessage(m, self.uid)));
+            setCursor(page.has_more
+              ? { created_at: page.next_cursor_created_at, mid: page.next_cursor_mid }
+              : null);
           } else {
             console.error("Error fetching chat messages:", result.error);
           }
@@ -226,25 +279,33 @@ const DMScreen = ({ navigation ,route }:any) => {
         </Pressable>
       </View>
 
-      {/* Messages */}
-      <ScrollView 
-        ref={scrollViewRef}
+      {/* Messages
+          Inverted, which is what makes this both paged and virtualised. The
+          array is newest-first and `inverted` flips it visually, so index 0
+          renders at the bottom where the newest message belongs - and
+          onEndReached then fires at the *top*, which is exactly where "load
+          older" goes.
+          A ScrollView stood here and mounted every message in the conversation
+          at once, with no hook to load more. Scrolling to the bottom on a new
+          message is also gone: with an inverted list the bottom is where the
+          list already starts. */}
+      <FlatList
         style={styles.messagesContainer}
         contentContainerStyle={styles.messagesContent}
-        onContentSizeChange={() => {
-          if (!isUserScrolling) {
-            scrollViewRef.current?.scrollToEnd({ animated: true });
-          }
-        }}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
+        data={messages}
+        inverted
+        keyExtractor={(item) => String(item.id)}
+        removeClippedSubviews={false}
         showsVerticalScrollIndicator={false}
         overScrollMode="never"
         keyboardShouldPersistTaps="handled"
-      >
-        {messages.map((message) => (
+        onEndReached={loadOlder}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={loadingOlder
+          ? <ActivityIndicator size="small" color="#10B981" style={{ marginVertical: 12 }} />
+          : null}
+        renderItem={({ item: message }) => (
           <Pressable
-            key={message.id}
             style={[
               styles.messageWrapper,
               message.sent ? styles.messageSent : styles.messageReceived,
@@ -302,8 +363,8 @@ const DMScreen = ({ navigation ,route }:any) => {
               )}
             </View>
           </Pressable>
-        ))}
-      </ScrollView>
+        )}
+      />
 
       {/* Input Area */}
       <View style={styles.inputContainer}>
