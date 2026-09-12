@@ -1,4 +1,6 @@
 package com.example.World.Notifications;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.User_;
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -13,6 +15,8 @@ import java.util.Optional;
 
 @Service
 public class NotificationService {
+
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
@@ -35,7 +39,7 @@ public class NotificationService {
                 .build();
 
         String response = FirebaseMessaging.getInstance().send(message);
-        System.out.println("Sent message: " + response);
+        log.debug("Push delivered to Firebase, id {}", response);
     }
 
     /**
@@ -109,7 +113,9 @@ public class NotificationService {
                     .build());
         } catch (Exception e) {
             // A push that does not arrive must not fail the message that was sent.
-            System.out.println("Conversation notification failed for group " + gid + ": " + e);
+            // The exception goes in as the last argument rather than concatenated,
+            // so the stack trace is kept instead of e.toString().
+            log.warn("Conversation push failed for group {}", gid, e);
         }
     }
 
@@ -143,7 +149,6 @@ public class NotificationService {
                 title = "Unknown";
         }
 
-        //System.out.println("REED RICH: " + recipient_id);
         Optional<Notification_> noti = notificationRepository.findLatestNonDeleted(notificationDTO.notification_type(),recipient_id,
                 notificationDTO.actor_id(), notificationDTO.target_id());
 
@@ -155,13 +160,13 @@ public class NotificationService {
         }
 
         try {
-            System.out.println("TOKEN: " + token);
             sendFBNotification(token, recipient_id ,title, body, notificationDTO.notification_type(), notificationDTO.target_id());
 
         } catch (Exception e) {
-            System.out.println("Notification Failed!");
-            System.out.println(e);
-
+            // The push token used to be printed here. A token is a credential for
+            // sending to somebody's device, so it belongs in a log about as much
+            // as a password does. The user it was for is enough to investigate.
+            log.warn("Push to user {} failed", recipient_id, e);
         }
 
 

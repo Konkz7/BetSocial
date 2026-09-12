@@ -65,7 +65,6 @@ public class ThreadService {
                 continue;
             }
 
-            //System.out.println(f.request_id());
 
             // get friends and loop
 

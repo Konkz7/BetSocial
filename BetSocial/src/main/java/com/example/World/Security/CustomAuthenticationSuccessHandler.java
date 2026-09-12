@@ -1,5 +1,9 @@
 package com.example.World.Security;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.example.World.Users.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.World.Users.User_;
@@ -20,6 +24,8 @@ import java.util.Map;
 
 @Component
 public class CustomAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(CustomAuthenticationSuccessHandler.class);
 
     private final UserService userService;
     private final ObjectMapper objectMapper;
@@ -58,7 +64,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         userService.notifyGroupsOnStatus(user.getUserId(), true);
 
         session.setAttribute("userId",user.getUserId());
-        System.out.println("User " + authentication.getName() + " has logged in.");
+        log.info("User {} signed in", authentication.getName());
 
 
         // One JSON object, written through Jackson. This used to be two separate
