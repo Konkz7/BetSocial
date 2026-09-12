@@ -82,8 +82,14 @@ cd BetSocial
 ```
 
 The API listens on `http://localhost:8080`. On first run against an empty
-database, `Startup` seeds eleven development users (`admin`, `john`, `jane`, …),
-all with the password `password`.
+database, `Startup` seeds ten development users (`john`, `jane`, …), all with
+the password `password`.
+
+The `admin` account is seeded separately, on **every** start rather than only
+against an empty database, so there is always a privileged login to test with.
+It has `user_role = 2` (ADMIN) and the same password `password`, and signing in
+with it lands on the admin approval queue instead of the social feed. These are
+development seeds; anything deployed publicly needs them changed.
 
 To build a jar instead:
 
