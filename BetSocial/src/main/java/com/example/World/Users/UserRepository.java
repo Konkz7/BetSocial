@@ -136,6 +136,55 @@ public interface UserRepository extends ListCrudRepository<User_, Long> {
     @Query("UPDATE User_ SET deleted_at = :time WHERE uid = :id AND deleted_at IS NULL")
     int suspend(@Param("id") Long id, @Param("time") Long time);
 
+    // --- password reset ---------------------------------------------------
+
+    /**
+     * Issues a reset token, replacing any outstanding one.
+     *
+     * Replacing rather than adding: asking twice should leave one working link,
+     * not two. The old one stops working the moment a new one is asked for.
+     */
+    @Modifying
+    @Transactional
+    @Query("""
+    UPDATE User_ SET password_reset_token = :token, password_reset_expires_at = :expiresAt
+    WHERE uid = :id AND deleted_at IS NULL
+    """)
+    int setPasswordResetToken(@Param("id") Long id, @Param("token") String token,
+                              @Param("expiresAt") Long expiresAt);
+
+    /**
+     * The account a reset token belongs to, if it has not expired.
+     *
+     * The expiry is checked in SQL rather than in Java so there is no path that
+     * finds the account and forgets to look at the clock.
+     */
+    @Query("""
+    SELECT * FROM User_
+    WHERE password_reset_token = :token
+      AND password_reset_expires_at > :now
+      AND deleted_at IS NULL
+    """)
+    Optional<User_> findByValidPasswordResetToken(@Param("token") String token,
+                                                  @Param("now") Long now);
+
+    /**
+     * Sets the new password and spends the token in one statement.
+     *
+     * Together, so there is no moment where the password has changed and the link
+     * still works. Filtered on the token as well as the id, so a second request
+     * carrying the same link updates nothing rather than setting the password
+     * twice.
+     */
+    @Modifying
+    @Transactional
+    @Query("""
+    UPDATE User_ SET pass_word = :hash, password_reset_token = NULL, password_reset_expires_at = NULL
+    WHERE uid = :id AND password_reset_token = :token
+    """)
+    int applyPasswordReset(@Param("id") Long id, @Param("token") String token,
+                           @Param("hash") String hash);
+
     /**
      * Removes the person from the account, leaving the account.
      *

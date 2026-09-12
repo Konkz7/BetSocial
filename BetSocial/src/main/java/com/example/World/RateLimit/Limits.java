@@ -49,6 +49,18 @@ public final class Limits {
      */
     public static final RateLimit REPORTS = new RateLimit(30, Duration.ofHours(1));
 
+    /**
+     * Asking for a reset link.
+     *
+     * The tightest of the lot after sign-in, because each one sends an email to
+     * an address the caller chose. Unlimited, this endpoint is a way to send mail
+     * to anybody, from us.
+     */
+    public static final RateLimit FORGOT_PASSWORD = new RateLimit(5, Duration.ofHours(1));
+
+    /** Using a reset link. The token is unguessable; this only stops it being free to hammer. */
+    public static final RateLimit RESET_PASSWORD = new RateLimit(20, Duration.ofHours(1));
+
     /** Placing a stake. Not abuse-prone - the wallet limits it - but a script should not be able to drain one. */
     public static final RateLimit PREDICTIONS = new RateLimit(60, Duration.ofHours(1));
 

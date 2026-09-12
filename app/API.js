@@ -709,3 +709,27 @@ export const deleteMyAccount = async(pass_word) =>{
     return false;
   }
 }
+
+// Asks for a password reset link. The answer is the same whether or not that
+// address has an account - the server will not say, because answering turns this
+// into a way to find out who has one.
+export const requestPasswordReset = async(email) =>{
+  try {
+    const result = await axios.post(IP_STRING + "/req/forgot-password", { email });
+    return result.data;
+  } catch (error) {
+    Alert.alert("Couldnt send that", error.response?.data?.message ?? error.message);
+    return null;
+  }
+}
+
+// Sets a new password from a reset link. The token comes from the emailed link.
+export const resetPassword = async(token, new_password) =>{
+  try {
+    const result = await axios.post(IP_STRING + "/req/reset-password", { token, new_password });
+    return result.data;
+  } catch (error) {
+    Alert.alert("Couldnt reset your password", error.response?.data?.message ?? error.message);
+    return null;
+  }
+}
