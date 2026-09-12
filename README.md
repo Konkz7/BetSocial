@@ -347,11 +347,20 @@ exporting it. These two errors always appear together: `initializeApp` throws at
 module scope, which aborts `Constants.js` evaluation, so every module importing
 `IP_STRING` from it sees `undefined`. Fix the export and both clear.
 
-**"Apologies! Image couldnt be Uploaded"** — `app/Secrets.js` has no
-`storageBucket`, so the Firebase client has no bucket to upload to
-(`storage/no-default-bucket`). Copy it from the Firebase console and restart
-Metro. The server's `FIREBASE_STORAGE_BUCKET` is a different setting and does
-not affect uploading — see [Media](#media).
+**"Apologies! Image couldnt be Uploaded"** / `storage/no-default-bucket` —
+`app/Secrets.js` has no `storageBucket`, so the Firebase client has no bucket to
+upload to. Copy it from the Firebase console and restart Metro. The server's
+`FIREBASE_STORAGE_BUCKET` is a different setting and does not affect uploading —
+see [Media](#media).
+
+The other way to get this error is to have put the **service-account JSON** in
+`app/Secrets.js`. Both come from the Firebase console and both look like "the
+Firebase credentials", but the service account is a private key with full access
+to the project, it is server-side only, and `app/Secrets.js` is bundled into the
+app — so it would ship to every device. Its bucket is also spelled
+`storage_bucket` and carries a `gs://` prefix, which is why storage reports no
+bucket at all. `FBStorageService` logs which of the two happened. If it has been
+built or shared, rotate the key in *Project settings → Service accounts*.
 
 **Media uploads succeed but posting fails with "That media reference is not one
 of ours"** — `FIREBASE_STORAGE_BUCKET` names a different bucket than the client
