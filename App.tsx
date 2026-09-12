@@ -28,6 +28,7 @@ import { Home, Search, Bell, Mail, CirclePlus, LucideAArrowDown, BanIcon} from "
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WalletScreen from './app/walletPage';
+import DeclareOutcomeScreen from './app/declareOutcomePage';
 import MessageScreen from './app/messagePage';
 import SearchScreen from './app/searchPage';
 import ProfileScreen from './app/Profile/profilePage';
@@ -68,6 +69,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="Home_H" component={HomeScreen}  />
       <HomeStack.Screen name="Thread_H" component={ThreadScreen} />
       <HomeStack.Screen name="Wallet_H" component={WalletStackNavigator} />
+      <HomeStack.Screen name="DeclareOutcome_H" component={DeclareOutcomeScreen} />
       <HomeStack.Screen name="SelfProfile_H" component={SelfProfileStackNavigator} />
 
     </HomeStack.Navigator>

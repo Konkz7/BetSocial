@@ -487,6 +487,36 @@ export const getMyPredictions = async () =>{
 }
 
 
+// Your own bets that have closed and are waiting on you to say what happened.
+//
+// silent for the same reason as getWallet: the home screen checks this on focus
+// to decide whether to show a banner, and a modal on every failure would be
+// unusable. The screen itself is opened deliberately and does report failures.
+export const getBetsAwaitingMyDecision = async ({ silent = false } = {}) =>{
+  try {
+    const awaiting = await axios.get(IP_STRING + "/api/bets/awaiting-my-decision");
+    return awaiting.data;
+  } catch (error) {
+    if (!silent) {
+      Alert.alert("Error!", "Couldnt load the bets waiting on you.");
+    }
+    return [];
+  }
+}
+
+// Declaring what happened. This does not pay anybody out - it hands the bet to
+// an approver, who has no stake in it and signs the outcome off.
+export const declareOutcome = async (bid, decision, reason) =>{
+  try {
+    await axios.post(IP_STRING + "/api/bets/decide", { bid, decision, reason });
+    return true;
+  } catch (error) {
+    Alert.alert("Couldnt record that outcome", error.response?.data?.message ?? error.message);
+    return false;
+  }
+}
+
+
 //ADMIN
 // The approval queue: bets whose owner has declared an outcome and which are
 // waiting on somebody without a stake in them.

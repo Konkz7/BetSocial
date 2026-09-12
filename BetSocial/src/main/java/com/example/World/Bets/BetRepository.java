@@ -32,6 +32,31 @@ public interface BetRepository extends ListCrudRepository<Bet_,Long> {
         """)
         List<Bet_> findAwaitingApproval(@Param("status") Integer status);
 
+        /**
+         * The other half of that queue: closed bets still waiting on their own
+         * owner to say what happened.
+         *
+         * Nothing asked this before, so a bet that closed simply stopped being
+         * mentioned anywhere. It is not active, so it is off the staking screen;
+         * it has no outcome, so findAwaitingApproval filters it out. The owner was
+         * the only person who could move it on and had no way of knowing they
+         * needed to.
+         *
+         * Joined to the thread because that is where ownership lives - a bet
+         * belongs to whoever posted the thread it sits under.
+         */
+        @Query("""
+        SELECT b.* FROM Bet_ b
+        JOIN Thread_ t ON t.tid = b.tid
+        WHERE b.status = :status
+          AND b.outcome IS NULL
+          AND b.deleted_at IS NULL
+          AND t.uid = :uid
+          AND t.deleted_at IS NULL
+        ORDER BY b.ends_at ASC
+        """)
+        List<Bet_> findAwaitingOwnerDecision(@Param("uid") Long uid, @Param("status") Integer status);
+
 
         @Query("SELECT * FROM Bet_ WHERE tid = :tid AND deleted_at IS NULL")
         List<Bet_> findByThread(
