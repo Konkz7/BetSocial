@@ -76,7 +76,7 @@ public class PredictionController {
     @ResponseStatus(HttpStatus.CREATED)
     @Transactional
     @PostMapping("/make")
-    void makePrediction(@Valid @RequestBody PredictionDTO prediction, HttpSession session){
+    public void makePrediction(@Valid @RequestBody PredictionDTO prediction, HttpSession session){
 
 
         Long uid = requireUserId(session);

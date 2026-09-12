@@ -110,7 +110,7 @@ public class SuperUserController {
 
     @Transactional
     @PostMapping("/approval")
-    void decideApproval(@RequestBody DecisionDTO decision, HttpSession session){
+    public void decideApproval(@RequestBody DecisionDTO decision, HttpSession session){
         Optional<Bet_> user_bet = betRepository.findById(decision.bid());
         Bet_ bet;
         Long userId = (Long) session.getAttribute("userId");
