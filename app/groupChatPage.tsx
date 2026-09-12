@@ -1,10 +1,11 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
+  ActivityIndicator,
   Image,
   StyleSheet,
   SafeAreaView,
@@ -42,13 +43,35 @@ type Message = {
   deleted: boolean;
 };
 
+/**
+ * One server row as the shape this screen renders.
+ *
+ * Outside the component and taking the viewer's id as an argument, so it closes
+ * over nothing. Defined inside, it became a new dependency of the focus effect
+ * every render - which is either a stale-closure bug or a reconnecting
+ * websocket, depending on which way you silence the warning.
+ */
+const toMessage = (item: any, selfUid: number): Message => ({
+  id: item.mid,
+  text: item.description,
+  sent: item.uid === selfUid,
+  senderId: item.uid,
+  time: formatMessageTime(item.created_at),
+  seen: item.is_read,
+  type: item.media_type,
+  deleted: item.deleted_at !== null,
+});
+
 const GroupChatScreen = ({ navigation, route }: any) => {
   const { gid, name } = route.params;
 
   const [newMessage, setNewMessage] = useState('');
+  // Newest first, rendered by an inverted list so index 0 sits at the bottom.
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
-  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Where the older messages continue from, or null at the start of the chat.
+  const [cursor, setCursor] = useState<any>(null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
 
   const queryClient = useQueryClient();
   const self = queryClient.getQueryData(['user']) as any;
@@ -69,12 +92,34 @@ const GroupChatScreen = ({ navigation, route }: any) => {
   const senderOf = (uid: number) =>
     members?.find((member: any) => member.uid === uid);
 
-  const handleScroll = (event: any) => {
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    const isAtBottom =
-      contentOffset.y + layoutMeasurement.height >= contentSize.height - 20;
-    setIsUserScrolling(!isAtBottom);
+  /**
+   * Loads the messages before the ones on screen. Fires from onEndReached,
+   * which on an inverted list is the top. Guarded because FlatList fires it
+   * more than once per scroll.
+   */
+  const loadOlder = async () => {
+    if (!cursor || loadingOlder) { return; }
+
+    setLoadingOlder(true);
+    try {
+      const page = await getChatMessages(gid, cursor);
+
+      setMessages(prev => {
+        const seen = new Set(prev.map(m => m.id));
+        return [...prev, ...page.messages.map((m: any) => toMessage(m, self.uid)).filter((m: Message) => !seen.has(m.id))];
+      });
+
+      setCursor(page.has_more
+        ? { created_at: page.next_cursor_created_at, mid: page.next_cursor_mid }
+        : null);
+    } finally {
+      setLoadingOlder(false);
+    }
   };
+
+  // handleScroll and scrollViewRef are gone with the ScrollView: they decided
+  // whether to auto-scroll to the end, and an inverted list already starts
+  // there.
 
   const deleteText = (message: Message) => {
     if (message.sent === false || message.deleted === true) { return; }
@@ -139,7 +184,9 @@ const GroupChatScreen = ({ navigation, route }: any) => {
           return;
         }
 
-        setMessages(previous => [...previous, {
+        // Prepended: the list is newest-first and rendered inverted, so index 0
+        // is the bottom of the screen.
+        setMessages(previous => [{
           id: message.mid,
           text: message.description,
           sent: message.uid === self.uid,
@@ -148,28 +195,27 @@ const GroupChatScreen = ({ navigation, route }: any) => {
           seen: message.is_read,
           type: message.media_type,
           deleted: false,
-        }]);
+        }, ...previous]);
       });
 
+      // The cursor goes with the messages: one left over from another
+      // conversation would pull that history into this screen.
       setMessages([]);
+      setCursor(null);
 
       refetchChat()
         .then(result => {
-          const backendMessages = result.data;
-          if (!backendMessages) {
+          const page = result.data;
+          if (!page) {
             console.error('Error fetching chat messages:', result.error);
             return;
           }
-          setMessages(backendMessages.map((item: any) => ({
-            id: item.mid,
-            text: item.description,
-            sent: item.uid === self.uid,
-            senderId: item.uid,
-            time: formatMessageTime(item.created_at),
-            seen: item.is_read,
-            type: item.media_type,
-            deleted: item.deleted_at !== null,
-          })));
+          // Already newest-first from the server, which is what the inverted
+          // list wants - nothing is reversed on the way in.
+          setMessages(page.messages.map((m: any) => toMessage(m, self.uid)));
+          setCursor(page.has_more
+            ? { created_at: page.next_cursor_created_at, mid: page.next_cursor_mid }
+            : null);
         })
         .catch(err => console.error('Refetch threw:', err));
 
@@ -205,30 +251,39 @@ const GroupChatScreen = ({ navigation, route }: any) => {
         </Pressable>
       </View>
 
-      <ScrollView
-        ref={scrollViewRef}
+      {/* Inverted: the array is newest-first and index 0 renders at the bottom,
+          so onEndReached fires at the top where older messages belong. Replaces
+          a ScrollView that mounted every message in the conversation with no way
+          to ask for more. */}
+      <FlatList
         style={styles.messagesContainer}
         contentContainerStyle={styles.messagesContent}
-        onContentSizeChange={() => {
-          if (!isUserScrolling) {
-            scrollViewRef.current?.scrollToEnd({ animated: true });
-          }
-        }}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
+        data={messages}
+        inverted
+        keyExtractor={(item) => String(item.id)}
+        removeClippedSubviews={false}
         showsVerticalScrollIndicator={false}
         overScrollMode="never"
         keyboardShouldPersistTaps="handled"
-      >
-        {messages.map((message, index) => {
+        onEndReached={loadOlder}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={loadingOlder
+          ? <ActivityIndicator size="small" color="#10B981" style={{ marginVertical: 12 }} />
+          : null}
+        renderItem={({ item: message, index }) => {
           const sender = message.sent ? null : senderOf(message.senderId);
           // Only label the first of a run from the same person - repeating the
           // name against every line of a burst is noise.
+          //
+          // index + 1, not index - 1: the list is newest-first and inverted, so
+          // the message *above* this one on screen is the next one along the
+          // array. Comparing backwards would put the name on the last line of
+          // each burst instead of the first.
           const startsRun =
-            !message.sent && messages[index - 1]?.senderId !== message.senderId;
+            !message.sent && messages[index + 1]?.senderId !== message.senderId;
 
           return (
-            <View key={message.id} style={styles.messageRow}>
+            <View style={styles.messageRow}>
               {startsRun && (
                 <View style={styles.senderLine}>
                   <Image
@@ -300,8 +355,8 @@ const GroupChatScreen = ({ navigation, route }: any) => {
               </Pressable>
             </View>
           );
-        })}
-      </ScrollView>
+        }}
+      />
 
       <View style={styles.inputRow}>
         <TouchableOpacity onPress={sendMedia} style={styles.mediaButton}>

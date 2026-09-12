@@ -395,12 +395,24 @@ export const getFollowersByID = async(uid) =>{
 
 
 //MESSAGES
-export const getChatMessages = async(gid) =>{
+// One page of a conversation, newest first. Returns { messages,
+// next_cursor_created_at, next_cursor_mid, has_more }.
+//
+// Newest first matches the order an inverted FlatList renders in - index 0 sits
+// at the bottom - so nothing reverses the array on the way in. Pass the cursor
+// from the previous response to fetch the messages *older* than it.
+export const getChatMessages = async(gid, cursor) =>{
   try {
-      const messages = await axios.get(IP_STRING + "/api/messages/group/"+gid);
+      const query = cursor
+        ? `?cursor_created_at=${cursor.created_at}&cursor_mid=${cursor.mid}`
+        : "";
+      const messages = await axios.get(IP_STRING + "/api/messages/group/" + gid + query);
       return messages.data;
   } catch (error) {
     Alert.alert("Error!", "Chat messgaes couldnt be found.")
+    // An empty page rather than undefined: a failed load must not look like the
+    // start of the conversation, or the screen stops offering to load more.
+    return { messages: [], next_cursor_created_at: null, next_cursor_mid: null, has_more: false };
   }
 }
 

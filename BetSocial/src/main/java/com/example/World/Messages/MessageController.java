@@ -73,10 +73,22 @@ public class MessageController {
     
      */
 
-    // Previously unchecked: any authenticated user could read any conversation.
+    /**
+     * One page of a conversation, newest first.
+     *
+     * Both cursor parameters come from the previous response and fetch the
+     * messages *older* than it; omit them to open the conversation at the end,
+     * which is where a chat is read from.
+     *
+     * Previously unchecked, and unbounded: any authenticated user could read any
+     * conversation, and every open returned its whole history.
+     */
     @GetMapping("/group/{gid}")
-    List<MessageView> getGroupMessages(@PathVariable Long gid, HttpSession session){
-        return messageService.getChatMessages(gid, requireUserId(session));
+    MessagePage getGroupMessages(@PathVariable Long gid, HttpSession session,
+                                 @RequestParam(required = false) Long cursor_created_at,
+                                 @RequestParam(required = false) Long cursor_mid){
+        return messageService.messagePage(gid, requireUserId(session),
+                cursor_created_at, cursor_mid);
     }
 
     @GetMapping("/conversations")

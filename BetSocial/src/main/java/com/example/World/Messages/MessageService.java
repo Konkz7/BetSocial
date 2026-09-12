@@ -217,6 +217,15 @@ public class MessageService {
         return MessageView.of(message, readUpTo(groupUserRepository.findByGid(message.gid()), uid));
     }
 
+    /**
+     * How many messages a conversation request returns.
+     *
+     * Larger than a feed page because a chat is scrolled back through in bursts
+     * rather than browsed, and a message is a fraction of the size of a thread
+     * with media attached.
+     */
+    static final int MESSAGE_PAGE_SIZE = 40;
+
     /** Returns a conversation's messages, provided the caller is a member of it. */
     public List<MessageView> getChatMessages(Long gid, Long uid) {
         requireMembership(gid, uid);
@@ -228,6 +237,47 @@ public class MessageService {
         return messageRepository.findMessagesByGidAsc(gid).stream()
                 .map(message -> MessageView.of(message, readUpTo))
                 .toList();
+    }
+
+    /**
+     * One page of a conversation, newest first.
+     *
+     * A conversation returned its entire history on every open. That is a
+     * hundred-odd rows today and unbounded in principle, all of it rendered by a
+     * ScrollView that mounts every message at once.
+     *
+     * Membership is checked first, before the cursor is even looked at, so a
+     * non-member cannot learn anything from the shape of the response.
+     */
+    public MessagePage messagePage(Long gid, Long uid, Long cursorCreatedAt, Long cursorMid) {
+        requireMembership(gid, uid);
+
+        // Both halves or neither. Half a cursor silently meaning "the newest
+        // page" would make a client scrolling back re-read the same page forever.
+        if ((cursorCreatedAt == null) != (cursorMid == null)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "A cursor needs both cursor_created_at and cursor_mid");
+        }
+
+        long readUpTo = readUpTo(groupUserRepository.findByGid(gid), uid);
+
+        List<Message_> rows = messageRepository.findMessagePage(gid, cursorCreatedAt,
+                cursorMid, MESSAGE_PAGE_SIZE + 1);
+
+        boolean hasMore = rows.size() > MESSAGE_PAGE_SIZE;
+        List<Message_> page = hasMore ? rows.subList(0, MESSAGE_PAGE_SIZE) : rows;
+
+        if (page.isEmpty()) {
+            return new MessagePage(List.of(), null, null, false);
+        }
+
+        Message_ oldest = page.get(page.size() - 1);
+
+        return new MessagePage(
+                page.stream().map(message -> MessageView.of(message, readUpTo)).toList(),
+                hasMore ? oldest.created_at() : null,
+                hasMore ? oldest.mid() : null,
+                hasMore);
     }
 
     public void requireMembership(Long gid, Long uid) {
