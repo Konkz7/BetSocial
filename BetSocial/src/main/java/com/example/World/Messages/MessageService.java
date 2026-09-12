@@ -1,6 +1,8 @@
 package com.example.World.Messages;
 
 import com.example.World.Blocks.BlockService;
+import com.example.World.Media.MediaReference;
+import com.example.World.Media.MediaStore;
 import com.example.World.Groups.*;
 import com.example.World.Notifications.NotificationDTO;
 import com.example.World.Notifications.NotificationService;
@@ -30,9 +32,11 @@ public class MessageService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final BlockService blockService;
+    private final MediaReference mediaReference;
+    private final MediaStore mediaStore;
 
     public MessageService(MessageRepository messageRepository, GroupService groupService, GroupUserRepository groupUserRepository, UserRepository userRepository, NotificationService notificationService,
-                          BlockService blockService) {
+                          BlockService blockService, MediaReference mediaReference, MediaStore mediaStore) {
         this.messageRepository = messageRepository;
         this.groupService = groupService;
         // Injected but never assigned before, so the field did not exist at all.
@@ -40,6 +44,8 @@ public class MessageService {
         this.userRepository = userRepository;
         this.notificationService = notificationService;
         this.blockService = blockService;
+        this.mediaReference = mediaReference;
+        this.mediaStore = mediaStore;
     }
 
     /**
@@ -55,6 +61,14 @@ public class MessageService {
      * other person in it, so there is no separate DM path.
      */
     public MessageView sendMessage(Long gid, Long senderId, String content, Integer mediaType ) {
+
+        // For a photo or a video the content is a URL, and it is rendered by
+        // everybody in the conversation. Unchecked, a "photo" could point
+        // anywhere - which in a private chat is a way to learn who opened it and
+        // when.
+        if (mediaType != null && mediaType != 0) {
+            content = mediaReference.require(content);
+        }
 
         List<Groupuser_> memberships = groupUserRepository.findByGid(gid);
 
@@ -205,6 +219,15 @@ public class MessageService {
         }
 
         messageRepository.softDelete(mid, new Date().getTime());
+
+        // For a photo or a video, the description *is* the file - softDelete
+        // replaces it with "This message was deleted", which stops the app
+        // showing it and does nothing about the object still sitting in the
+        // bucket on a public URL. A text message has nothing to remove and
+        // MediaStore ignores it.
+        if (message.media_type() != null && message.media_type() != 0) {
+            mediaStore.delete(message.description());
+        }
     }
 
     /** A single message, provided the caller belongs to the conversation it is in. */
