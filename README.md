@@ -185,6 +185,7 @@ is no other setup, and no need for a local database.
 | `ThreadProfileViewerTest` | the liked flag reflects the viewer, not the thread's author |
 | `FeedVisibilityTest` | private threads need a mutual follow; authors always see their own; liked flag and comment count are per viewer |
 | `FeedQueryCountTest` | the feed's query count does not grow with the number of threads |
+| `AdminSeedingTest` | an admin account is always seeded, including into a database that already has users, and never duplicated |
 
 A container is started once and shared across the suite; the first run pulls
 `postgres:17-alpine`, so expect it to take a little longer.

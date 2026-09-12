@@ -45,19 +45,36 @@ class AdminSeedingTest extends AbstractIntegrationTest {
         // The row is moved aside rather than deleted - user_name, email and
         // phone_number are all UNIQUE, so the old values have to be freed before
         // a replacement can be inserted.
-        long displaced = users.findByUsername("admin").orElseThrow().uid();
+        User_ original = users.findByUsername("admin").orElseThrow();
+        long displaced = original.uid();
         jdbc.update("UPDATE User_ SET user_name = ?, email = ?, phone_number = ? WHERE uid = ?",
                 "displaced-admin", "displaced-admin@example.com", "+" + PHONE, displaced);
+        try {
+            assertThat(users.findAll()).as("the table must not be empty, or the old "
+                    + "seeding path would have created the admin anyway").isNotEmpty();
+            assertThat(users.findByUsername("admin")).isEmpty();
 
-        assertThat(users.findAll()).as("the table must not be empty, or the old "
-                + "seeding path would have created the admin anyway").isNotEmpty();
-        assertThat(users.findByUsername("admin")).isEmpty();
+            startup.onApplicationReady();
 
-        startup.onApplicationReady();
+            User_ admin = users.findByUsername("admin").orElseThrow();
+            assertThat(admin.uid()).isNotEqualTo(displaced);
+            assertThat(admin.user_role()).isEqualTo(UserRole.ADMIN.toInt());
+        } finally {
+            // The container is shared by the whole suite, so put the account back
+            // exactly as it was. Without this the test leaves a second admin
+            // behind and the other tests here only pass in the right order.
+            restoreAdmin(original, displaced);
+        }
+    }
 
-        User_ admin = users.findByUsername("admin").orElseThrow();
-        assertThat(admin.uid()).isNotEqualTo(displaced);
-        assertThat(admin.user_role()).isEqualTo(UserRole.ADMIN.toInt());
+    /** Drops any admin this test created and moves the original row back. */
+    private void restoreAdmin(User_ original, long displaced) {
+        users.findByUsername("admin").ifPresent(created -> {
+            jdbc.update("DELETE FROM ledger_entry_ WHERE uid = ?", created.uid());
+            jdbc.update("DELETE FROM User_ WHERE uid = ?", created.uid());
+        });
+        jdbc.update("UPDATE User_ SET user_name = ?, email = ?, phone_number = ? WHERE uid = ?",
+                original.user_name(), original.email(), original.phone_number(), displaced);
     }
 
     @Test
