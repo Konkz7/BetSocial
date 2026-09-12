@@ -29,7 +29,7 @@ import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient 
 // getBalance, getCircleSecret and getIpAddress are gone with the /circle
 // endpoints they called - deleted along with CircleService, and 404ing ever
 // since. Only the commented-out queries below ever referenced them.
-import {getProfile,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads, getActiveNotifications, getConversations, getFollows} from "./API";
+import {getProfile,getGroupProfiles, getThreadLikes, registerThreadLike, getThreads, getActiveNotifications, getConversations, getFollows, getWallet} from "./API";
 import { useFocusEffect ,} from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { getProfilePictureUrl, IP_STRING } from "./Constants";
@@ -60,6 +60,17 @@ const HomeScreen = ({navigation,route}:any) => {
 
   // consider this in backend
   const { data: profile, isLoading: profileLoading , refetch: refetchProfile } = useQuery({ queryKey: ["user"], queryFn: getProfile });
+
+  // Refetched when the screen regains focus, below - a stake placed on a thread
+  // changes this number, and coming back to a stale one is how you talk yourself
+  // into thinking the coins never left.
+  // Not `queryFn: getWallet` - react-query calls the function with its own
+  // context object, which would land in the options parameter and silently turn
+  // the silent flag off.
+  const { data: wallet, refetch: refetchWallet } = useQuery({
+    queryKey: ["wallet"],
+    queryFn: () => getWallet({ silent: true }),
+  });
   const { data: notifications, isLoading: notificationsLoading } = useQuery({
     queryKey: ["activeNotifications"],
     queryFn: getActiveNotifications
@@ -83,12 +94,10 @@ const HomeScreen = ({navigation,route}:any) => {
   //const { data: groupProfiles, isLoading: groupProfilesLoading } = useQuery({ queryKey: ["groupProfiles"], queryFn: getGroupProfiles});
 
 
-  /*
-  const { data: circleSecret, isLoading: circleLoading } = useQuery({ queryKey: ["circle-secret"], queryFn: getCircleSecret });
-  const { data: wallet, isLoading: walletLoading } = useQuery({ queryKey: ["wallet"], queryFn: getWallet });
-  const { data: balance, isLoading: balanceLoading } = useQuery({ queryKey: ["balance"], queryFn: getBalance });
-  const { data: ipAddress, isLoading: ipLoading } = useQuery({ queryKey: ["ipAddress"], queryFn: getIpAddress});
-  */
+  // The Circle-era queries that stood here - circleSecret, balance, ipAddress and
+  // a crypto "wallet" - are gone with the endpoints they called. The real wallet
+  // query is above; keeping a commented one of the same name beside it only
+  // invited confusion about which number the header shows.
 
   
   /*
@@ -215,7 +224,8 @@ const HomeScreen = ({navigation,route}:any) => {
     useCallback(() => {
       console.log("Screen focused → refresh threads" + route.params?.params);
       screenStore.set("Home");
-         
+      refetchWallet();
+
       (async () => {
         if (route.params?.refresh) {
           console.log("Refetching because refetch flag is true");
@@ -248,11 +258,18 @@ const HomeScreen = ({navigation,route}:any) => {
           <Text style={styles.title}>BetSocial</Text>
 
           <View style = {styles.rowContainer}>
-            <TouchableOpacity style= {[styles.rowContainer,{marginRight:25}]} onPress={() => null /*wallet == undefined
-              ? null :navigation.navigate("Wallet_H")*/}>
-              <Wallet  color={"green"} size={20}></Wallet> 
-              {/*<Text style = {styles.amount}>{balance && balance.data.tokenBalances.length > 0? "temp" : "0.00"}</Text>*/}
-              <Text style = {styles.USDC}>USDC</Text>
+            {/* The balance lives here as well as on the wallet screen: it is the
+                number you need before staking, and the stake is made two taps
+                away from this header. */}
+            <TouchableOpacity
+              style={[styles.rowContainer, { marginRight: 25 }]}
+              onPress={() => navigation.navigate("Wallet_H")}
+            >
+              <Wallet  color={"green"} size={20}></Wallet>
+              <Text style={styles.balanceText}>
+                {wallet ? wallet.balance.toLocaleString() : "—"}
+              </Text>
+              <Text style = {styles.USDC}>coins</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style = {{marginRight:15}}>
@@ -399,6 +416,11 @@ const styles = StyleSheet.create({
     fontSize:12,
     marginLeft: 5,
     fontWeight:"bold",
+  },balanceText:{
+    fontSize: 16,
+    marginLeft: 6,
+    fontWeight: "bold",
+    color: "green",
   },amount:{
     marginLeft: 5,
     fontSize: 20,
