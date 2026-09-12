@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { approveBet, getPendingApprovals, getOpenReports, decideReport } from './API';
+import { approveBet, getPendingApprovals, getOpenReports, decideReport, generateSampleData } from './API';
 
 /**
  * The two queues a privileged account works through: bet outcomes waiting to be
@@ -34,6 +34,7 @@ const AdminScreen = ({ navigation }: any) => {
   const [tab, setTab] = useState<'bets' | 'reports'>('bets');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -85,6 +86,40 @@ const AdminScreen = ({ navigation }: any) => {
               setReports(rows => rows.filter(row =>
                 !(row.target_type === report.target_type
                   && row.target_id === report.target_id)));
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  /**
+   * Fills the database with enough content to see pagination work.
+   *
+   * Confirms first because it writes a few hundred rows, and reports back what
+   * the server actually did - "added 0 threads" is the useful answer when the
+   * targets are already met, and silence would look like a failure.
+   *
+   * Reloads both queues afterwards: the sample threads are somebody's, and the
+   * counts on the tabs should reflect what is there now.
+   */
+  const confirmGenerateSampleData = () => {
+    Alert.alert(
+      'Generate sample data?',
+      'Adds accounts, threads and a long conversation until there is enough to '
+        + 'page through. Safe to run more than once - it tops up to a target '
+        + 'rather than adding every time.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Generate',
+          onPress: async () => {
+            setGenerating(true);
+            const summary = await generateSampleData();
+            setGenerating(false);
+            if (summary) {
+              Alert.alert('Sample data', summary);
+              await load();
             }
           },
         },
@@ -146,6 +181,19 @@ const AdminScreen = ({ navigation }: any) => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* A development tool sitting on a screen used for real decisions, so it
+          is deliberately quiet: small, muted, below the tabs rather than beside
+          Sign out, and it asks before writing anything. */}
+      <TouchableOpacity
+        style={styles.sampleDataRow}
+        disabled={generating}
+        onPress={confirmGenerateSampleData}
+      >
+        <Text style={styles.sampleDataText}>
+          {generating ? 'Generating…' : 'Generate sample data'}
+        </Text>
+      </TouchableOpacity>
 
       {tab === 'reports' ? (
         <FlatList
@@ -303,6 +351,15 @@ const styles = StyleSheet.create({
   approve: { backgroundColor: '#10B981' },
   rejectText: { color: '#9E3B34', fontWeight: '600' },
   approveText: { color: 'white', fontWeight: '600' },
+
+  sampleDataRow: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    backgroundColor: '#f9fafb',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  sampleDataText: { fontSize: 12, color: '#9CA3AF' },
 
   tabs: { flexDirection: 'row', backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },

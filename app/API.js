@@ -641,3 +641,18 @@ export const decideReport = async(rid, action) =>{
     return false;
   }
 }
+
+// Development only. Tops the database up to enough threads, messages and
+// accounts to see pagination work, and returns a sentence saying what it did.
+//
+// Admin only, and safe to call twice - the server tops up to a target rather
+// than appending.
+export const generateSampleData = async() =>{
+  try {
+    const result = await axios.post(IP_STRING + "/superusers/sample-data");
+    return result.data;
+  } catch (error) {
+    Alert.alert("Couldnt generate sample data", error.response?.data?.message ?? error.message);
+    return null;
+  }
+}
