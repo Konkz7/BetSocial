@@ -328,6 +328,64 @@ re-mints once and retries.
 default test rules is writable by anyone who has the project's client config,
 which ships inside the app.
 
+## Deploying
+
+```bash
+SPRING_PROFILES_ACTIVE=prod java -jar target/World-0.0.1-SNAPSHOT.jar
+```
+
+Without that profile the server runs its development defaults, and the first of
+those is an account called `admin` with the password `password`. The profile
+turns off seeding, tightens the session cookie, stops exception messages
+reaching clients, and switches the log to JSON — see
+`application-prod.properties`, which says why for each.
+
+### The environment it needs
+
+| Variable | |
+|---|---|
+| `DB_URL` `DB_USERNAME` `DB_PASSWORD` | the database |
+| `ADMIN_PASSWORD` | creates the admin account with this password. **Without it no admin is created at all** — deliberately, because the alternative is a guessable one |
+| `FIREBASE_CREDENTIALS` | `file:/path/to/firebaseAPI.json`, outside the jar |
+| `FIREBASE_STORAGE_BUCKET` | or media references are stored unchecked and files are never deleted |
+| `MAIL_USERNAME` `MAIL_PASSWORD` | verification and password-reset email |
+| `APP_BASE_URL` | the public URL, used in password-reset links |
+
+### Before the first deploy
+
+**Rotate everything that has been in the repository.** `application.properties`
+was committed with literal values on 2026-09-05 (`8ebe730`) and git keeps them
+whatever the current file says:
+
+- the database password, username and URL
+- the mail password — a Google app password
+- `spring.security.user.password`
+
+Rotating is the fix. Rewriting history is not, on its own: clones and forks keep
+what they already have.
+
+The Firebase service-account key has already been rotated; if it is ever
+rotated again, replace `firebaseAPI.json` **and restart**, or the server keeps
+signing with a key Google no longer accepts and every upload identity, push and
+verification email fails at once.
+
+### HTTPS is not optional here
+
+The session cookie authenticates both the API and the WebSocket handshake, so
+over plain HTTP it is readable by anyone on the same network, and a phone on
+public wifi hands out a login by using the app.
+
+The prod profile sets `server.servlet.session.cookie.secure=true`, which means
+the cookie is **only** sent over HTTPS — so with TLS not yet in front of it,
+nothing will authenticate at all. That is the intended failure: it breaks
+loudly rather than shipping sessions in clear.
+
+`server.forward-headers-strategy=framework` is set for TLS terminating at a
+reverse proxy, which is the usual arrangement.
+
+The client must move with it: `IP_STRING` in `app/Constants.js` becomes
+`https://`, and `WebSocketService` derives `wss://` from it.
+
 ## How the chat socket authenticates
 
 `/ws` requires an authenticated session — WebSocket identity comes from the
