@@ -1,6 +1,6 @@
 
 import axios from "axios";
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import { initializeApp } from "firebase/app";
 import {firebaseConfig, devApiUrl} from "./Secrets";
 
@@ -30,10 +30,16 @@ const PRODUCTION_API = "https://betsocial.example.org";
  * is already the gitignored one - so changing networks stops being an edit to a
  * tracked file that then wants committing.
  *
- * The fallback is the Android emulator's route to its host. On a physical device
- * it will not work, which is what the warning below is for.
+ * The fallback differs by platform because the two simulators reach their host
+ * differently: 10.0.2.2 is the Android emulator's route to it, while the iOS
+ * simulator shares the host's network and so just uses localhost. Neither works
+ * on a physical device, which is what the warning below is for.
  */
-const DEVELOPMENT_API = devApiUrl || "http://10.0.2.2:8080";
+const SIMULATOR_HOST = Platform.OS === "android"
+  ? "http://10.0.2.2:8080"
+  : "http://localhost:8080";
+
+const DEVELOPMENT_API = devApiUrl || SIMULATOR_HOST;
 
 export const IP_STRING = __DEV__ ? DEVELOPMENT_API : PRODUCTION_API;
 
@@ -51,9 +57,9 @@ export const WS_URL = IP_STRING.replace(/^http/, "ws") + "/ws";
 if (__DEV__ && !devApiUrl) {
   console.error(
     "devApiUrl is not set in app/Secrets.js, so the app is pointed at " +
-    DEVELOPMENT_API + " - the Android emulator's route to its host. On a " +
-    "physical device nothing will load. Add devApiUrl with this machine's LAN " +
-    "address, e.g. \"http://192.168.1.210:8080\". See app/Secrets.example.js."
+    DEVELOPMENT_API + " - this simulator's route to its host. On a physical " +
+    "device nothing will load. Add devApiUrl with this machine's LAN address, " +
+    "e.g. \"http://192.168.1.210:8080\". See app/Secrets.example.js."
   );
 }
 
