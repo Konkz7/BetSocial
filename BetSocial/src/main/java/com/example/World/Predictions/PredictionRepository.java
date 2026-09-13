@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 import java.util.Optional;
+import java.util.Collection;
 import java.util.List;
 
 public interface PredictionRepository extends ListCrudRepository<Prediction_,Long> {
@@ -34,6 +35,55 @@ public interface PredictionRepository extends ListCrudRepository<Prediction_,Lon
     /** Everything one person has staked on, newest first. */
     @Query("SELECT * FROM Prediction_ WHERE uid = :uid AND deleted_at IS NULL ORDER BY created_at DESC")
     List<Prediction_> findByUid(@Param("uid") Long uid);
+
+    /**
+     * Total staked and distinct bettors, for a whole page of threads at once.
+     *
+     * One query for the page rather than one per card. The comment counts are
+     * gathered the same way and for the same reason - FeedQueryCountTest pins
+     * that the feed's query count does not grow with the number of threads, and
+     * a lookup per card is exactly what it exists to catch.
+     *
+     * A thread nobody has staked on is absent rather than zero; the caller
+     * defaults, which is cheaper than a LEFT JOIN across three tables to
+     * manufacture rows of nothing.
+     *
+     * Summed over predictions rather than over bet.amount_for + amount_against.
+     * The two should agree, but the ledger is the record of what people actually
+     * staked, and a bet's running totals are a denormalisation of it - if they
+     * ever disagree, this is the one that is true.
+     */
+    @Query("""
+    SELECT b.tid AS tid,
+           COALESCE(SUM(p.amount_bet), 0) AS pool,
+           COUNT(DISTINCT p.uid) AS bettors
+    FROM Prediction_ p
+    JOIN Bet_ b ON b.bid = p.bid
+    WHERE b.tid IN (:tids)
+      AND p.deleted_at IS NULL
+      AND b.deleted_at IS NULL
+    GROUP BY b.tid
+    """)
+    List<ThreadStakeSummary> stakesByThreadIds(@Param("tids") Collection<Long> tids);
+
+    /**
+     * How many people took each side, for every bet on one thread.
+     *
+     * FILTER rather than two queries or two passes: one row per bet, both sides
+     * counted in the same scan.
+     */
+    @Query("""
+    SELECT p.bid AS bid,
+           COUNT(*) FILTER (WHERE p.prediction = true)  AS people_for,
+           COUNT(*) FILTER (WHERE p.prediction = false) AS people_against
+    FROM Prediction_ p
+    JOIN Bet_ b ON b.bid = p.bid
+    WHERE b.tid = :tid
+      AND p.deleted_at IS NULL
+      AND b.deleted_at IS NULL
+    GROUP BY p.bid
+    """)
+    List<BetSideCount> sideCountsByThread(@Param("tid") Long tid);
 
     @Modifying
     @Transactional

@@ -20,7 +20,6 @@ import {
   Search,
   Bell,
   Mail,
-  Menu,
   CirclePlus,
   Wallet,
   Frown,
@@ -339,10 +338,6 @@ const HomeScreen = ({navigation,route}:any) => {
                 {wallet ? wallet.balance.toLocaleString() : "—"}
               </Text>
               <Text style = {styles.USDC}>coins</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style = {{marginRight:15}}>
-             <Menu size={24} color="green" />
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => navigation.navigate("SelfProfile_H")}>

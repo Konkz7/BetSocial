@@ -18,6 +18,8 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.World.Blocks.BlockService;
 import com.example.World.Media.MediaReference;
 import com.example.World.Media.MediaStore;
+import com.example.World.Predictions.PredictionRepository;
+import com.example.World.Predictions.ThreadStakeSummary;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -41,10 +43,12 @@ public class ThreadService {
     private final BlockService blockService;
     private final MediaReference mediaReference;
     private final MediaStore mediaStore;
+    private final PredictionRepository predictionRepository;
 
     ThreadService(ThreadRepository threadRepository, BetRepository betRepository, ThreadLikeRepository threadLikeRepository,
                   UserRepository userRepository, CommentRepository commentRepository, NotificationService notificationService, FollowService followService,
-                  BlockService blockService, MediaReference mediaReference, MediaStore mediaStore){
+                  BlockService blockService, MediaReference mediaReference, MediaStore mediaStore,
+                  PredictionRepository predictionRepository){
 
         this.threadRepository = threadRepository;
         this.betRepository = betRepository;
@@ -56,6 +60,7 @@ public class ThreadService {
         this.blockService = blockService;
         this.mediaReference = mediaReference;
         this.mediaStore = mediaStore;
+        this.predictionRepository = predictionRepository;
     }
 
     public Thread_ makeThread(ThreadDTO thread , Long uid){
@@ -143,8 +148,15 @@ public class ThreadService {
         // would otherwise hand it over to anyone holding the number.
         blockService.requireNotBlocked(viewerUid, t.uid());
 
+        // The same numbers the feed card shows, so opening a thread does not
+        // change them. One row, from the same query the feed uses for a page.
+        ThreadStakeSummary stakes = predictionRepository.stakesByThreadIds(List.of(t.tid()))
+                .stream().findFirst()
+                .orElse(new ThreadStakeSummary(t.tid(), 0L, 0L));
+
         return new ThreadProfile(t.tid(),UserView.from(user),t.title(),t.media(),t.media_type(),t.category(),t.likes()
-                ,isThreadLike(viewerUid,t.tid()),(long) commentRepository.findByThread(t.tid()).size(),t.created_at(), t.is_private());
+                ,isThreadLike(viewerUid,t.tid()),(long) commentRepository.findByThread(t.tid()).size(),t.created_at(), t.is_private(),
+                stakes.pool(), stakes.bettors());
     }
 
     /**
@@ -270,6 +282,13 @@ public class ThreadService {
         commentRepository.countByThreadIds(threads.stream().map(Thread_::tid).toList())
                 .forEach(c -> commentCounts.put(c.tid(), c.comment_count()));
 
+        // One query for the page, like the comment counts above. Per card this
+        // would be an N+1 that grows with the page size, which is what
+        // FeedQueryCountTest is there to catch.
+        Map<Long, ThreadStakeSummary> stakes = new HashMap<>();
+        predictionRepository.stakesByThreadIds(threads.stream().map(Thread_::tid).toList())
+                .forEach(s -> stakes.put(s.tid(), s));
+
         List<ThreadProfile> result = new ArrayList<>();
         for(Thread_ t : threads){
             User_ author = authors.get(t.uid());
@@ -281,7 +300,11 @@ public class ThreadService {
                     t.media_type(), t.category(), t.likes(),
                     likedThreads.contains(t.tid()),
                     commentCounts.getOrDefault(t.tid(), 0L),
-                    t.created_at(), t.is_private()));
+                    t.created_at(), t.is_private(),
+                    // A thread nobody has staked on is absent from the summary
+                    // rather than present as zero, so the default is here.
+                    stakes.containsKey(t.tid()) ? stakes.get(t.tid()).pool() : 0L,
+                    stakes.containsKey(t.tid()) ? stakes.get(t.tid()).bettors() : 0L));
         }
 
         return result;
