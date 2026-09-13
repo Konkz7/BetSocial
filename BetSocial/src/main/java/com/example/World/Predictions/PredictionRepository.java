@@ -35,6 +35,39 @@ public interface PredictionRepository extends ListCrudRepository<Prediction_,Lon
     @Query("SELECT * FROM Prediction_ WHERE uid = :uid AND deleted_at IS NULL ORDER BY created_at DESC")
     List<Prediction_> findByUid(@Param("uid") Long uid);
 
+    /**
+     * The same predictions, with what they were about.
+     *
+     * A Prediction_ is a bid, a side and two numbers - it cannot say what was
+     * being predicted, which is the one thing a list of your own bets has to
+     * say. Joining here rather than fetching each bet and thread afterwards:
+     * that is two N+1s over a list bounded only by how much somebody has staked.
+     *
+     * Deleted threads and bets are kept deliberately. Your stake happened and
+     * your coins moved whether or not the thread still stands, and a wallet
+     * history with rows missing is worse than one naming something gone.
+     */
+    @Query("""
+    SELECT p.pid       AS pid,
+           p.bid       AS bid,
+           b.tid       AS tid,
+           t.title     AS thread_title,
+           b.description AS bet_description,
+           p.prediction  AS prediction,
+           p.amount_bet  AS amount_bet,
+           p.amount_won  AS amount_won,
+           b.status      AS bet_status,
+           b.ends_at     AS ends_at,
+           p.created_at  AS created_at
+    FROM Prediction_ p
+    JOIN Bet_ b    ON b.bid = p.bid
+    JOIN Thread_ t ON t.tid = b.tid
+    WHERE p.uid = :uid
+      AND p.deleted_at IS NULL
+    ORDER BY p.created_at DESC
+    """)
+    List<PredictionHistory> historyOf(@Param("uid") Long uid);
+
     @Modifying
     @Transactional
     @Query("UPDATE Prediction_ SET  amount_won = :amount WHERE pid = :id AND deleted_at IS NULL")

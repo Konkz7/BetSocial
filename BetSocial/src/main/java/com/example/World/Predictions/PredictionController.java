@@ -61,6 +61,19 @@ public class PredictionController {
     }
 
     /**
+     * Everything the caller has staked on, with what it was about and how it went.
+     *
+     * Separate from /mine, which returns bare Prediction_ rows and is what the
+     * thread screen uses to know which bets are already staked. That shape is
+     * right for that job and useless for a list somebody reads: it cannot say
+     * what was being predicted.
+     */
+    @GetMapping("/history")
+    List<PredictionHistory> history(HttpSession session){
+        return predictionRepository.historyOf(requireUserId(session));
+    }
+
+    /**
      * A single prediction, readable only by whoever made it.
      *
      * This used to return anybody's by id, which meant walking pids to read what

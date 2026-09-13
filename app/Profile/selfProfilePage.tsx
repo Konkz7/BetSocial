@@ -8,11 +8,12 @@ import { getProfilePictureUrl, IP_STRING, timeAgo } from "../Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Settings2, DollarSign, Frown, Heart, MessageCircle, Users, Trash2, Pencil } from "lucide-react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { changeBio, getUserThreads, removeThread, changePfp, registerThreadLike, getThreads, getThreadLikes, getFollows, getFollowers } from "../API";
+import { changeBio, getUserThreads, removeThread, changePfp, registerThreadLike, getThreads, getThreadLikes, getFollows, getFollowers, getPredictionHistory } from "../API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import Video from 'react-native-video';
 import { selectImage} from "../Components/FBStorageService";
 import threadList from "../Components/ThreadList";
+import PredictionList from "../Components/PredictionList";
 import { screenStore } from "../GlobalFlags";
 
 
@@ -22,6 +23,16 @@ import { screenStore } from "../GlobalFlags";
 const SelfProfileScreen = ({navigation , route}: any) => { 
 
     const [currentTab,setCurrentTab] = useState('Threads');
+
+    // Only fetched once the tab is opened. Most visits to a profile are for the
+    // threads, and this is a join across three tables bounded by how much
+    // somebody has staked.
+    const { data: predictions = [], isLoading: predictionsLoading, refetch: refetchPredictions } =
+      useQuery({
+        queryKey: ["predictionHistory"],
+        queryFn: getPredictionHistory,
+        enabled: currentTab === 'Bets',
+      });
     const [threads, setThreads] = useState<any[]>([]);
     const [bioMode,setBioMode] = useState(false);
     const [bioText, setBioText] = useState("");
@@ -238,7 +249,16 @@ const SelfProfileScreen = ({navigation , route}: any) => {
             
             </View>
             
-                {threadList(threads, refetchThreads, loading, navigation, "Thread_H",setThreads,"self")}
+                {/* The Predictions tab set this state and nothing read it - the
+                    threads list rendered underneath either way, so the tab did
+                    nothing at all. */}
+                {currentTab === 'Threads'
+                  ? threadList(threads, refetchThreads, loading, navigation, "Thread_H",setThreads,"self")
+                  : <PredictionList
+                      predictions={predictions}
+                      loading={predictionsLoading}
+                      onRefresh={refetchPredictions}
+                    />}
             </ScrollView>
         </SafeAreaView>
     );
