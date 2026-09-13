@@ -104,3 +104,8 @@ BetSocial/*.env
 # IntelliJ
 **/.idea/
 *.iml
+# A stray Android Firebase config in the backend tree. The real one lives at
+# android/app/google-services.json and is tracked; this path is a copy that gets
+# made while troubleshooting, and 'git add -A' would commit it. Scoped rather
+# than **/, which would also cover the tracked one and confuse anyone re-adding it.
+BetSocial/src/main/google-services.json

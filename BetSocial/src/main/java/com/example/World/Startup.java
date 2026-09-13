@@ -11,6 +11,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -26,15 +27,41 @@ public class Startup {
     private static final String ADMIN_USERNAME = "admin";
     private static final String ADMIN_PHONE = "+2348039919669";
 
+    /** What the demo accounts sign in with. Fine locally, fatal anywhere else. */
+    private static final String DEMO_PASSWORD = "password";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final LedgerService ledgerService;
 
+    /**
+     * Whether to create the demo accounts.
+     *
+     * On by default, because a fresh local database with nobody in it is not
+     * usable and that is the common case for this flag. A deployment turns it
+     * off - see application-prod.properties, which does.
+     */
+    private final boolean devSeed;
+
+    /**
+     * The admin's password, when one has been supplied.
+     *
+     * Empty means "use the demo password", which is only allowed to happen while
+     * demo seeding is on. With seeding off and no password given, no admin is
+     * created at all - an account called "admin" whose password is "password" on
+     * a public server is worse than having no admin.
+     */
+    private final String adminPassword;
+
     public Startup(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                   LedgerService ledgerService) {
+                   LedgerService ledgerService,
+                   @Value("${betsocial.dev-seed:true}") boolean devSeed,
+                   @Value("${betsocial.admin-password:}") String adminPassword) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.ledgerService = ledgerService;
+        this.devSeed = devSeed;
+        this.adminPassword = adminPassword == null ? "" : adminPassword.trim();
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -45,13 +72,18 @@ public class Startup {
         // would never be created on a fresh database.
         boolean freshDatabase = userRepository.findAll().isEmpty();
 
+        // Said before anything is created, so it is at the top of the log where
+        // somebody bringing a server up will see it rather than buried under the
+        // seeding it is warning about.
+        warnAboutDefaultCredentials();
+
         // The admin is seeded on its own, every start, rather than as part of the
         // demo-user block. That block only runs against a completely empty table,
         // so a database that already had ordinary users in it - the normal state
         // after any testing - would never get an admin at all.
         ensureAdmin();
 
-        if(freshDatabase) {
+        if(freshDatabase && devSeed) {
             createUser("john", "+2348012345678", UserRole.USER);
             createUser("jane", "+2348023456789", UserRole.USER);
             createUser("mike", "+2348034567890", UserRole.USER);
@@ -68,11 +100,51 @@ public class Startup {
     }
 
     /**
-     * Guarantees there is always an admin account to sign in with. Looks the
-     * account up by username rather than by role, so re-running against a
-     * database that already has one is a no-op instead of a second admin.
+     * Says, once and loudly, that this server has accounts anybody can sign into.
+     *
+     * The seeding was written for a laptop and is correct there. The failure it
+     * guards against is nobody remembering it exists on the day the server stops
+     * being a laptop.
+     */
+    private void warnAboutDefaultCredentials() {
+        if (devSeed && adminPassword.isEmpty()) {
+            log.warn("Development seeding is ON: '{}' and the demo accounts exist with the "
+                    + "password '{}'. Set DEV_SEED=false (or SPRING_PROFILES_ACTIVE=prod) "
+                    + "before this is reachable from anywhere but this machine.",
+                    ADMIN_USERNAME, DEMO_PASSWORD);
+        }
+    }
+
+    /**
+     * The password new seeded accounts get, or empty when none may be created.
+     *
+     * With seeding off and no ADMIN_PASSWORD given there is deliberately no
+     * fallback: the alternative is a known password on a public server, and a
+     * missing admin is the safer of the two failures - it can be fixed with one
+     * SQL statement, which the log says.
+     */
+    private Optional<String> seedPassword() {
+        if (!adminPassword.isEmpty()) {
+            return Optional.of(adminPassword);
+        }
+        return devSeed ? Optional.of(DEMO_PASSWORD) : Optional.empty();
+    }
+
+    /**
+     * Guarantees there is an admin account to sign in with, when one may be
+     * created at all. Looks the account up by username rather than by role, so
+     * re-running against a database that already has one is a no-op instead of a
+     * second admin.
      */
     private void ensureAdmin() {
+        if (seedPassword().isEmpty()) {
+            log.info("No admin seeded: development seeding is off and no ADMIN_PASSWORD was set. "
+                    + "Set ADMIN_PASSWORD and restart, or promote an existing account with "
+                    + "UPDATE user_ SET user_role = {} WHERE user_name = '<name>'.",
+                    UserRole.ADMIN.toInt());
+            return;
+        }
+
         Optional<User_> existing = userRepository.findByUsername(ADMIN_USERNAME);
         if (existing.isPresent()) {
             Integer role = existing.get().user_role();
@@ -96,7 +168,9 @@ public class Startup {
 
     private void createUser(String username, String phoneNumber, UserRole role) {
 
-        String hashedPassword = passwordEncoder.encode("password");
+        // seedPassword() is never empty here: ensureAdmin returns early when it is,
+        // and the demo block only runs while devSeed is on.
+        String hashedPassword = passwordEncoder.encode(seedPassword().orElse(DEMO_PASSWORD));
 
         // Create a new User_ instance with the hashed password
         User_ userWithHashedPassword = new User_(
