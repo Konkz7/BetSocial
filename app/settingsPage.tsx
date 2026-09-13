@@ -102,12 +102,8 @@ const SettingsScreen = ({navigation}: any) => {
   useFocusEffect(
     useCallback(() => {
       screenStore.set("Settings");
-      console.log("Screen is focused! Perform refresh or action here.");
       getProfile().then(setProfile);
       getNotificationPreference().then(setPushEnabled);
-      return () => {
-        console.log("Screen is unfocused! Cleanup if needed.");
-      };
     }, [])
   );
 

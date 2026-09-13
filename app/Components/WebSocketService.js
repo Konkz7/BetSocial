@@ -73,8 +73,19 @@ class WebSocketService {
         chatId: String(gid),
       },
 
+      /**
+       * Frame-level logging, in development only.
+       *
+       * stompjs calls this for every frame including heartbeats, which on an
+       * open chat is a line every few seconds saying nothing. Heartbeats are
+       * dropped and the rest is kept, because when a socket misbehaves these
+       * lines are the only account of what it did - which this session proved
+       * twice over.
+       */
       debug: (str) => {
-        console.log(str);
+        if (__DEV__ && !str.startsWith('<<< PONG') && !str.startsWith('>>> PING')) {
+          console.log(str);
+        }
       },
       reconnectDelay: 5000, // Optional: retry on disconnect
       onConnect: () => {
@@ -86,8 +97,6 @@ class WebSocketService {
         // one that is not connected yet.
         client.subscribe(`/topic/chat/${gid}`, (frame) => {
           const message = JSON.parse(frame.body);
-          console.log(message.online);
-
           onMessageReceived(message);
         });
 
@@ -137,11 +146,17 @@ class WebSocketService {
    *         going to be delivered.
    */
   sendMessage(messageObj) {
-    if (!messageObj.description?.trim()){return false} else{console.log ("Message: ", messageObj.description);};
+    // The message body is deliberately not logged. console.log is not stripped
+    // from release builds by React Native's babel preset, so what was here wrote
+    // the text of every message somebody sent into the device log - readable by
+    // anything that can read logcat. The length says as much as is useful for
+    // debugging and nothing that is nobody's business.
+    if (!messageObj.description?.trim()) {
+      return false;
+    }
 
     if (this.stompClient && this.stompClient.connected) {
       this.publish(messageObj);
-      console.log(JSON.stringify(messageObj));
       return true;
     }
 
@@ -154,7 +169,7 @@ class WebSocketService {
     }
 
     this.outbox.push(messageObj);
-    console.log(`Socket is not up yet; holding this message (${this.outbox.length} waiting)`);
+    console.warn(`Socket is not up yet; holding a message (${this.outbox.length} waiting)`);
     return false;
   }
 

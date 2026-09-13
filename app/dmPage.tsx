@@ -147,7 +147,6 @@ const DMScreen = ({ navigation ,route }:any) => {
       media_type: 0, 
     };
     webSocketService.sendMessage(messageObj);
-    console.log("IS READING:", isReading);
 
     setNewMessage('');
 

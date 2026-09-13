@@ -316,7 +316,6 @@ const ThreadScreen = ({navigation,route}:any) => {
 
   useFocusEffect(
       useCallback(() => {
-        console.log("ThreadScreen is focused! Perform refresh or action here."); 
         screenStore.set("Thread");
         getBets();
         getSideCounts();
@@ -329,9 +328,6 @@ const ThreadScreen = ({navigation,route}:any) => {
         //console.log("comments:",loadedComments);
         console.log("thread:",threadObject);
 
-        return () => {
-          console.log("ThreadScreen is unfocused! Cleanup if needed.");
-        };
       }, [])
     );
   

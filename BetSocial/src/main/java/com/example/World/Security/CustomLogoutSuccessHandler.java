@@ -2,8 +2,6 @@ package com.example.World.Security;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.example.World.Users.UserService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,10 +29,20 @@ public class CustomLogoutSuccessHandler implements LogoutSuccessHandler {
                                 org.springframework.security.core.Authentication authentication)
             throws IOException, ServletException {
 
-        HttpSession session = request.getSession();
+        // Null when there was nobody signed in, which is the common case rather
+        // than the odd one: the login screen posts /logout every time it gains
+        // focus, so most calls here arrive with no session at all. Dereferencing
+        // it wrote a NullPointerException and a full stack trace to the log on
+        // every visit to that screen, and answered the request with a 500.
+        //
+        // Logging out when you are not logged in is not an error. It is already
+        // true.
+        if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails user)) {
+            respondOk(response);
+            return;
+        }
 
-        CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
-
+        HttpSession session = request.getSession(false);
 
         if (session != null) {
             Long uid = user.getUserId();
@@ -43,11 +51,15 @@ public class CustomLogoutSuccessHandler implements LogoutSuccessHandler {
             userService.changeStatus(uid,false);
             userService.notifyGroupsOnStatus(uid, false);
 
-            // Invalidate session
             session.invalidate();
         }
 
+        respondOk(response);
+    }
+
+    private static void respondOk(HttpServletResponse response) throws IOException {
         response.setStatus(HttpServletResponse.SC_OK);
+        response.setContentType("application/json");
         response.getWriter().write("{\"message\":\"Logout successful!\"}");
         response.getWriter().flush();
     }

@@ -19,10 +19,6 @@ const OtpScreen = ({navigation,route}: any) => {
     useFocusEffect(
       useCallback(() => {
         screenStore.set("OTP"); 
-        console.log("Screen is focused! Perform refresh or action here.");  
-        return () => {
-          console.log("Screen is unfocused! Cleanup if needed.");
-        };
       }, [])
     );
       
