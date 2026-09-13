@@ -546,6 +546,21 @@ export const makePrediction = async (bid, prediction, amount_bet) =>{
 // Separate from getMyPredictions, which returns bare prediction rows for the
 // thread screen to know which bets you have already taken. That shape cannot say
 // what was being predicted, which is the whole content of this list.
+// Somebody else's track record. Counts only.
+//
+// Not getPredictionHistory with a uid: that carries thread titles and amounts and
+// is scoped to the caller, and serving it for another person would name private
+// threads the viewer is not allowed to know exist.
+export const getPredictionRecord = async (uid) =>{
+  try {
+    const record = await axios.get(IP_STRING + "/api/predictions/record/" + uid);
+    return record.data;
+  } catch (error) {
+    console.error("Couldnt load their record:", error.response?.status ?? error.message);
+    return null;
+  }
+}
+
 export const getPredictionHistory = async () =>{
   try {
     const history = await axios.get(IP_STRING + "/api/predictions/history");
