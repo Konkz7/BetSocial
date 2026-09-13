@@ -588,22 +588,31 @@ const ThreadScreen = ({navigation,route}:any) => {
                     </Text>
                   </View>
 
+                  <View style={styles.betFactRow}>
+                    <Text style={styles.betFactLabel}>Status</Text>
+                    <View style={styles.betStatus}>
+                      <View style={[styles.betStatusDot,
+                        { backgroundColor: statusColors.at(bet.status) ?? "#9CA3AF" }]} />
+                      <Text style={styles.betFactValue}>
+                        {statusStrings.at(bet.status) ?? "Unknown"}
+                      </Text>
+                    </View>
+                  </View>
+
                 </View>
                </View>   
                 )}
               </Card>
 
-                {betClicked.at(index) ? (
+                {/* The status used to be a 180x40 bar sitting below the card,
+                    and it showed only while the card was collapsed. It is a row
+                    inside the card now, so what is left here is the Continue
+                    action alone. */}
+                {betClicked.at(index) && (
                   <View>
-                    <TouchableOpacity style = {[styles.statusContainer,{backgroundColor: "lightgreen"},prediction.at(index) === null? {opacity: 0.2} : {opacity: 1}]} disabled = {prediction.at(index) === null}>       
-                      <Text style = {styles.statusText}>Continue</Text>
+                    <TouchableOpacity style = {[styles.continueButton,{backgroundColor: "lightgreen"},prediction.at(index) === null? {opacity: 0.2} : {opacity: 1}]} disabled = {prediction.at(index) === null}>
+                      <Text style = {styles.continueText}>Continue</Text>
                     </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View>
-                    <View style = {[styles.statusContainer,{backgroundColor: statusColors.at(bet.status)}]}>       
-                      <Text style = {styles.statusText}>{statusStrings.at(bet.status)}</Text>
-                    </View>
                   </View>
                 )}
               
@@ -664,6 +673,8 @@ const styles = StyleSheet.create({
   },
   betFactLabel: { fontSize: 13, color: "#6B7280" },
   betFactValue: { fontSize: 13, color: "#111827", fontWeight: "500" },
+  betStatus: { flexDirection: "row", alignItems: "center" },
+  betStatusDot: { width: 9, height: 9, borderRadius: 5, marginRight: 6 },
   ownBetNotice: {
     paddingVertical: 40,
     paddingHorizontal: 20,
@@ -846,7 +857,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginRight: 10,
-  },statusContainer: {
+  },continueButton: {
     borderRadius:70,
     width: 180,
     height:40,
@@ -855,7 +866,7 @@ const styles = StyleSheet.create({
     backgroundColor: "blue",
     marginTop: -25,
     
-  },statusText: {
+  },continueText: {
     textAlign:"center",
     color: "white",
     fontWeight: "bold",
