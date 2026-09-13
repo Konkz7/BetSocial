@@ -551,6 +551,20 @@ export const makePrediction = async (bid, prediction, amount_bet) =>{
 // Not getPredictionHistory with a uid: that carries thread titles and amounts and
 // is scoped to the caller, and serving it for another person would name private
 // threads the viewer is not allowed to know exist.
+// The bets you bookmarked, with what they were.
+//
+// The bookmark toggle has worked all along; there was simply no way to ask for
+// the list, which is why the Settings row showing them did nothing.
+export const getSavedBets = async () =>{
+  try {
+    const saved = await axios.get(IP_STRING + "/api/bets/saved-list");
+    return saved.data;
+  } catch (error) {
+    console.error("Couldnt load your saved bets:", error.response?.status ?? error.message);
+    return [];
+  }
+}
+
 export const getPredictionRecord = async (uid) =>{
   try {
     const record = await axios.get(IP_STRING + "/api/predictions/record/" + uid);

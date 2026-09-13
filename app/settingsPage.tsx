@@ -15,22 +15,17 @@ import {
   ArrowLeft,
   ChevronRight,
   User,
-  Bell,
   Lock,
   Wallet,
   UserX,
   Download,
   Trash2,
-  HelpCircle,
   LogOut,
-  Languages,
-  Moon,
-  Shield,
   Bookmark,
 } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { screenStore } from './GlobalFlags';
-import { requestDataDownloadLink, deleteMyAccount } from './API';
+import { requestDataDownloadLink, deleteMyAccount, requestPasswordReset, getProfile, changeUsername, changeBio } from './API';
 
 
 
@@ -85,10 +80,19 @@ const SettingsScreen = ({navigation}: any) => {
   const [password, setPassword] = useState('');
   const [deleting, setDeleting] = useState(false);
 
+  // Loaded for the email Change Password sends to, and for the two fields
+  // Personal Information edits. Settings had no idea who was looking at it.
+  const [profile, setProfile] = useState<any>(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [nameText, setNameText] = useState('');
+  const [bioText, setBioText] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+
   useFocusEffect(
     useCallback(() => {
       screenStore.set("Settings");
       console.log("Screen is focused! Perform refresh or action here.");
+      getProfile().then(setProfile);
       return () => {
         console.log("Screen is unfocused! Cleanup if needed.");
       };
@@ -125,6 +129,99 @@ const SettingsScreen = ({navigation}: any) => {
           + 'The download expires in two minutes, so try again when you can.',
       );
     }
+  };
+
+  /**
+   * Sends a reset link rather than asking for a new password here.
+   *
+   * The flow already exists and is the safer of the two shapes: the link proves
+   * control of the address, expires, and works once. Changing a password from
+   * inside a session would mean trusting the session alone - and a session is
+   * what somebody has if they picked up an unlocked phone.
+   *
+   * The address is partly masked in the prompt. It is the account's own owner
+   * reading it, but a shoulder is a shoulder.
+   */
+  const changePassword = () => {
+    if (!profile?.email) {
+      Alert.alert('Not ready yet', 'Your account details are still loading.');
+      return;
+    }
+
+    const [name, domain] = profile.email.split('@');
+    const masked = `${name.slice(0, 1)}***@${domain}`;
+
+    Alert.alert(
+      'Change your password',
+      `A reset link will be sent to ${masked}. It expires in an hour and can be `
+        + 'used once.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send link',
+          onPress: async () => {
+            await requestPasswordReset(profile.email);
+            // Deliberately the same words whatever happened. The endpoint
+            // answers identically for an unknown address so it cannot be used to
+            // discover who has an account, and saying more here would undo that.
+            Alert.alert('Check your email',
+              'If that address has an account, a reset link is on its way.');
+          },
+        },
+      ],
+    );
+  };
+
+  const openPersonalInfo = () => {
+    if (!profile) {
+      Alert.alert('Not ready yet', 'Your account details are still loading.');
+      return;
+    }
+    setNameText(profile.user_name ?? '');
+    setBioText(profile.bio ?? '');
+    setEditingProfile(true);
+  };
+
+  /**
+   * Saves only what changed.
+   *
+   * Two endpoints rather than one, and neither is worth calling with the value
+   * it already holds - a username change is rejected if the name is taken, and
+   * submitting the existing one would fail against itself.
+   */
+  const savePersonalInfo = async () => {
+    setSavingProfile(true);
+
+    if (nameText.trim() && nameText.trim() !== profile.user_name) {
+      await changeUsername(nameText.trim());
+    }
+    if (bioText !== (profile.bio ?? '')) {
+      await changeBio(bioText);
+    }
+
+    const updated = await getProfile();
+    setProfile(updated);
+    setSavingProfile(false);
+    setEditingProfile(false);
+  };
+
+  /**
+   * Asks first, then goes to Login - which is what actually ends the session.
+   *
+   * The Login screen posts /logout on focus, so navigating there is the logout
+   * rather than a route to it. This button previously logged to the console,
+   * which meant the only way out of the app was to force-quit it.
+   */
+  const confirmLogOut = () => {
+    Alert.alert(
+      'Log out?',
+      'You will need your password to sign back in.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Log out', style: 'destructive',
+          onPress: () => navigation.navigate('Login') },
+      ],
+    );
   };
 
   /**
@@ -183,7 +280,7 @@ const SettingsScreen = ({navigation}: any) => {
           <SettingItem
             icon={<User size={24} color="#6B7280" />}
             label="Personal Information"
-            onClick={() => console.log('Navigate to profile')}
+            onClick={openPersonalInfo}
           />
           {/* "Payment Methods - Visa ****4242" stood here: a hardcoded card that
               never existed, left from the deprecated card screen. Coins cannot be
@@ -193,7 +290,11 @@ const SettingsScreen = ({navigation}: any) => {
             label="Blocked Accounts"
             onClick={() => navigation.navigate('BlockedUsers_SP')}
           />
-          <SettingItem icon={<Bookmark size={24} color="#6B7280" />} label="Saved Bets" />
+          <SettingItem
+            icon={<Bookmark size={24} color="#6B7280" />}
+            label="Saved Bets"
+            onClick={() => navigation.navigate('SavedBets_SP')}
+          />
 
         </SettingGroup>
 
@@ -212,39 +313,85 @@ const SettingsScreen = ({navigation}: any) => {
             onClick={confirmDelete}
           />
         </SettingGroup>
-        <SettingGroup title="Preferences">
+        {/* Language, Dark Mode, Privacy Settings, Security and Help Center were
+            here and did nothing at all - no handler, no screen behind them. A
+            settings page where every row does something reads as finished; one
+            with six inert rows reads as abandoned, and invites people to keep
+            pressing them.
+
+            Notifications is the one kept unimplemented on purpose: the push
+            machinery is real, so the toggle is worth building properly rather
+            than deleting. It needs a column and a check before sending, which is
+            its own change. */}
+        <SettingGroup title="Security">
           <SettingItem
-            icon={<Bell size={24} color="#6B7280" />}
-            label="Notifications"
-            toggle={true}
+            icon={<Lock size={24} color="#6B7280" />}
+            label="Change Password"
+            onClick={changePassword}
           />
-          <SettingItem
-            icon={<Languages size={24} color="#6B7280" />}
-            label="Language"
-            value="English"
-          />
-          <SettingItem
-            icon={<Moon size={24} color="#6B7280" />}
-            label="Dark Mode"
-            toggle={false}
-          />
-        </SettingGroup>
-        <SettingGroup title="Privacy & Security">
-          <SettingItem icon={<Shield size={24} color="#6B7280" />} label="Privacy Settings" />
-          <SettingItem icon={<Lock size={24} color="#6B7280" />} label="Security" />
-          <SettingItem icon={<Lock size={24} color="#6B7280" />} label="Change Password" />
-        </SettingGroup>
-        <SettingGroup title="Support">
-          <SettingItem icon={<HelpCircle size={24} color="#6B7280" />} label="Help Center" />
         </SettingGroup>
         <SettingGroup title="">
           <SettingItem
             icon={<LogOut size={24} color="#6B7280" />}
             label="Log Out"
-            onClick={() => console.log('Log out')}
+            onClick={confirmLogOut}
           />
         </SettingGroup>
       </ScrollView>
+
+      <Modal
+        visible={editingProfile}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditingProfile(false)}
+      >
+        <View style={styles.backdrop}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>Personal information</Text>
+            <Text style={styles.sheetBody}>
+              Your name is shown on everything you post. Your bio is on your profile.
+            </Text>
+
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Username"
+              placeholderTextColor="#9CA3AF"
+              value={nameText}
+              onChangeText={setNameText}
+              autoCapitalize="none"
+              maxLength={50}
+            />
+
+            <TextInput
+              style={[styles.passwordInput, styles.bioInput]}
+              placeholder="Bio"
+              placeholderTextColor="#9CA3AF"
+              value={bioText}
+              onChangeText={setBioText}
+              multiline
+            />
+
+            <View style={styles.sheetActions}>
+              <TouchableOpacity
+                style={[styles.sheetButton, styles.sheetCancel]}
+                disabled={savingProfile}
+                onPress={() => setEditingProfile(false)}
+              >
+                <Text style={styles.sheetCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sheetButton, styles.sheetSave]}
+                disabled={savingProfile || nameText.trim().length === 0}
+                onPress={savePersonalInfo}
+              >
+                <Text style={styles.sheetDeleteText}>
+                  {savingProfile ? 'Saving…' : 'Save'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={askingPassword}
@@ -296,6 +443,8 @@ const SettingsScreen = ({navigation}: any) => {
 }
 
 const styles = StyleSheet.create({
+  bioInput: { height: 90, textAlignVertical: 'top', paddingTop: 10 },
+  sheetSave: { backgroundColor: '#10B981' },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
