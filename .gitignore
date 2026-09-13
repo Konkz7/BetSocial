@@ -119,3 +119,10 @@ deploy/backups/
 # inside the app rather than being secret, but it is per-project and downloaded
 # from the console, so it is set up rather than committed. See the README.
 ios/newProject/GoogleService-Info.plist
+
+# The release signing key and its passwords. A signing key is the one credential
+# that cannot be rotated - it is the app identity on Play permanently - so it
+# never goes in the repository.
+android/keystore.properties
+android/app/*.jks
+android/app/release.keystore

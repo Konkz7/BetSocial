@@ -2,8 +2,22 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <!-- Android 13 and up will not show a notification without this, and it is a
+         runtime permission rather than a manifest-only one - so a build missing
+         it fails silently: push arrives, nothing appears, and nothing errors.
+         FBCloudMessagingService already asks for it through
+         messaging().requestPermission(). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Capped at 32 on purpose. From Android 13 these grant nothing - the photo
+         picker returns a URI the app is already allowed to read - and leaving
+         them uncapped asks every user for storage access the app never uses,
+         which is also a Play Console warning. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+                     android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+                     android:maxSdkVersion="32" />
 
     <application
       android:name=".MainApplication"
