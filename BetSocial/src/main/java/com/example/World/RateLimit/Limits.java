@@ -65,6 +65,16 @@ public final class Limits {
     public static final RateLimit PREDICTIONS = new RateLimit(60, Duration.ofHours(1));
 
     /**
+     * Asking for a WebSocket handshake ticket.
+     *
+     * One per connection attempt, and a bad network reconnects often - stompjs
+     * retries every five seconds for as long as it is failing. So this has to be
+     * loose enough that a train journey does not lock somebody out of their own
+     * chat, while still refusing a script minting them without end.
+     */
+    public static final RateLimit WS_TICKETS = new RateLimit(240, Duration.ofHours(1));
+
+    /**
      * Asking for a data download link.
      *
      * Each one runs the whole export - every thread, comment, message and ledger
