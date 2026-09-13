@@ -7,7 +7,8 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "check:imports": "node scripts/check-import-case.js"
   },
   "dependencies": {
     "@notifee/react-native": "^9.1.8",
@@ -25,12 +26,9 @@
     "buffer": "^6.0.3",
     "firebase": "^12.0.0",
     "lucide-react-native": "^0.475.0",
-    "openpgp": "^6.1.0",
     "react": "18.3.1",
     "react-native": "0.76.6",
     "react-native-compressor": "^1.12.0",
-    "react-native-crypto": "^2.2.0",
-    "react-native-fast-openpgp": "^2.8.0",
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "^2.23.0",
     "react-native-get-random-values": "^1.11.0",

@@ -357,6 +357,80 @@ re-mints once and retries.
 default test rules is writable by anyone who has the project's client config,
 which ships inside the app.
 
+## Releasing on Android
+
+```bash
+cd android && ./gradlew bundleRelease
+```
+
+The bundle lands at `android/app/build/outputs/bundle/release/app-release.aab`
+and is what Play takes. `assembleRelease` produces an APK instead, useful for
+installing on a device directly but not for the store.
+
+### Before the first upload
+
+**A signing key.** The template signs release builds with `debug.keystore`,
+which is committed here with the password `android` — Play refuses it, and a
+build using it could be updated by anybody. Generate your own:
+
+```bash
+keytool -genkeypair -v -keystore android/app/release.keystore \
+  -alias betsocial -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Then `android/keystore.properties`:
+
+```properties
+storeFile=app/release.keystore
+storePassword=…
+keyAlias=betsocial
+keyPassword=…
+```
+
+Both files are gitignored. **Back them up somewhere durable.** A signing key is
+the one credential that cannot be rotated: it is the app's identity on Play
+permanently, and losing it means publishing under a new listing and asking
+everybody to reinstall.
+
+The build falls back to the debug key when `keystore.properties` is absent, so a
+release build still assembles for testing. It simply cannot be uploaded, which is
+the right outcome for a key everybody has.
+
+**`applicationId` is `com.newproject`** and is deliberately left that way. It
+appears in the Play listing URL and in Android's settings, and cannot be changed
+after the first publish — but `google-services.json` is keyed to it, so changing
+it means registering a new Android app in the Firebase console first. The name
+users see is `BetSocial` everywhere it matters.
+
+### Check imports before building
+
+```bash
+npm run check:imports
+```
+
+Windows and macOS resolve paths case-insensitively, so an import like
+`./app/addThreadPage` happily loads `AddThreadPage.tsx` and development works for
+months. Metro's release bundler does not, and neither does Linux — the mismatch
+appears as `Unable to resolve module` at bundle time, or as CI failing on a file
+that works locally. That is exactly how it was found here.
+
+### Play's target API level
+
+`targetSdkVersion` is 36. Play has required Android 16 for new apps and updates
+since 31 August 2026, and this requirement moves every year — check
+[the current requirement](https://developer.android.com/google/play/requirements/target-sdk)
+before a release rather than trusting this paragraph.
+
+### Size
+
+The bundle is around 50MB, most of it React Native's own native libraries. Play
+splits it per device, so the actual download is smaller than that figure.
+
+`enableProguardInReleaseBuilds` in `android/app/build.gradle` is `false`. Turning
+it on shrinks things further but R8 can break libraries that use reflection, and
+the failure is at runtime rather than at build time — so it needs testing on a
+device, not just a successful build.
+
 ## iOS
 
 The app has never been built for iOS. What follows is what an audit of the
