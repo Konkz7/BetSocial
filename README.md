@@ -456,6 +456,35 @@ where that gets fixed if it happens.
 `permitAll` rule names the download path and the GET method exactly, because a
 wildcard there would have opened it too.
 
+## What a failed request says back
+
+There are two kinds of message and they were being treated as one.
+
+A reason on a `ResponseStatusException` was written by whoever threw it, for the
+person who will read it — *"You cannot stake more than you have"* — and the app
+shows it. A message on an arbitrary exception was written by a library, about
+itself, and on a 500 it is usually a driver naming the host, the database and
+the user.
+
+`server.error.include-message` decides between them with one switch, so the
+choice was to leak the second or lose the first. `ApiErrorHandler` makes the
+distinction instead: written reasons pass through, everything else becomes
+`Something went wrong` and goes to the log with the request id that produced it.
+
+```json
+{"status": 429, "error": "Too Many Requests", "message": "..."}
+{"status": 500, "error": "Internal Server Error", "message": "Something went wrong", "requestId": "3f9a1c22"}
+```
+
+`message` is the field the client reads (`error.response?.data?.message`), so
+renaming it would turn every error in the app into *"Request failed with status
+code 400"*.
+
+It extends `ResponseEntityExceptionHandler` rather than only catching
+`Exception`. That base class already maps every standard Spring MVC failure — a
+wrong method, malformed JSON, a missing parameter — to its proper status, and
+catching `Exception` alone would turn all of them into 500s.
+
 ## Logging
 
 Every line carries the request it belongs to and who was making it:
