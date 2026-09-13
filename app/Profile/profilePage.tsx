@@ -17,9 +17,10 @@ import {
     from "lucide-react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getFollow, getUserThreads, follow, unfollow , DMCheck , makePrivateGroup, fillReadMarkers, blockUser, 
-    getThreadLikes, registerThreadLike, getOtherFollow, getFollowsByID, getFollowersByID} from "../API";
+    getThreadLikes, registerThreadLike, getOtherFollow, getFollowsByID, getFollowersByID, getPredictionRecord} from "../API";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import threadList from "../Components/ThreadList";
+import PredictionRecord from "../Components/PredictionRecord";
 import { screenStore } from "../GlobalFlags";
 import { promptReport } from "../Components/ReportPrompt";
 
@@ -42,6 +43,16 @@ const ProfileScreen = ({navigation , route}: any) => {
   
 
     var user = route.params;
+
+    // Counts only - see PredictionRecord. The full history is on your own profile;
+    // serving it here would name private threads this viewer cannot see.
+    //
+    // Fetched only when the tab is opened, like the threads below.
+    const { data: record, isLoading: recordLoading } = useQuery({
+        queryKey: ["predictionRecord" + user.uid],
+        queryFn: () => getPredictionRecord(user.uid),
+        enabled: currentTab === 'Bets',
+    });
    
     const { data: threadData, isLoading: threadDataLoading, refetch: refetchThreads } = useQuery({
         queryKey: ["userThreads" + user.uid],
@@ -331,7 +342,12 @@ const ProfileScreen = ({navigation , route}: any) => {
             
             </View>
 
-            {threadList(threads, refetchThreads, threadsLoading, navigation, "Thread_S", setThreads,"non")}
+            {/* The Predictions tab set this state and nothing read it - the
+                threads list rendered underneath either way, so the tab did
+                nothing at all. The same placeholder was on the self profile. */}
+            {currentTab === 'Threads'
+              ? threadList(threads, refetchThreads, threadsLoading, navigation, "Thread_S", setThreads,"non")
+              : <PredictionRecord record={record} loading={recordLoading} name={user.user_name} />}
 
             </ScrollView>
         </SafeAreaView>

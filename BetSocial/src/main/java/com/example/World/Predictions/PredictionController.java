@@ -4,6 +4,7 @@ package com.example.World.Predictions;
 import com.example.World.RateLimit.Limits;
 import com.example.World.RateLimit.RateLimiter;
 import com.example.World.Bets.BetRepository;
+import com.example.World.Blocks.BlockService;
 import com.example.World.Bets.Bet_;
 import com.example.World.Bets.Status;
 import com.example.World.Wallet.LedgerReason;
@@ -31,15 +32,17 @@ public class PredictionController {
     private final ThreadRepository threadRepository;
     private final LedgerService ledgerService;
     private final RateLimiter rateLimiter;
+    private final BlockService blockService;
 
 
     public PredictionController(PredictionRepository predictionRepository, BetRepository betRepository, ThreadRepository threadRepository, LedgerService ledgerService,
-                                RateLimiter rateLimiter) {
+                                RateLimiter rateLimiter, BlockService blockService) {
         this.predictionRepository = predictionRepository;
         this.betRepository = betRepository;
         this.threadRepository = threadRepository;
         this.ledgerService = ledgerService;
         this.rateLimiter = rateLimiter;
+        this.blockService = blockService;
     }
 
     // GET /all is deliberately absent. It returned every prediction in the
@@ -71,6 +74,23 @@ public class PredictionController {
     @GetMapping("/history")
     List<PredictionHistory> history(HttpSession session){
         return predictionRepository.historyOf(requireUserId(session));
+    }
+
+    /**
+     * Somebody else's track record.
+     *
+     * Counts only. /history carries thread titles and amounts and is scoped to
+     * the caller; serving that for another person would name private threads the
+     * viewer is not allowed to know exist, because its join to Thread_ has no
+     * visibility rules - deliberately, so your own history survives a thread
+     * being deleted.
+     *
+     * Blocked either way and there is nothing to see, the same as their threads.
+     */
+    @GetMapping("/record/{uid}")
+    PredictionRecord record(@PathVariable Long uid, HttpSession session){
+        blockService.requireNotBlocked(requireUserId(session), uid);
+        return predictionRepository.recordOf(uid);
     }
 
     /**

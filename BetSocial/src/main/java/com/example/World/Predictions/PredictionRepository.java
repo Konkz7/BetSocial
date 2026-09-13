@@ -70,6 +70,32 @@ public interface PredictionRepository extends ListCrudRepository<Prediction_,Lon
     List<PredictionHistory> historyOf(@Param("uid") Long uid);
 
     /**
+     * How often somebody has been right, without saying what about.
+     *
+     * This is what another person's profile shows. historyOf above is for your
+     * own: it carries thread titles and amounts, and joins Thread_ with no
+     * visibility rules on purpose, so serving it for anybody else would name
+     * private threads the viewer is not allowed to know exist.
+     *
+     * Counts leak none of that, which is most of the reason this exists as its
+     * own query rather than as a filter over the other one.
+     *
+     * settled deliberately excludes amount_won = 0. That is a refund - nobody
+     * backed the outcome, so every stake went back and the bet decided nothing.
+     * Counting it as a loss would mark somebody down for a bet that never
+     * resolved.
+     */
+    @Query("""
+    SELECT COUNT(*) AS total,
+           COUNT(*) FILTER (WHERE p.amount_won IS NOT NULL AND p.amount_won <> 0) AS settled,
+           COUNT(*) FILTER (WHERE p.amount_won > 0) AS correct
+    FROM Prediction_ p
+    WHERE p.uid = :uid
+      AND p.deleted_at IS NULL
+    """)
+    PredictionRecord recordOf(@Param("uid") Long uid);
+
+    /**
      * Total staked and distinct bettors, for a whole page of threads at once.
      *
      * One query for the page rather than one per card. The comment counts are
