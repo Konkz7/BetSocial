@@ -41,6 +41,21 @@ if (firebaseConfig?.type === "service_account" || firebaseConfig?.private_key) {
 // one, which nothing else signs into.
 const storage = getStorage(firebaseApp);
 
+// Declared rather than inferred.
+//
+// uploadBytes takes the content type from blob.type, and a blob built by
+// fetching a file:// URI in React Native frequently has none - in which case
+// Firebase stores the object as application/octet-stream. That is enough on its
+// own to be refused by a rule reading contentType.matches('image/.*'), and the
+// error it produces is storage/unauthorized, which points at permissions rather
+// than at the file being unlabelled.
+//
+// It matters after the upload too: an object served as octet-stream is a
+// download rather than an image, so anything rendering the URL outside the app
+// gets a file instead of a picture.
+const IMAGE_TYPE = { contentType: "image/jpeg" };
+const VIDEO_TYPE = { contentType: "video/mp4" };
+
 const IMAGE_SOFT_LIMIT = 3 * 1024 * 1024;   // 3MB
 const IMAGE_HARD_LIMIT = 15 * 1024 * 1024;  // 15MB
 const VIDEO_SOFT_LIMIT = 50 * 1024 * 1024;  // 50MB
@@ -70,7 +85,7 @@ export async function uploadImage(uri) {
 
   const fileRef = ref(storage, `images/${uuid.v4()}.jpg`);
   return withUploadIdentity(async () => {
-    await uploadBytes(fileRef, blob);
+    await uploadBytes(fileRef, blob, IMAGE_TYPE);
     return await getDownloadURL(fileRef); // public URL
   });
 }
@@ -95,7 +110,7 @@ export async function uploadPFP(uri,uid) {
   // person writing profile_pictures/7.jpg is user 7.
   const fileRef = ref(storage, `profile_pictures/${uid}.jpg`);
   return withUploadIdentity(async () => {
-    await uploadBytes(fileRef, blob);
+    await uploadBytes(fileRef, blob, IMAGE_TYPE);
     return await getDownloadURL(fileRef); // public URL
   });
 }
@@ -130,7 +145,7 @@ export async function uploadVideo(uri) {
 
   const fileRef = ref(storage, `videos/${uuid.v4()}.mp4`);
   return withUploadIdentity(async () => {
-    await uploadBytes(fileRef, blob);
+    await uploadBytes(fileRef, blob, VIDEO_TYPE);
     return await getDownloadURL(fileRef);
   });
 }
