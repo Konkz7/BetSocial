@@ -155,12 +155,33 @@ by name, and a missing or unexported value makes every screen fail with
 
 ### 3. Point the app at your backend
 
-The API base URL is `IP_STRING` in `app/Constants.js`. A device or emulator
-cannot reach `localhost` on your machine, so set it to your machine's LAN IP:
+`devApiUrl` in `app/Secrets.js` — the same gitignored file as the Firebase
+config, because this value is per-machine and per-network too:
 
 ```js
-export const IP_STRING = "http://192.168.1.53:8080";
+export const devApiUrl = "http://192.168.1.10:8080";
 ```
+
+A device or emulator cannot reach `localhost` — that is the device itself. Use
+your machine's LAN address (`ipconfig` / `ifconfig`), or `10.0.2.2` on the
+Android emulator, which is its route to the host.
+
+**Release builds ignore it.** `app/Constants.js` holds a separate
+`PRODUCTION_API`, and `IP_STRING` is whichever of the two the build calls for:
+
+```js
+export const IP_STRING = __DEV__ ? DEVELOPMENT_API : PRODUCTION_API;
+```
+
+So changing network is an edit to a gitignored file rather than a tracked one
+that then wants committing, and a release build cannot ship pointing at a
+laptop. The app says so at startup if `devApiUrl` is missing, or if a release
+build still has the placeholder production URL.
+
+`WS_URL` is derived from the same base rather than written out again —
+`^http` → `ws` turns `http` into `ws` and `https` into `wss` in one step. It was
+previously `"ws://" + IP_STRING` with `http://` stripped, which would have
+produced `ws://https://host/ws` the moment the server had TLS in front of it.
 
 ### 4. Start Metro, then the app
 

@@ -2,9 +2,67 @@
 import axios from "axios";
 import { Alert } from "react-native";
 import { initializeApp } from "firebase/app";
-import {firebaseConfig} from "./Secrets";
+import {firebaseConfig, devApiUrl} from "./Secrets";
 
-export const IP_STRING = "http://192.168.1.53:8080"; 
+/**
+ * Where the app talks to.
+ *
+ * This used to be one hardcoded LAN address, edited by hand whenever the machine
+ * moved network and committed by accident when it did not. Two things were wrong
+ * with that beyond the nuisance: a release build could ship pointing at a
+ * laptop, and there was nowhere to put a deployed URL that did not also have to
+ * be reverted before the next day's development.
+ *
+ * So the two are separate values and the build picks. Nothing to remember, and a
+ * release cannot accidentally be a development build.
+ */
+
+/**
+ * The deployed server. Tracked, because it is not a secret - it is the address
+ * printed on the app.
+ */
+const PRODUCTION_API = "https://betsocial.example.org";
+
+/**
+ * This machine, for development.
+ *
+ * Lives in Secrets.js because it is per-machine and per-network, and that file
+ * is already the gitignored one - so changing networks stops being an edit to a
+ * tracked file that then wants committing.
+ *
+ * The fallback is the Android emulator's route to its host. On a physical device
+ * it will not work, which is what the warning below is for.
+ */
+const DEVELOPMENT_API = devApiUrl || "http://10.0.2.2:8080";
+
+export const IP_STRING = __DEV__ ? DEVELOPMENT_API : PRODUCTION_API;
+
+/**
+ * The chat socket, derived rather than written out again.
+ *
+ * `^http` -> `ws` turns http into ws and https into wss in one step, which
+ * matters: a deployed server is https, and pairing it with a plain ws:// socket
+ * fails in a way that looks like the socket problem rather than a URL problem.
+ * The session cookie is Secure in production, so it would not be sent over ws://
+ * even if the connection opened.
+ */
+export const WS_URL = IP_STRING.replace(/^http/, "ws") + "/ws";
+
+if (__DEV__ && !devApiUrl) {
+  console.error(
+    "devApiUrl is not set in app/Secrets.js, so the app is pointed at " +
+    DEVELOPMENT_API + " - the Android emulator's route to its host. On a " +
+    "physical device nothing will load. Add devApiUrl with this machine's LAN " +
+    "address, e.g. \"http://192.168.1.210:8080\". See app/Secrets.example.js."
+  );
+}
+
+if (!__DEV__ && PRODUCTION_API.includes("example.org")) {
+  console.error(
+    "PRODUCTION_API in app/Constants.js is still the placeholder. This is a " +
+    "release build and it is pointed at nothing."
+  );
+}
 
 
 

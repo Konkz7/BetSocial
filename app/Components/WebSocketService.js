@@ -1,6 +1,6 @@
 // WebSocketService.js
 import { Client } from '@stomp/stompjs';
-import { IP_STRING } from '../Constants';
+import { WS_URL } from '../Constants';
 import { requestHandshakeTicket } from '../API';
  
 /**
@@ -36,7 +36,10 @@ class WebSocketService {
     // on its own schedule.
     this.disconnect();
 
-    const socketUrl = `ws://${IP_STRING.replace(/^http:\/\//, '')}/ws`; // Use ws:// not http://
+    // Derived once, in Constants, from the same base URL the API uses. Built here
+    // it was `ws://` + IP_STRING with http:// stripped, which silently produced
+    // "ws://https://host/ws" the moment the server had TLS in front of it.
+    const socketUrl = WS_URL;
 
     const client = new Client({
       brokerURL: socketUrl,
@@ -72,7 +75,6 @@ class WebSocketService {
 
       debug: (str) => {
         console.log(str);
-        //console.log(`ws://${IP_STRING.replace(/^http:\/\//, '')}/ws`);
       },
       reconnectDelay: 5000, // Optional: retry on disconnect
       onConnect: () => {
