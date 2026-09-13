@@ -21,7 +21,7 @@ import {firebaseConfig, devApiUrl} from "./Secrets";
  * The deployed server. Tracked, because it is not a secret - it is the address
  * printed on the app.
  */
-const PRODUCTION_API = "https://betsocial.example.org";
+const PRODUCTION_API = "https://betsocial.duckdns.org";
 
 /**
  * This machine, for development.
