@@ -29,14 +29,20 @@ class WebSocketService {
   }
 
   connect(uid,gid, onMessageReceived) {
-    this.stompClient = new Client({
+    // Whatever was here first. Opening a chat, leaving and coming back used to
+    // leave the previous client running - it keeps its own retry timer, so the
+    // sockets accumulated and every one of them logged "Opening Web Socket..."
+    // on its own schedule.
+    this.disconnect();
+
+    const client = new Client({
       brokerURL: `ws://${IP_STRING.replace(/^http:\/\//, '')}/ws`, // Use ws:// not http://
 
       connectHeaders: {
         userId: String(uid), // Send userId as a native STOMP header
         chatId: String(gid),
       },
-      
+
       debug: (str) => {
         console.log(str);
         //console.log(`ws://${IP_STRING.replace(/^http:\/\//, '')}/ws`);
@@ -44,7 +50,12 @@ class WebSocketService {
       reconnectDelay: 5000, // Optional: retry on disconnect
       onConnect: () => {
         console.log('Connected');
-        this.stompClient.subscribe(`/topic/chat/${gid}`, (frame) => {
+
+        // client, not this.stompClient. A client that connects late - after the
+        // screen has moved on and replaced it - would otherwise subscribe and
+        // publish on whichever one is current, which is either the wrong chat or
+        // one that is not connected yet.
+        client.subscribe(`/topic/chat/${gid}`, (frame) => {
           const message = JSON.parse(frame.body);
           console.log(message.online);
 
@@ -54,17 +65,38 @@ class WebSocketService {
         // After subscribing, so anything that was waiting comes back on the
         // topic like a normal message rather than being sent into a chat this
         // client is not listening to yet.
-        this.flush();
+        if (client === this.stompClient) {
+          this.flush();
+        }
       },
       onStompError: (frame) => {
         console.error('Broker reported error: ' + frame.headers['message']);
         console.error('Additional details: ' + frame.body);
       },
+
+      // Without these three, a handshake that never completes is silent: stompjs
+      // logs "Opening Web Socket..." and then simply retries every five seconds,
+      // so a socket that cannot connect looks exactly like one still connecting.
+      onWebSocketError: (event) => {
+        console.error('WebSocket error before the connection opened:', event?.message ?? event);
+      },
+      onWebSocketClose: (event) => {
+        console.error(
+          `WebSocket closed (code ${event?.code}). ` +
+          'Code 1006 with no frames usually means the handshake was refused - '
+          + 'most often a signed-out session, since /ws needs the login cookie.'
+        );
+      },
+      onDisconnect: () => {
+        console.log('Disconnected');
+      },
+
       forceBinaryWSFrames: true,
       appendMissingNULLonIncoming: true,
     });
 
-    this.stompClient.activate();
+    this.stompClient = client;
+    client.activate();
   }
 
   /**
@@ -115,6 +147,15 @@ class WebSocketService {
       return;
     }
 
+    // Checked rather than assumed. flush runs from onConnect, where the socket
+    // is up by definition - but emptying the outbox against a client that is not
+    // connected would throw away every held message at once, which is the exact
+    // thing the outbox exists to prevent.
+    if (!this.stompClient || !this.stompClient.connected) {
+      console.warn('Not flushing: the socket is not connected. Messages stay held.');
+      return;
+    }
+
     const waiting = this.outbox;
     this.outbox = [];
 
@@ -132,9 +173,22 @@ class WebSocketService {
     }
   }
 
+  /**
+   * Closes the current connection, if there is one.
+   *
+   * The reference is dropped as well as deactivated. deactivate() is
+   * asynchronous, so without this the field goes on pointing at a client that is
+   * on its way out - and sendMessage would read connected from it and publish
+   * into a socket that is closing, where the message is lost rather than queued.
+   *
+   * Anything still waiting in the outbox stays there: leaving a chat should not
+   * throw away a message that has not been sent yet.
+   */
   disconnect() {
     if (this.stompClient) {
-      this.stompClient.deactivate();
+      const closing = this.stompClient;
+      this.stompClient = null;
+      closing.deactivate();
     }
   }
 }
