@@ -85,6 +85,10 @@ public class SecurityConfig {
         .addFilterBefore(handshakeTicketFilter, UsernamePasswordAuthenticationFilter.class)
         .authorizeHttpRequests(registry -> {
             registry.requestMatchers("/req/**").permitAll();
+            // The host polls this to decide whether to send traffic here, and it
+            // has no session. It reports reachability and nothing else - see
+            // HealthController, which deliberately returns no detail.
+            registry.requestMatchers(HttpMethod.GET, "/health").permitAll();
             // Opened for the phone's browser, which has no session cookie - the
             // one-time token in the URL is the authorisation instead. Exactly
             // this path and this method: /api/users/my-data itself stays behind

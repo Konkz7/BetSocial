@@ -1,0 +1,21 @@
+# Keeps the build context small and, more importantly, keeps credentials out of
+# it. Anything sent to the daemon can end up in an image layer.
+
+target/
+.mvn/wrapper/maven-wrapper.jar
+mvnw
+mvnw.cmd
+
+# Secrets. firebaseAPI.json is gitignored, so it is only ever here on a machine
+# that has one - which is exactly the machine that builds the image. It is
+# supplied at runtime through FIREBASE_CREDENTIALS_JSON instead.
+.env
+*.env
+src/main/resources/firebaseAPI.json*
+src/main/google-services.json
+
+.idea/
+*.iml
+.git/
+.gitignore
+README.md
