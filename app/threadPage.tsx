@@ -10,11 +10,7 @@ import {
   Bookmark,
   BookmarkCheck, 
   ArrowLeft,
-  HandCoins, 
-  ShieldCheck, 
   Heart, 
-  Crown, 
-  Percent, 
   Users, 
   DollarSign,
   X,
@@ -569,46 +565,27 @@ const ThreadScreen = ({navigation,route}:any) => {
                       </Text>
                   </View>
                 </TouchableOpacity>
-                <View style = {{flexDirection: "row"}}>
-                  <View style = {{borderRightWidth: 1, borderRightColor: "#ddd"}}>
-                    <TouchableOpacity style = {[styles.betButtonContainer, {marginTop: 10},
-                        bet.is_verified ? {backgroundColor: "#4CAF50" } : {backgroundColor: "#ccc"}]}>
-                        <ShieldCheck  size={36} color={bet.is_verified ? "white" : "black"}></ShieldCheck>
-                      </TouchableOpacity>
-                    
-                    <TouchableOpacity style = {[styles.betButtonContainer, 
-                      bet.profit_mode ? {backgroundColor: "#4CAF50" } : {backgroundColor: "#ccc"}]}>
-                      <HandCoins  size={36} color={bet.profit_mode ? "white" : "black"}></HandCoins>
-                    </TouchableOpacity>
+                {/* A 64px crown or percent sign on a pink or blue square stood
+                    here, next to two unlabelled icon buttons - king mode, profit
+                    mode and a verified shield, none of which the server ever
+                    acted on. What is left is what a person deciding whether to
+                    stake actually needs to know. */}
+                <View style={styles.betFacts}>
+
+                  <View style={styles.betFactRow}>
+                    <Text style={styles.betFactLabel}>Stake limits</Text>
+                    <Text style={styles.betFactValue}>
+                      {bet.min_amount || 0} to {bet.max_amount ? bet.max_amount : "no maximum"}
+                    </Text>
                   </View>
 
-                  <View style = {{}}>
-                    <View style = {{marginLeft: 30 , flexDirection: "row" , width: 208}}>
-  
-                      <View style = {bet.king_mode ? styles.kingIcon : styles.percentIcon}>
-                        {bet.king_mode? 
-                        <Crown size = {64}  style = {{backgroundColor: "pink", borderRadius: 10 , padding:20 }}></Crown> : 
-                        <Percent size = {64}  style = {{backgroundColor: "dodgerblue", borderRadius: 10 , padding:20}}></Percent>
-                        }
-                      </View>
-
-                      {bet.king_mode ? (null) : 
-                      (<View style = {{marginTop: 20}}>
-                        <Text style = {styles.maxInputBox}>Max Bet: {(bet.max_amount == 0) ? "N/A" : bet.max_amount}</Text>
-                        <Text style = {styles.maxInputBox}> Min Bet: {bet.min_amount}</Text>
-                      </View>)}                      
-                    
-                    </View>                    
-                    <View style = {{flexDirection: "row", alignItems: "center", marginLeft:30, marginTop:5}}>
-                        <Text style = {{marginRight: 20}}>Ends at:</Text>
-                        <View style = {styles.dateBox}>
-                            <Text style = {styles.dateBoxText}> {new Date(bet.ends_at).toLocaleString()} </Text>
-                        </View>
-                    </View>
-                  <View>
-
-                 </View>
-                    
+                  <View style={styles.betFactRow}>
+                    <Text style={styles.betFactLabel}>Closes</Text>
+                    <Text style={styles.betFactValue}>
+                      {new Date(bet.ends_at).toLocaleString([], {
+                        day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+                      })}
+                    </Text>
                   </View>
 
                 </View>
@@ -672,6 +649,21 @@ const ThreadScreen = ({navigation,route}:any) => {
 };
 
 const styles = StyleSheet.create({
+  betFacts: {
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 4,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+  },
+  betFactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
+  betFactLabel: { fontSize: 13, color: "#6B7280" },
+  betFactValue: { fontSize: 13, color: "#111827", fontWeight: "500" },
   ownBetNotice: {
     paddingVertical: 40,
     paddingHorizontal: 20,

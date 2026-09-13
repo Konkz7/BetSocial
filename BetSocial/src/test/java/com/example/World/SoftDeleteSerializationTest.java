@@ -54,7 +54,7 @@ class SoftDeleteSerializationTest extends AbstractIntegrationTest {
 
         Bet_ bet = bets.save(new Bet_(null, thread.tid(), Status.ACTIVE.toInt(), null, 0L, 0L,
                 "accessor bet", now, null, now + 86_400_000L,
-                false, false, false, 100L, 1L, null));
+                100L, 1L, null));
 
         // Exactly what removeThread does to a live bet.
         threadService.removeThread(thread.tid(), author.uid());
@@ -91,7 +91,7 @@ class SoftDeleteSerializationTest extends AbstractIntegrationTest {
         Thread_ thread = threadRepository.save(thread(author, now));
         bets.save(new Bet_(null, thread.tid(), Status.ACTIVE.toInt(), null, 0L, 0L,
                 "accessor bet 2", now, null, now + 86_400_000L,
-                false, false, false, 100L, 1L, null));
+                100L, 1L, null));
 
         threadService.removeThread(thread.tid(), author.uid());
 

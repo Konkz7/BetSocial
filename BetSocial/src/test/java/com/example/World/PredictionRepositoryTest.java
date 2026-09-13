@@ -64,9 +64,8 @@ class PredictionRepositoryTest extends AbstractIntegrationTest {
         if (jdbc.queryForObject("SELECT count(*) FROM bet_ WHERE bid = ?", Integer.class, collidingBid) == 0) {
             jdbc.update("""
                     INSERT INTO bet_ (bid, tid, status, amount_for, amount_against, description,
-                                      created_at, ends_at, is_verified, king_mode, profit_mode,
-                                      max_amount, min_amount, b_version)
-                    VALUES (?, ?, ?, 0, 0, 'phase4 decoy bet', ?, ?, false, false, false, 100, 1, 0)
+                                      created_at, ends_at, max_amount, min_amount, b_version)
+                    VALUES (?, ?, ?, 0, 0, 'phase4 decoy bet', ?, ?, 100, 1, 0)
                     """, collidingBid, thread.tid(), Status.ACTIVE.toInt(), now, now + 86_400_000L);
         }
 
@@ -96,7 +95,7 @@ class PredictionRepositoryTest extends AbstractIntegrationTest {
     private Bet_ newBet(Long tid, long now) {
         return new Bet_(null, tid, Status.ACTIVE.toInt(), null, 0L, 0L,
                 "phase4 regression bet", now, null, now + 86_400_000L,
-                false, false, false, 100L, 1L, null);
+                100L, 1L, null);
     }
 
     private User_ user(String name) {

@@ -269,7 +269,7 @@ class ReportingTest extends AbstractIntegrationTest {
         long now = new Date().getTime();
         return new Bet_(null, thread.tid(), Status.ACTIVE.toInt(), null, 200L, 0L,
                 "will it happen", now, null, now + 86_400_000L,
-                false, false, false, 0L, 0L, null);
+                 0L, 0L, null);
     }
 
     private User_ user() {
