@@ -114,3 +114,8 @@ BetSocial/src/main/google-services.json
 # and this file only exists on the server.
 deploy/.env
 deploy/backups/
+
+# The Firebase iOS client config. Like google-services.json on Android it ships
+# inside the app rather than being secret, but it is per-project and downloaded
+# from the console, so it is set up rather than committed. See the README.
+ios/newProject/GoogleService-Info.plist

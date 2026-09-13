@@ -357,6 +357,90 @@ re-mints once and retries.
 default test rules is writable by anyone who has the project's client config,
 which ships inside the app.
 
+## iOS
+
+The app has never been built for iOS. What follows is what an audit of the
+project found — some of it fixed here, the rest needing a Mac.
+
+### Fixed in the repository
+
+- `[FIRApp configure]` in `AppDelegate.mm`. Android gets this from the
+  google-services Gradle plugin; iOS does not, and without it every Firebase
+  call fails with *"Default FirebaseApp is not initialized"* — push, the phone
+  OTP at registration, and the upload identity the chat socket needs.
+- `NSPhotoLibraryUsageDescription`, `NSCameraUsageDescription` and
+  `NSMicrophoneUsageDescription`. Their absence is **not** a declined prompt, it
+  is an immediate crash the moment the picker opens.
+- Removed an empty `NSLocationWhenInUseUsageDescription`. Nothing here uses
+  location, and an empty usage string is itself an App Review rejection.
+- The development fallback URL is platform-aware: `10.0.2.2` is the Android
+  emulator's route to its host, while the iOS simulator uses `localhost`.
+
+### Still required, and needs a Mac
+
+**1. The Firebase iOS config.** Firebase console → *Project settings → Your apps
+→ Add app → iOS*, using the bundle identifier from Xcode. Download
+`GoogleService-Info.plist` into `ios/newProject/` and **add it to the Xcode
+project** (drag it in, "Copy items if needed"). Dropping it in the folder alone
+does not put it in the bundle, and `FIRApp configure` reads it from the bundle.
+
+It is gitignored, like `app/Secrets.js` and the Android `google-services.json`.
+
+**2. Pods.** They have never been installed — there is no `Podfile.lock`.
+
+```bash
+cd ios && pod install
+```
+
+If `use_frameworks!` is needed for anything later, react-native-firebase also
+requires `$RNFirebaseAsStaticFramework = true` at the top of the Podfile.
+
+**3. Push notifications.** These need real Apple infrastructure:
+
+- an APNs authentication key (`.p8`) from the Apple Developer portal, uploaded
+  to *Firebase console → Project settings → Cloud Messaging*
+- the **Push Notifications** capability added in Xcode, which creates the
+  `aps-environment` entitlement
+- **Background Modes → Remote notifications** for delivery while backgrounded
+
+Without these `messaging().getToken()` rejects on iOS, and `requestFBNPermission`
+fails at login.
+
+**4. Phone OTP at registration.** `signInWithPhoneNumber` on iOS verifies the app
+with a silent push, and falls back to reCAPTCHA in a browser when that is
+unavailable. The fallback needs a URL scheme to return to the app:
+
+Add to `Info.plist` — the value is the `REVERSED_CLIENT_ID` from
+`GoogleService-Info.plist`:
+
+```xml
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLSchemes</key>
+    <array><string>com.googleusercontent.apps.YOUR-REVERSED-CLIENT-ID</string></array>
+  </dict>
+</array>
+```
+
+Registration is the one flow that cannot work at all without this.
+
+### What should already work
+
+- **Cleartext HTTP in development.** `NSAllowsLocalNetworking` is `true`, which
+  covers a LAN address. Production is HTTPS regardless.
+- **The chat socket.** Its handshake carries a one-time ticket rather than
+  relying on the session cookie, which was the part never verified on iOS — see
+  [How the chat socket authenticates](#how-the-chat-socket-authenticates).
+- **No Android-only APIs.** Nothing calls `PermissionsAndroid`, `ToastAndroid`
+  or `BackHandler`, so there is nothing that fails only on iOS.
+- **The `TextEncoder` polyfill** is installed at the app entry point and applies
+  to Hermes on both platforms.
+
+None of this has been run. It is what an audit says rather than what a build
+proved, and the first `pod install` will almost certainly surface something this
+list does not mention.
+
 ## Deploying
 
 The backend ships as a container. `deploy/docker-compose.yml` runs the whole
