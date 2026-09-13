@@ -93,15 +93,41 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+
+        // Read from android/keystore.properties, which is gitignored. The
+        // alternative - the values written here - puts a signing key's password
+        // in the repository, and a signing key is the one credential that cannot
+        // be rotated: it is the app's identity on Play forever, and losing or
+        // leaking it means publishing under a new listing.
+        release {
+            def props = new Properties()
+            def file = rootProject.file("keystore.properties")
+            if (file.exists()) {
+                props.load(new FileInputStream(file))
+                storeFile rootProject.file(props["storeFile"])
+                storePassword props["storePassword"]
+                keyAlias props["keyAlias"]
+                keyPassword props["keyPassword"]
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // The template signs release with the debug key. Play refuses an
+            // upload signed with it, and the key itself is committed to this
+            // repository with the password "android" - so a build that shipped
+            // would be one anybody could publish an update to.
+            //
+            // Falls back to debug only when keystore.properties is absent, so a
+            // release build still assembles locally for testing. It cannot be
+            // uploaded, which is the correct outcome for a build signed with a
+            // key everybody has.
+            signingConfig rootProject.file("keystore.properties").exists()
+                    ? signingConfigs.release
+                    : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
