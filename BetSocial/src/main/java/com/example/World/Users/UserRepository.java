@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -222,4 +223,34 @@ public interface UserRepository extends ListCrudRepository<User_, Long> {
                           @Param("scrubbedEmail") String scrubbedEmail,
                           @Param("scrubbedPhone") String scrubbedPhone,
                           @Param("time") Long time);
+
+    /**
+     * Whether this account wants push, and the setting of it.
+     *
+     * push_enabled is deliberately not a field on User_. Adding one would mean
+     * editing all thirty-six places that construct the record, thirty-three of
+     * them tests, for a single boolean - a diff that would be almost entirely
+     * mechanical and would bury the change it is carrying.
+     *
+     * The cost is that User_ no longer mirrors its table exactly, which is worth
+     * knowing rather than discovering: this column is reached through these
+     * queries and nowhere else.
+     */
+    @Query("SELECT push_enabled FROM User_ WHERE uid = :uid")
+    Boolean pushEnabled(@Param("uid") Long uid);
+
+    /**
+     * Of these accounts, the ones that want push.
+     *
+     * One query rather than a lookup per recipient. A conversation push already
+     * had to stop being one call per member once; this is the same mistake
+     * waiting to be made again in a filter.
+     */
+    @Query("SELECT uid FROM User_ WHERE uid IN (:uids) AND push_enabled = true")
+    List<Long> withPushEnabled(@Param("uids") Collection<Long> uids);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE User_ SET push_enabled = :enabled WHERE uid = :uid")
+    int setPushEnabled(@Param("uid") Long uid, @Param("enabled") boolean enabled);
 }
