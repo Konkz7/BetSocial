@@ -338,45 +338,101 @@ which ships inside the app.
 
 ## Deploying
 
-The backend ships as a container. `BetSocial/Dockerfile` builds it and
-`BetSocial/fly.toml` deploys it to Fly.io, which terminates TLS and gives it a
-hostname — the app needs HTTPS to authenticate anyone at all, so that is not a
-detail to add later.
+The backend ships as a container. `deploy/docker-compose.yml` runs the whole
+server — database, application, and Caddy in front for TLS — on one machine.
+
+It is written for an **Oracle Cloud Always Free** instance, which costs nothing
+permanently and is generous enough (4 ARM cores, 24GB) that this uses a fraction
+of it. Nothing in the compose file is Oracle-specific; it is three containers on
+one box and would run anywhere Docker does.
+
+### What you need first
+
+**A hostname pointing at the machine.** Not optional: a certificate cannot be
+issued for a bare IP, and without HTTPS the application authenticates nobody —
+the session cookie is `Secure` in the prod profile, and that same cookie carries
+the WebSocket handshake. A free [DuckDNS](https://duckdns.org) subdomain is
+enough.
+
+**Ports 80 and 443 open, in both places.** Oracle instances have a cloud
+firewall *and* iptables on the instance itself, and the instance one is closed by
+default. Missing the second is the usual reason a new Oracle box looks dead:
 
 ```bash
-cd BetSocial
-fly launch --no-deploy        # once: claims a name, keeps this fly.toml
-fly postgres create           # once: a managed database
-fly postgres attach <db-name>
+# on the instance
+sudo iptables -I INPUT -p tcp --dport 80  -j ACCEPT
+sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
+sudo netfilter-persistent save
 ```
 
-Then the secrets. `fly postgres attach` prints a `DATABASE_URL` in libpq form;
-Spring wants JDBC, so the pieces go in separately:
+and add the same two rules to the subnet's Security List in the Oracle console.
+
+### Setting it up
 
 ```bash
-fly secrets set \
-  DB_URL="jdbc:postgresql://<host>:5432/<database>" \
-  DB_USERNAME="<user>" \
-  DB_PASSWORD="<password>" \
-  ADMIN_PASSWORD="<something you choose>" \
-  MAIL_USERNAME="<address>" \
-  MAIL_PASSWORD="<google app password>" \
-  FIREBASE_STORAGE_BUCKET="<project>.firebasestorage.app" \
-  APP_BASE_URL="https://<app>.fly.dev" \
-  FIREBASE_CREDENTIALS_JSON="$(cat src/main/resources/firebaseAPI.json)"
+sudo apt update && sudo apt install -y docker.io docker-compose-v2 git
+sudo usermod -aG docker $USER && newgrp docker
+
+git clone https://github.com/Konkz7/BetSocial.git
+cd BetSocial/deploy
+cp .env.example .env
 ```
+
+Fill in `.env` — every value is a credential except `DOMAIN`, and compose
+refuses to start rather than defaulting any of them. The Firebase key goes in as
+one line:
 
 ```bash
-fly deploy
+# with firebaseAPI.json copied onto the server
+FIREBASE_CREDENTIALS_JSON=$(jq -c . firebaseAPI.json)
 ```
 
-`FIREBASE_CREDENTIALS_JSON` carries the service-account key as a value rather
-than a file. The container has no copy — `firebaseAPI.json` is gitignored and
-`.dockerignore` keeps it out of the build context, because a private key baked
-into an image travels wherever that image goes.
+Then:
 
-Without `ADMIN_PASSWORD` **no admin account is created**, which is deliberate —
-see below.
+```bash
+docker compose up -d --build
+```
+
+**Build on the machine that runs it.** Always Free instances are Ampere ARM; an
+image built on an x86 laptop will not start on one. The first build takes a few
+minutes — it downloads the full Maven dependency tree.
+
+Caddy gets a certificate on first start. Watch it happen:
+
+```bash
+docker compose logs -f caddy
+```
+
+### Checking it
+
+```bash
+curl https://<your-domain>/health      # {"status":"ok"}
+```
+
+That endpoint runs `SELECT 1`, so it answers only when the application can
+actually reach the database.
+
+### Backups
+
+Running Postgres yourself is what makes this free, and backups are the part a
+managed database would have been doing. `deploy/backup.sh` dumps and rotates;
+put it in cron:
+
+```bash
+0 * * * * /home/ubuntu/BetSocial/deploy/backup.sh >> /home/ubuntu/backup.log 2>&1
+```
+
+The volume survives `docker compose down`. It does not survive `down -v`, a
+deleted instance, or a mistaken `DELETE`.
+
+### Updating
+
+```bash
+git pull && docker compose up -d --build
+```
+
+Flyway applies any new migrations at startup. Take a backup first — that is the
+moment one is most worth having.
 
 ### Running it as a plain jar instead
 
@@ -406,7 +462,7 @@ the internet can reach.
 |---|---|
 | `DB_URL` `DB_USERNAME` `DB_PASSWORD` | the database |
 | `ADMIN_PASSWORD` | creates the admin account with this password. **Without it no admin is created at all** — deliberately, because the alternative is a guessable one |
-| `SPRING_PROFILES_ACTIVE` | `prod`. Set for you by the Dockerfile and `fly.toml` |
+| `SPRING_PROFILES_ACTIVE` | `prod`. Set by the Dockerfile, so a container cannot start without it by accident |
 | `FIREBASE_CREDENTIALS_JSON` | the service-account key as a value, for a container with no file. Or `FIREBASE_CREDENTIALS=file:/path/...` where there is one |
 | `FIREBASE_STORAGE_BUCKET` | or media references are stored unchecked and files are never deleted |
 | `MAIL_USERNAME` `MAIL_PASSWORD` | verification and password-reset email |

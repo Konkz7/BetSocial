@@ -1,0 +1,31 @@
+# TLS, and nothing else.
+#
+# Caddy gets a Let's Encrypt certificate for $DOMAIN on first start and renews it
+# on its own. That is the whole reason it is here: the session cookie is marked
+# Secure in the prod profile, so without HTTPS the application cannot
+# authenticate anybody - including the WebSocket handshake, which carries the
+# same cookie.
+#
+# This needs a real hostname pointing at the machine. A certificate cannot be
+# issued for a bare IP address. A free DuckDNS subdomain is enough.
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# WebSockets need no special handling in Caddy 2 - Upgrade and Connection are
+	# forwarded as a matter of course, and the connection is held open. The v1
+	# incantations people still paste in are for a version that is gone.
+	reverse_proxy app:8080 {
+		# The application is told to trust these (server.forward-headers-strategy
+		# in application-prod.properties). Without them it believes every request
+		# arrived over plain HTTP and writes redirects and cookies that say so.
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		header_up X-Real-IP {remote_host}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
