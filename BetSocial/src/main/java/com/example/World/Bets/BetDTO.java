@@ -17,8 +17,6 @@ public record BetDTO(
      @NonNull
      Long ends_at,
      @NonNull
-     Boolean is_verified,
-     @NonNull
      Long max_amount,
      @NonNull
      Long min_amount

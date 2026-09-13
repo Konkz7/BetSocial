@@ -6,7 +6,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { errorHandler, getProfilePictureUrl, IP_STRING } from "./Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { SquarePlus, ArrowLeft, ShieldCheck, CircleX, ImageUp, X } from "lucide-react-native";
+import { SquarePlus, ArrowLeft, CircleX, ImageUp, X } from "lucide-react-native";
 import Card from "./Components/Card"; 
 import DatePickerButton from "./Components/DatePicker"; 
 import { uploadImage, uploadVideo, selectLocalMedia} from './Components/FBStorageService';
@@ -168,17 +168,10 @@ const AddThreadScreen = ({navigation}:any) => {
       "tid": null,
       "description": "", 
       "ends_at": 0,
-      "is_verified": false,
       "max_amount": 0 , 
       "min_amount": 0,
       }]);
   }
-
-  const handleBetVerifiedChange = ( index:number) => {
-    const updatedBets = [...bets];
-    updatedBets[index].is_verified = !updatedBets[index].is_verified;
-    setBets(updatedBets); // Assuming you have setBets as a state updater
-  };
 
   const handleBetTextChange = (text:String, index:number) => {
     const updatedBets = [...bets];
@@ -328,20 +321,11 @@ const AddThreadScreen = ({navigation}:any) => {
                   />
                 </View>
 
-                {/* Every control labelled. What stood here was two icon buttons -
-                    a shield and a pair of hands - and an unlabelled switch, with
-                    no way to tell what any of them did. Two of them turned out to
-                    do nothing at all. */}
+                {/* Every control labelled. What stood here was three controls - a
+                    shield, a pair of hands and an unlabelled switch - and all
+                    three turned out to set columns nothing ever read. What is
+                    left is what a bet actually is. */}
                 <View style={styles.betFields}>
-
-                  <TouchableOpacity
-                    style={[styles.betOption, bet.is_verified && styles.betOptionOn]}
-                    onPress={() => handleBetVerifiedChange(index)}>
-                    <ShieldCheck size={20} color={bet.is_verified ? "white" : "#6B7280"} />
-                    <Text style={[styles.betOptionText, bet.is_verified && styles.betOptionTextOn]}>
-                      Verified outcome
-                    </Text>
-                  </TouchableOpacity>
 
                   <View style={styles.betRow}>
                     <Text style={styles.betLabel}>Stake limits</Text>
@@ -427,19 +411,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     backgroundColor: "white",
   },
-  betOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  betOptionOn: { backgroundColor: "#10B981", borderColor: "#10B981" },
-  betOptionText: { marginLeft: 6, fontSize: 13, color: "#374151", fontWeight: "500" },
-  betOptionTextOn: { color: "white" },
   container:{
     flex: 1,
     backgroundColor: "#f6f2e6",

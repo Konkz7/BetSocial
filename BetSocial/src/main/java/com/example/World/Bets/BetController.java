@@ -95,7 +95,7 @@ public class BetController {
 
         // Both pools start empty and grow as people stake into them.
         betRepository.save(new Bet_(null, bet.tid(), Status.ACTIVE.toInt(), null, 0L, 0L,
-                bet.description(), new Date().getTime(), null,bet.ends_at(),bet.is_verified(),
+                bet.description(), new Date().getTime(), null,bet.ends_at(),
                 bet.max_amount(),bet.min_amount(), null));
     }
 

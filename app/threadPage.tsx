@@ -10,7 +10,6 @@ import {
   Bookmark,
   BookmarkCheck, 
   ArrowLeft,
-  ShieldCheck, 
   Heart, 
   Users, 
   DollarSign,
@@ -567,10 +566,10 @@ const ThreadScreen = ({navigation,route}:any) => {
                   </View>
                 </TouchableOpacity>
                 {/* A 64px crown or percent sign on a pink or blue square stood
-                    here, next to two unlabelled icon buttons. The crown meant
-                    king_mode and the hands meant profit_mode, neither of which
-                    the server ever acted on. What is left is what a person
-                    deciding whether to stake actually needs to know. */}
+                    here, next to two unlabelled icon buttons - king mode, profit
+                    mode and a verified shield, none of which the server ever
+                    acted on. What is left is what a person deciding whether to
+                    stake actually needs to know. */}
                 <View style={styles.betFacts}>
 
                   <View style={styles.betFactRow}>
@@ -588,15 +587,6 @@ const ThreadScreen = ({navigation,route}:any) => {
                       })}
                     </Text>
                   </View>
-
-                  {bet.is_verified && (
-                    <View style={styles.betFactRow}>
-                      <ShieldCheck size={15} color="#10B981" />
-                      <Text style={[styles.betFactValue, { marginLeft: 6, flex: 1 }]}>
-                        Verified outcome
-                      </Text>
-                    </View>
-                  )}
 
                 </View>
                </View>   
