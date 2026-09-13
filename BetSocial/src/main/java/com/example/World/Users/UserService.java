@@ -46,9 +46,24 @@ public class UserService implements UserDetailsService {
         this.messageOperations = messageOperations;
     }
 
+    /**
+     * Resolves whoever is signing in, by username or by email address.
+     *
+     * The name is Spring Security's, and so is the "username" form field the
+     * login screen posts - but the screen itself is labelled Email, types with
+     * an email keyboard, and the forgot-password button beside it sends a real
+     * message to whatever is in that box. So an address is what people type,
+     * and only a username used to work.
+     *
+     * Username is tried first. Both columns are unique, so neither can match two
+     * accounts - but a username may legally contain '@' and could therefore
+     * equal somebody else's address, and a tie has to resolve the same way every
+     * time. It resolves to the value this method has always accepted.
+     */
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Optional<User_> user = userRepository.findByUsername(username);
+    public UserDetails loadUserByUsername(String login) throws UsernameNotFoundException {
+        Optional<User_> user = userRepository.findByUsername(login)
+                .or(() -> userRepository.findByEmail(login));
         if(user.isPresent()){
             User_ user_obj = user.get();
 
