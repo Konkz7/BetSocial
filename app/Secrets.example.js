@@ -34,3 +34,16 @@ export const firebaseConfig = {
   messagingSenderId: "YOUR_SENDER_ID",
   appId: "YOUR_APP_ID",
 };
+
+// Where this machine's backend is, for development builds only.
+//
+// Here rather than in Constants.js because it is per-machine and per-network:
+// your LAN address changes, and this file is gitignored, so changing it stops
+// being an edit to a tracked file that then wants committing.
+//
+// A device or emulator cannot reach "localhost" - that is the device itself.
+// Use your machine's LAN address (ipconfig / ifconfig), or 10.0.2.2 for the
+// Android emulator, which is its route to the host.
+//
+// Release builds ignore this entirely and use PRODUCTION_API in Constants.js.
+export const devApiUrl = "http://192.168.1.10:8080";
