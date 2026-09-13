@@ -25,6 +25,18 @@ public record ThreadProfile(
         @NonNull
         Long created_at,
         @NonNull
-        Boolean is_private
+        Boolean is_private,
+
+        /**
+         * Total staked across this thread's bets, and how many people staked it.
+         *
+         * The card showed "$2.5K" and "18" - written into the component, the same
+         * on every thread and wrong on all of them. Zero when nobody has staked
+         * yet, which is a real answer rather than a missing one.
+         */
+        @NonNull
+        Long pool,
+        @NonNull
+        Long bettors
 ) {
 }

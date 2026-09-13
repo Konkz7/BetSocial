@@ -29,6 +29,33 @@ import { timeAgo, getProfilePictureUrl } from "../Constants";
 
 
 
+/**
+ * Coins, short enough to sit on a card.
+ *
+ * 2500 becomes 2.5K rather than wrapping the row or being cut off mid-number,
+ * which is the shape the hardcoded "$2.5K" was imitating. Exact below a
+ * thousand, because the difference between 40 and 900 is the whole point of the
+ * number at that size.
+ */
+const compactAmount = (coins) => {
+  const amount = Number(coins) || 0;
+  if (amount < 1_000) {
+    return String(amount);
+  }
+
+  const round1 = (n) => Math.round(n * 10) / 10;
+
+  // Rounded before the unit is chosen, not after. 999,999 scaled to thousands is
+  // 999.999, which reads as "1000K" once rounded - so anything that rounds up
+  // into the next unit is shown in that unit instead.
+  const thousands = round1(amount / 1_000);
+  if (thousands < 1_000) {
+    return `${thousands}K`;
+  }
+
+  return `${round1(amount / 1_000_000)}M`;
+};
+
 const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,page, onEndReached, loadingMore) =>  {
     
 
@@ -164,14 +191,18 @@ const threadList =  (threads, getthreads ,loading ,navigation ,nav ,setThreads,p
                                 </View>
                                 : null}
                             </View>
+                        {/* Was "$2.5K" and "18", written into the component - the same
+                            two numbers on every card, and wrong on all of them. The feed
+                            now carries the real ones, counted across the page in one
+                            query rather than per card. */}
                         <View style={styles.actionsRight}>
                             <View style={styles.actionButton}>
                                 <DollarSign size={18} color="green" />
-                                <Text>$2.5K</Text>
+                                <Text>{compactAmount(item.pool)}</Text>
                             </View>
                             <View style={styles.actionButton}>
                                 <Users size={18} color="green" />
-                                <Text>18</Text>
+                                <Text>{item.bettors ?? 0}</Text>
                             </View>
                         </View>
                     </View>

@@ -1,6 +1,7 @@
 package com.example.World.Bets;
 
 
+import com.example.World.Predictions.BetSideCount;
 import com.example.World.Predictions.PredictionRepository;
 import com.example.World.Predictions.Prediction_;
 import com.example.World.Threads.ThreadDTO;
@@ -46,6 +47,23 @@ public class BetController {
     @GetMapping("/all")
     List<Bet_> findAll(){
         return betRepository.findAll();
+    }
+
+    /**
+     * How many people took each side of each bet on a thread.
+     *
+     * Its own endpoint rather than fields on the bets above. Bet_ has seventeen
+     * columns, and a view record repeating them so two counts could ride along
+     * is a thing that goes quietly out of date the first time one is added.
+     *
+     * The money side needs nothing new - amount_for and amount_against are
+     * columns on Bet_ and already reach the client. This is the half the thread
+     * page had no way to show, which is why both halves of its toggle read
+     * "for / against".
+     */
+    @GetMapping("/side-counts/{tid}")
+    List<BetSideCount> sideCounts(@PathVariable Long tid){
+        return predictionRepository.sideCountsByThread(tid);
     }
 
     @GetMapping("/find-by-thread/{tid}")
