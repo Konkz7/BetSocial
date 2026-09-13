@@ -65,6 +65,16 @@ public final class Limits {
     public static final RateLimit PREDICTIONS = new RateLimit(60, Duration.ofHours(1));
 
     /**
+     * Asking for a data download link.
+     *
+     * Each one runs the whole export - every thread, comment, message and ledger
+     * entry the account has - so this is the most expensive thing one tap can
+     * ask the database for. Ten an hour is more than anybody exercising a right
+     * of access needs and far less than a script would want.
+     */
+    public static final RateLimit DATA_EXPORT = new RateLimit(10, Duration.ofHours(1));
+
+    /**
      * Asking for an upload identity.
      *
      * A token lasts an hour and the client refreshes its Firebase session by
