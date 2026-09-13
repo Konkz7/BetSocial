@@ -112,6 +112,17 @@ public class BetController {
         }
     }
 
+    /**
+     * The caller's bookmarked bets.
+     *
+     * The toggle beside it has worked all along; this is the list it was saving
+     * into, which nothing could ask for until now.
+     */
+    @GetMapping("/saved-list")
+    List<SavedBetView> savedList(HttpSession session){
+        return betSaveRepository.savedBy(requireUserId(session));
+    }
+
     @GetMapping("saved")
     Betsave_ getBetSave(@RequestParam Long bid, HttpSession session){
         return betSaveRepository.findByBetAndUser(bid, requireUserId(session));
