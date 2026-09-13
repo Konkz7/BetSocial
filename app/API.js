@@ -555,6 +555,32 @@ export const makePrediction = async (bid, prediction, amount_bet) =>{
 //
 // The bookmark toggle has worked all along; there was simply no way to ask for
 // the list, which is why the Settings row showing them did nothing.
+// Whether this account wants push notifications.
+//
+// Push only. The activity list is written either way - switching this off asks
+// the phone to stay quiet, not to stop being notified.
+export const getNotificationPreference = async () =>{
+  try {
+    const result = await axios.get(IP_STRING + "/api/users/notifications");
+    return result.data.push_enabled;
+  } catch (error) {
+    console.error("Couldnt read your notification setting:", error.response?.status ?? error.message);
+    // Assume on, matching the column's default. Showing it off when it is on
+    // would invite somebody to "fix" a setting that was never broken.
+    return true;
+  }
+}
+
+export const setNotificationPreference = async (enabled) =>{
+  try {
+    await axios.put(IP_STRING + "/api/users/notifications?enabled=" + enabled);
+    return true;
+  } catch (error) {
+    Alert.alert("Couldnt save that", error.response?.data?.message ?? error.message);
+    return false;
+  }
+}
+
 export const getSavedBets = async () =>{
   try {
     const saved = await axios.get(IP_STRING + "/api/bets/saved-list");

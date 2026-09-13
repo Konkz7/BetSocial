@@ -26,7 +26,8 @@ class MigrationTest extends AbstractIntegrationTest {
                 "SELECT version FROM flyway_schema_history WHERE success = true ORDER BY installed_rank",
                 String.class);
 
-        assertThat(applied).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13");
+        assertThat(applied).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+                "11", "12", "13", "14");
     }
 
     @Test
@@ -141,6 +142,13 @@ class MigrationTest extends AbstractIntegrationTest {
 
         // A different table's is_read, still written and still read.
         assertThat(columnsOf("notification_")).contains("is_read");
+
+        // V14. Not a field on User_ - it is reached through UserRepository and
+        // nowhere else, so the record no longer mirrors its table and this is the
+        // only place that says the column exists at all.
+        assertThat(columnsOf("user_"))
+                .as("the Notifications toggle has nothing behind it without this")
+                .contains("push_enabled");
     }
 
     private List<String> columnsOf(String table) {

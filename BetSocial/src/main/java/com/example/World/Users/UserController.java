@@ -194,6 +194,30 @@ public class UserController {
      * Their own only - there is no parameter for whose data to fetch, because
      * that is the one mistake this endpoint could make that would matter.
      */
+    /**
+     * Whether this account wants push notifications.
+     *
+     * Push only. The rows behind the activity list are written either way -
+     * switching this off asks the phone to stay quiet, not to stop being
+     * notified, and a screen that emptied itself would be answering a different
+     * question than the one the toggle asks.
+     */
+    @GetMapping("/notifications")
+    Map<String, Object> notificationPreference(HttpSession session){
+        Long uid = requireUserId(session);
+        return Map.of("push_enabled", Boolean.TRUE.equals(userRepository.pushEnabled(uid)));
+    }
+
+    @PutMapping("/notifications")
+    ResponseEntity<String> setNotificationPreference(@RequestParam boolean enabled,
+                                                     HttpSession session){
+        Long uid = requireUserId(session);
+        userRepository.setPushEnabled(uid, enabled);
+
+        log.info("User {} turned push notifications {}", uid, enabled ? "on" : "off");
+        return ResponseEntity.ok().body(enabled ? "Notifications on" : "Notifications off");
+    }
+
     @GetMapping("/my-data")
     Map<String, Object> myData(HttpSession session){
         return accountDataService.export(requireUserId(session));

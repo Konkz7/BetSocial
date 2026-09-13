@@ -11,7 +11,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class NotificationService {
@@ -75,6 +77,13 @@ public class NotificationService {
         String title = isDirect ? sender.user_name() : conversationName;
         String body = isDirect ? content : sender.user_name() + ": " + content;
 
+        // Asked once for the whole conversation rather than per recipient. The
+        // rows below are written either way: switching push off is asking the
+        // phone to stay quiet, not asking to stop being notified, so the in-app
+        // activity list keeps working.
+        Set<Long> wantsPush = new HashSet<>(userRepository.withPushEnabled(
+                recipients.stream().map(User_::uid).toList()));
+
         List<String> tokens = new java.util.ArrayList<>();
 
         for (User_ recipient : recipients) {
@@ -93,7 +102,9 @@ public class NotificationService {
 
             // A user who has never registered a device has no token. Passing null
             // through used to raise an exception per recipient, caught and logged.
-            if (recipient.fb_notification_token() != null && !recipient.fb_notification_token().isBlank()) {
+            if (wantsPush.contains(recipient.uid())
+                    && recipient.fb_notification_token() != null
+                    && !recipient.fb_notification_token().isBlank()) {
                 tokens.add(recipient.fb_notification_token());
             }
         }
@@ -157,6 +168,13 @@ public class NotificationService {
         }else {
             notificationRepository.save(new Notification_(null, recipient_id, notificationDTO.actor_id(), notificationDTO.notification_type(),
                     notificationDTO.target_id(), notificationDTO.target_type(), title,body, false, false, new Date().getTime()));
+        }
+
+        // After the row above is written, never before it. Switching push off
+        // asks the phone to stay quiet; it does not ask to stop being notified,
+        // and the activity list is where that notification still lives.
+        if (!Boolean.TRUE.equals(userRepository.pushEnabled(recipient_id))) {
+            return;
         }
 
         try {

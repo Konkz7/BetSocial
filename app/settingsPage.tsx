@@ -8,11 +8,13 @@ import {
   TextInput,
   Alert,
   Linking,
+  Switch,
   StyleSheet,
 } from 'react-native';
 // Replace these with your preferred RN icon library or custom icons
 import { 
   ArrowLeft,
+  Bell,
   ChevronRight,
   User,
   Lock,
@@ -25,7 +27,7 @@ import {
 } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { screenStore } from './GlobalFlags';
-import { requestDataDownloadLink, deleteMyAccount, requestPasswordReset, getProfile, changeUsername, changeBio } from './API';
+import { requestDataDownloadLink, deleteMyAccount, requestPasswordReset, getProfile, changeUsername, changeBio, getNotificationPreference, setNotificationPreference } from './API';
 
 
 
@@ -47,6 +49,8 @@ interface SettingItemProps {
   value?: string;
   toggle?: boolean;
   onClick?: () => void;
+  /** Present only for rows that are actually a switch. */
+  onToggle?: (next: boolean) => void;
 }
 
 const SettingItem: React.FC<SettingItemProps> = ({
@@ -55,18 +59,24 @@ const SettingItem: React.FC<SettingItemProps> = ({
   value,
   toggle,
   onClick,
+  onToggle,
 }) => (
-  <TouchableOpacity style={styles.itemContainer} onPress={onClick}>
+  <TouchableOpacity style={styles.itemContainer} onPress={onClick} disabled={!!onToggle}>
     <View style={styles.itemLeft}>
       <View style={styles.iconWrapper}>{icon}</View>
       <Text style={styles.itemLabel}>{label}</Text>
     </View>
     <View style={styles.itemRight}>
       {value && <Text style={styles.itemValue}>{value}</Text>}
-      {toggle ? (
-        <View style={styles.toggleContainer}>
-          <View style={styles.toggleCircle} />
-        </View>
+      {onToggle ? (
+        // A real Switch. What stood here was two nested Views styled to look like
+        // one - it could not be moved, and had no handler to move it to.
+        <Switch
+          value={!!toggle}
+          onValueChange={onToggle}
+          trackColor={{ false: '#D1D5DB', true: '#A7F3D0' }}
+          thumbColor={toggle ? '#10B981' : '#F3F4F6'}
+        />
       ) : (
         <ChevronRight size={20} color="#9CA3AF" />
       )}
@@ -87,12 +97,14 @@ const SettingsScreen = ({navigation}: any) => {
   const [nameText, setNameText] = useState('');
   const [bioText, setBioText] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       screenStore.set("Settings");
       console.log("Screen is focused! Perform refresh or action here.");
       getProfile().then(setProfile);
+      getNotificationPreference().then(setPushEnabled);
       return () => {
         console.log("Screen is unfocused! Cleanup if needed.");
       };
@@ -212,6 +224,21 @@ const SettingsScreen = ({navigation}: any) => {
    * rather than a route to it. This button previously logged to the console,
    * which meant the only way out of the app was to force-quit it.
    */
+  /**
+   * Moves the switch first, then saves.
+   *
+   * A switch that waits for a round trip before moving feels broken on a slow
+   * connection, so it moves immediately and goes back if the save fails - which
+   * is the only honest way to show a setting that did not take.
+   */
+  const toggleNotifications = async (next: boolean) => {
+    setPushEnabled(next);
+
+    if (!(await setNotificationPreference(next))) {
+      setPushEnabled(!next);
+    }
+  };
+
   const confirmLogOut = () => {
     Alert.alert(
       'Log out?',
@@ -323,6 +350,18 @@ const SettingsScreen = ({navigation}: any) => {
             machinery is real, so the toggle is worth building properly rather
             than deleting. It needs a column and a check before sending, which is
             its own change. */}
+        <SettingGroup title="Preferences">
+          {/* Push only. The activity list keeps its rows either way - switching
+              this off asks the phone to stay quiet, not to stop being notified,
+              and a screen that emptied itself would answer a different question
+              than the one this toggle asks. */}
+          <SettingItem
+            icon={<Bell size={24} color="#6B7280" />}
+            label="Notifications"
+            toggle={pushEnabled}
+            onToggle={toggleNotifications}
+          />
+        </SettingGroup>
         <SettingGroup title="Security">
           <SettingItem
             icon={<Lock size={24} color="#6B7280" />}
