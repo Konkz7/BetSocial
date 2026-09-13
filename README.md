@@ -328,6 +328,35 @@ re-mints once and retries.
 default test rules is writable by anyone who has the project's client config,
 which ships inside the app.
 
+## Downloading your data
+
+*Settings → Download My Data* saves a JSON file with everything held about the
+account. It does not come from the app.
+
+```
+POST /api/users/my-data/link       (session)  → a one-time token
+GET  /api/users/my-data/download   (token)    → the file
+```
+
+The app cannot write the file itself. From Android 10 the public Downloads
+folder is closed to ordinary file writes, and React Native's `Share` takes a
+string rather than a file on Android — so anything the app saved would land
+somewhere its owner could not get at. The phone's browser can do both, so the
+app hands it a link and the browser's own download handling does the saving.
+
+The browser is not the app and carries no session cookie, so the URL has to
+carry its own permission. That is worth being careful about — a URL reaches
+browser history, and this one returns an email address, a phone number and
+private messages. So the token is 256 bits of `SecureRandom`, **usable once**,
+and **dead after two minutes**. Only its hash is stored, and it is held in
+memory rather than in a table, which assumes a single server: with two, the
+browser could be handed to the one that did not issue it. `DownloadTokens` is
+where that gets fixed if it happens.
+
+`GET /api/users/my-data` still exists and still needs the session — the
+`permitAll` rule names the download path and the GET method exactly, because a
+wildcard there would have opened it too.
+
 ## Logging
 
 Every line carries the request it belongs to and who was making it:

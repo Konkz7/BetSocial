@@ -694,6 +694,23 @@ export const exportMyData = async() =>{
   }
 }
 
+// A URL the phone's browser can open to save that same export as a file.
+//
+// The app cannot write anywhere its owner can find the file again - from Android
+// 10 the public Downloads folder is closed to ordinary writes, and the share
+// sheet takes a string rather than a file. So the browser does the saving, and
+// the link carries a token because the browser has no session cookie. The token
+// works once and expires in two minutes.
+export const requestDataDownloadLink = async() =>{
+  try {
+    const result = await axios.post(IP_STRING + "/api/users/my-data/link");
+    return IP_STRING + "/api/users/my-data/download?token=" + encodeURIComponent(result.data.token);
+  } catch (error) {
+    Alert.alert("Couldnt prepare your download", error.response?.data?.message ?? error.message);
+    return null;
+  }
+}
+
 // Deletes your account. The password is required because it cannot be undone and
 // a session is easier to come by than a password.
 //

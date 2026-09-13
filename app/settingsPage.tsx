@@ -7,7 +7,7 @@ import {
   Modal,
   TextInput,
   Alert,
-  Share,
+  Linking,
   StyleSheet,
 } from 'react-native';
 // Replace these with your preferred RN icon library or custom icons
@@ -30,7 +30,7 @@ import {
 } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { screenStore } from './GlobalFlags';
-import { exportMyData, deleteMyAccount } from './API';
+import { requestDataDownloadLink, deleteMyAccount } from './API';
 
 
 
@@ -96,24 +96,34 @@ const SettingsScreen = ({navigation}: any) => {
   );
 
   /**
-   * Hands the export to the platform share sheet.
+   * Saves the export as a file, by handing a link to the phone's browser.
    *
-   * Not a file download: there is no file picker here and no filesystem library
-   * installed, and sharing is what a phone does instead. It is enough for the
-   * right of access - the data reaches the person - but a proper file would be
-   * better for a large account, and this will read badly for one.
+   * This used to put the whole export into the share sheet as a message. That
+   * satisfied the right of access in the narrow sense - the data reached the
+   * person - but what they received was a wall of JSON in a text field, and for
+   * an account of any size the intent is too large to deliver at all.
+   *
+   * The app cannot write the file itself. From Android 10 the public Downloads
+   * folder is closed to ordinary file writes, and React Native's Share takes a
+   * string rather than a file on Android, so anything written would land where
+   * its owner could not get at it. The browser can do both, so it does - with a
+   * link that works once and expires in two minutes, because it has to carry its
+   * own permission.
    */
-  const shareMyData = async () => {
-    const data = await exportMyData();
-    if (!data) { return; }
+  const downloadMyData = async () => {
+    const url = await requestDataDownloadLink();
+    if (!url) { return; }
 
-    try {
-      await Share.share({
-        title: 'My BetSocial data',
-        message: JSON.stringify(data, null, 2),
-      });
-    } catch (error) {
-      // Dismissing the share sheet throws on some platforms. Not a failure.
+    const opened = await Linking.openURL(url).then(() => true).catch(() => false);
+
+    if (!opened) {
+      // No browser to hand it to. Rare, but silently doing nothing after
+      // somebody asks for their own data is the wrong way to fail.
+      Alert.alert(
+        'Couldnt open your browser',
+        'Your data is ready but this device would not open the link. '
+          + 'The download expires in two minutes, so try again when you can.',
+      );
     }
   };
 
@@ -194,7 +204,7 @@ const SettingsScreen = ({navigation}: any) => {
           <SettingItem
             icon={<Download size={24} color="#6B7280" />}
             label="Download My Data"
-            onClick={shareMyData}
+            onClick={downloadMyData}
           />
           <SettingItem
             icon={<Trash2 size={24} color="#9E3B34" />}

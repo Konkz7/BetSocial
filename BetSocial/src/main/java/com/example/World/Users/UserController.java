@@ -5,6 +5,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.example.World.Blocks.BlockService;
 import com.example.World.Media.MediaReference;
+import com.example.World.RateLimit.Limits;
+import com.example.World.RateLimit.RateLimiter;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.Set;
 import com.example.World.Bets.DecisionDTO;
@@ -12,7 +15,9 @@ import com.example.World.Users.User_;
 import com.example.World.Users.UserRepository;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -30,15 +35,20 @@ public class UserController {
     private final BlockService blockService;
     private final AccountDataService accountDataService;
     private final MediaReference mediaReference;
+    private final DownloadTokens downloadTokens;
+    private final RateLimiter rateLimiter;
 
     public UserController(UserRepository userRepository, UserService userService,
                           BlockService blockService, AccountDataService accountDataService,
-                          MediaReference mediaReference) {
+                          MediaReference mediaReference, DownloadTokens downloadTokens,
+                          RateLimiter rateLimiter) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.blockService = blockService;
         this.accountDataService = accountDataService;
         this.mediaReference = mediaReference;
+        this.downloadTokens = downloadTokens;
+        this.rateLimiter = rateLimiter;
     }
 
     /**
@@ -187,6 +197,49 @@ public class UserController {
     @GetMapping("/my-data")
     Map<String, Object> myData(HttpSession session){
         return accountDataService.export(requireUserId(session));
+    }
+
+    /**
+     * A link the phone's browser can open to save the export as a file.
+     *
+     * The app cannot write somewhere its owner can find afterwards: from Android
+     * 10 the public Downloads folder is closed to ordinary file writes, and
+     * React Native's share sheet takes a string rather than a file on Android.
+     * The browser can, so the export is handed to it - which means the URL has
+     * to carry its own permission, because the browser has no session cookie.
+     * See DownloadTokens for why that is safe to do and for how briefly.
+     */
+    @PostMapping("/my-data/link")
+    Map<String, Object> dataDownloadLink(HttpSession session){
+        Long uid = requireUserId(session);
+        rateLimiter.require(RateLimiter.scopeOf("data-export", uid), Limits.DATA_EXPORT);
+
+        log.info("Issued a data download link for user {}", uid);
+        return Map.of(
+                "token", downloadTokens.issue(uid),
+                "expiresInSeconds", DownloadTokens.LIFETIME.toSeconds());
+    }
+
+    /**
+     * The export itself, as a file, for whoever holds a valid token.
+     *
+     * Unauthenticated by necessity - see above - so the token is the whole of
+     * the authorisation, and the user it names is the only one whose data this
+     * can return. There is deliberately no parameter for whose data to fetch.
+     */
+    @GetMapping("/my-data/download")
+    ResponseEntity<Map<String, Object>> downloadMyData(@RequestParam String token){
+        long uid = downloadTokens.consume(token);
+
+        String filename = "betsocial-my-data-" + LocalDate.now() + ".json";
+        log.info("Data export downloaded for user {}", uid);
+
+        return ResponseEntity.ok()
+                // What makes the browser save it rather than render it, and what
+                // gives the saved file a name somebody can recognise later.
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(accountDataService.export(uid));
     }
 
     /**

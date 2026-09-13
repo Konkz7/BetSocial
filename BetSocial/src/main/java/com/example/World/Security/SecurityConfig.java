@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -73,6 +74,11 @@ public class SecurityConfig {
         .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
         .authorizeHttpRequests(registry -> {
             registry.requestMatchers("/req/**").permitAll();
+            // Opened for the phone's browser, which has no session cookie - the
+            // one-time token in the URL is the authorisation instead. Exactly
+            // this path and this method: /api/users/my-data itself stays behind
+            // the session, and a wildcard here would open it too.
+            registry.requestMatchers(HttpMethod.GET, "/api/users/my-data/download").permitAll();
             // The STOMP handshake must carry the session cookie: WebSocket identity
             // is now derived from the authenticated principal, not a client header.
             registry.requestMatchers("/ws/**").authenticated();
