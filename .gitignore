@@ -109,3 +109,8 @@ BetSocial/*.env
 # made while troubleshooting, and 'git add -A' would commit it. Scoped rather
 # than **/, which would also cover the tracked one and confuse anyone re-adding it.
 BetSocial/src/main/google-services.json
+
+# Deployment credentials. Every value in here is a secret except the hostname,
+# and this file only exists on the server.
+deploy/.env
+deploy/backups/

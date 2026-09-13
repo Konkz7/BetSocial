@@ -1,0 +1,77 @@
+# The whole server: database, application, and TLS in front of it.
+#
+# Written for an Oracle Cloud Always Free ARM instance, but there is nothing
+# Oracle-specific in here - it is three containers on one box, and would run the
+# same anywhere Docker does.
+#
+#   docker compose up -d --build
+#
+# Build it on the machine that runs it. Always Free instances are Ampere ARM, and
+# an image built on an x86 laptop will not start on one.
+
+name: betsocial
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: betsocial
+      POSTGRES_USER: betsocial
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in deploy/.env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    # Deliberately no `ports:`. The database is reachable from the app over the
+    # compose network and from nowhere else - publishing 5432 would put it on the
+    # public internet behind one password.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U betsocial -d betsocial"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: ../BetSocial
+    restart: unless-stopped
+    depends_on:
+      db:
+        # Flyway runs at startup and fails the whole application if the database
+        # is not there yet, which on a reboot is a race the app loses.
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/betsocial
+      DB_USERNAME: betsocial
+      DB_PASSWORD: ${DB_PASSWORD:?}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD, or no admin account is created}
+      MAIL_USERNAME: ${MAIL_USERNAME:?}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:?}
+      FIREBASE_STORAGE_BUCKET: ${FIREBASE_STORAGE_BUCKET:?}
+      FIREBASE_CREDENTIALS_JSON: ${FIREBASE_CREDENTIALS_JSON:?}
+      APP_BASE_URL: https://${DOMAIN:?}
+    # Also not published. Caddy reaches it over the compose network; exposing
+    # 8080 on the host would be a way past the TLS in front of it.
+    mem_limit: 1g
+    # The JVM sizes its heap from the container limit (MaxRAMPercentage in the
+    # Dockerfile), so without a limit here it would see all 24GB of an Always
+    # Free instance and take most of it.
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data      # certificates live here - losing it means re-issuing
+      - caddy-config:/config
+    depends_on:
+      - app
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:

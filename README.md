@@ -88,8 +88,12 @@ the password `password`.
 The `admin` account is seeded separately, on **every** start rather than only
 against an empty database, so there is always a privileged login to test with.
 It has `user_role = 2` (ADMIN) and the same password `password`, and signing in
-with it lands on the admin approval queue instead of the social feed. These are
-development seeds; anything deployed publicly needs them changed.
+with it lands on the admin approval queue instead of the social feed.
+
+All of that is development only. `DEV_SEED=false` turns it off, and the `prod`
+profile sets it — a deployed server creates an admin only if `ADMIN_PASSWORD` is
+given, and no demo accounts at all. Startup warns while the defaults are in use,
+so a server that still has them says so in its own log.
 
 ### Sample data for testing pagination
 
@@ -122,7 +126,9 @@ Flyway at startup. To change it, add a new `V<n>__description.sql` file — neve
 edit an already-applied migration.
 
 An existing database that already contains the tables is adopted automatically
-(`spring.flyway.baseline-on-migrate=true`) and marked as being at V1.
+(`spring.flyway.baseline-on-migrate=true`) and marked as being at V1. The `prod`
+profile turns that off: adopting an unknown schema as V1 is a convenience for a
+development database and a way to silently skip migrations anywhere else.
 
 ---
 
@@ -202,6 +208,8 @@ is no other setup, and no need for a local database.
 | `FeedVisibilityTest` | private threads need a mutual follow; authors always see their own; liked flag and comment count are per viewer |
 | `FeedQueryCountTest` | the feed's query count does not grow with the number of threads |
 | `AdminSeedingTest` | an admin account is always seeded, including into a database that already has users, and never duplicated |
+| `ProductionSeedingTest` | with seeding off and no `ADMIN_PASSWORD`, nothing is created — no demo accounts, no default admin |
+| `HealthCheckTest` | `/health` answers without a session and says nothing beyond reachability |
 
 A container is started once and shared across the suite; the first run pulls
 `postgres:17-alpine`, so expect it to take a little longer.
@@ -330,6 +338,104 @@ which ships inside the app.
 
 ## Deploying
 
+The backend ships as a container. `deploy/docker-compose.yml` runs the whole
+server — database, application, and Caddy in front for TLS — on one machine.
+
+It is written for an **Oracle Cloud Always Free** instance, which costs nothing
+permanently and is generous enough (4 ARM cores, 24GB) that this uses a fraction
+of it. Nothing in the compose file is Oracle-specific; it is three containers on
+one box and would run anywhere Docker does.
+
+### What you need first
+
+**A hostname pointing at the machine.** Not optional: a certificate cannot be
+issued for a bare IP, and without HTTPS the application authenticates nobody —
+the session cookie is `Secure` in the prod profile, and that same cookie carries
+the WebSocket handshake. A free [DuckDNS](https://duckdns.org) subdomain is
+enough.
+
+**Ports 80 and 443 open, in both places.** Oracle instances have a cloud
+firewall *and* iptables on the instance itself, and the instance one is closed by
+default. Missing the second is the usual reason a new Oracle box looks dead:
+
+```bash
+# on the instance
+sudo iptables -I INPUT -p tcp --dport 80  -j ACCEPT
+sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
+sudo netfilter-persistent save
+```
+
+and add the same two rules to the subnet's Security List in the Oracle console.
+
+### Setting it up
+
+```bash
+sudo apt update && sudo apt install -y docker.io docker-compose-v2 git
+sudo usermod -aG docker $USER && newgrp docker
+
+git clone https://github.com/Konkz7/BetSocial.git
+cd BetSocial/deploy
+cp .env.example .env
+```
+
+Fill in `.env` — every value is a credential except `DOMAIN`, and compose
+refuses to start rather than defaulting any of them. The Firebase key goes in as
+one line:
+
+```bash
+# with firebaseAPI.json copied onto the server
+FIREBASE_CREDENTIALS_JSON=$(jq -c . firebaseAPI.json)
+```
+
+Then:
+
+```bash
+docker compose up -d --build
+```
+
+**Build on the machine that runs it.** Always Free instances are Ampere ARM; an
+image built on an x86 laptop will not start on one. The first build takes a few
+minutes — it downloads the full Maven dependency tree.
+
+Caddy gets a certificate on first start. Watch it happen:
+
+```bash
+docker compose logs -f caddy
+```
+
+### Checking it
+
+```bash
+curl https://<your-domain>/health      # {"status":"ok"}
+```
+
+That endpoint runs `SELECT 1`, so it answers only when the application can
+actually reach the database.
+
+### Backups
+
+Running Postgres yourself is what makes this free, and backups are the part a
+managed database would have been doing. `deploy/backup.sh` dumps and rotates;
+put it in cron:
+
+```bash
+0 * * * * /home/ubuntu/BetSocial/deploy/backup.sh >> /home/ubuntu/backup.log 2>&1
+```
+
+The volume survives `docker compose down`. It does not survive `down -v`, a
+deleted instance, or a mistaken `DELETE`.
+
+### Updating
+
+```bash
+git pull && docker compose up -d --build
+```
+
+Flyway applies any new migrations at startup. Take a backup first — that is the
+moment one is most worth having.
+
+### Running it as a plain jar instead
+
 ```bash
 SPRING_PROFILES_ACTIVE=prod java -jar target/World-0.0.1-SNAPSHOT.jar
 ```
@@ -338,7 +444,17 @@ Without that profile the server runs its development defaults, and the first of
 those is an account called `admin` with the password `password`. The profile
 turns off seeding, tightens the session cookie, stops exception messages
 reaching clients, and switches the log to JSON — see
-`application-prod.properties`, which says why for each.
+`application-prod.properties`, which says why for each. The Dockerfile sets the
+profile itself, so an image cannot be started without it by accident.
+
+### What the host polls
+
+`GET /health` is the only unauthenticated endpoint besides registration. It runs
+`SELECT 1`, so an instance that cannot reach the database reports 503 and stops
+being sent traffic rather than serving errors — which also means a rolling
+deploy cannot replace working instances with broken ones and call it a success.
+It returns `{"status":"ok"}` and nothing else; it is the one endpoint anybody on
+the internet can reach.
 
 ### The environment it needs
 
@@ -346,7 +462,8 @@ reaching clients, and switches the log to JSON — see
 |---|---|
 | `DB_URL` `DB_USERNAME` `DB_PASSWORD` | the database |
 | `ADMIN_PASSWORD` | creates the admin account with this password. **Without it no admin is created at all** — deliberately, because the alternative is a guessable one |
-| `FIREBASE_CREDENTIALS` | `file:/path/to/firebaseAPI.json`, outside the jar |
+| `SPRING_PROFILES_ACTIVE` | `prod`. Set by the Dockerfile, so a container cannot start without it by accident |
+| `FIREBASE_CREDENTIALS_JSON` | the service-account key as a value, for a container with no file. Or `FIREBASE_CREDENTIALS=file:/path/...` where there is one |
 | `FIREBASE_STORAGE_BUCKET` | or media references are stored unchecked and files are never deleted |
 | `MAIL_USERNAME` `MAIL_PASSWORD` | verification and password-reset email |
 | `APP_BASE_URL` | the public URL, used in password-reset links |
