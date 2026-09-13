@@ -541,6 +541,21 @@ export const makePrediction = async (bid, prediction, amount_bet) =>{
 // The caller's own predictions, in one request rather than one per bet. A stake
 // cannot be changed once placed, so this is what decides whether a bet is still
 // open to this person.
+// Everything you have staked on, with what it was about and how it went.
+//
+// Separate from getMyPredictions, which returns bare prediction rows for the
+// thread screen to know which bets you have already taken. That shape cannot say
+// what was being predicted, which is the whole content of this list.
+export const getPredictionHistory = async () =>{
+  try {
+    const history = await axios.get(IP_STRING + "/api/predictions/history");
+    return history.data;
+  } catch (error) {
+    console.error("Couldnt load your predictions:", error.response?.status ?? error.message);
+    return [];
+  }
+}
+
 export const getMyPredictions = async () =>{
   try {
     const mine = await axios.get(IP_STRING + "/api/predictions/mine");
