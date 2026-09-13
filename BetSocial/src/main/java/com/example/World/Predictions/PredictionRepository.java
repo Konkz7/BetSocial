@@ -68,6 +68,8 @@ public interface PredictionRepository extends ListCrudRepository<Prediction_,Lon
     ORDER BY p.created_at DESC
     """)
     List<PredictionHistory> historyOf(@Param("uid") Long uid);
+
+    /**
      * Total staked and distinct bettors, for a whole page of threads at once.
      *
      * One query for the page rather than one per card. The comment counts are
