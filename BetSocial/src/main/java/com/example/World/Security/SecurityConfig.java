@@ -10,6 +10,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -117,7 +120,23 @@ public class SecurityConfig {
                             response.getWriter().flush();
                         }
                     });
-        }).logout(logout -> logout
+        })
+        .exceptionHandling(handling -> handling
+                // A WebSocket handshake that is not signed in was being answered
+                // with formLogin's 302 to /login. A redirect is not something an
+                // upgrade request can do anything with: the client is waiting for
+                // 101, gets a redirect to an HTML page, and neither opens nor
+                // fails cleanly - it simply stops, which reads as the socket
+                // hanging on "Opening Web Socket...".
+                //
+                // 401 says the same thing in a form the client can act on, and
+                // shows up in its logs. Scoped to the handshake rather than
+                // applied everywhere, because the browser-facing pages do want
+                // the redirect.
+                .defaultAuthenticationEntryPointFor(
+                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                        new AntPathRequestMatcher("/ws/**")))
+        .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessHandler(customLogoutSuccessHandler)
                         .invalidateHttpSession(true)

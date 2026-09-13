@@ -442,6 +442,26 @@ property if the daemon's minimum API has moved again.
 **Metro cannot connect / network request failed** — `IP_STRING` still points at
 `localhost`, or your phone is on a different network than your machine.
 
+**`error listen EADDRINUSE :::8081`** — a Metro from an earlier run is still
+serving, and the app is talking to *that* one. Until it is stopped, the bundle
+on the device is the old one no matter what you rebuild.
+
+**`npm start --reset-cache` does nothing** — npm keeps the flag for itself and
+says `Unknown cli config "--reset-cache"`. The arguments have to be handed past
+it:
+
+```bash
+npm start -- --reset-cache
+```
+
+**The chat socket hangs on "Opening Web Socket..."** — the handshake is being
+refused and the client cannot tell. `/ws` needs the login session cookie, and a
+refusal now comes back as `401`; it used to be a `302` to the login page, which
+a WebSocket client can do nothing with, so it retried every five seconds in
+silence. `WebSocketService` logs the close code: **1006 with no frames means the
+handshake was refused**, most often because the session has gone. Signing in
+again is the fix.
+
 ---
 
 ## Author
