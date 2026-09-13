@@ -3,7 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet,SafeAreaView 
 import { Search ,X} from 'lucide-react-native';
 import { TextInput,Searchbar } from 'react-native-paper';
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {getThreadLikes, getThreads, searchUsers} from "./API";
+import {getThreadLikes, searchUsers, searchThreads} from "./API";
 import { useFocusEffect } from '@react-navigation/native';
 import threadList from './Components/ThreadList';
 import { screenStore } from './GlobalFlags';
@@ -16,9 +16,11 @@ const SearchScreen = ({ navigation} : any) => {
     const [filteredData, setFilteredData] = useState<any[]>([]);
 
 
-    // People are searched on the server now. Threads are still filtered here
-    // from the cached feed - the feed is paged, so this only searches what has
-    // been loaded, which is a real limitation and a separate change to make.
+    // Both are searched on the server. Threads used to be filtered here from the
+    // cached feed, which searched one page of however many exist - and returned
+    // an empty list for everything else, which is indistinguishable from "no
+    // matches". It also called getThreads as the queryFn directly, so React Query
+    // passed its context object where a cursor was expected.
     const { data: people = [], isLoading: usersLoading } = useQuery({
       queryKey: ["userSearch", search],
       queryFn: () => searchUsers(search),
@@ -27,16 +29,25 @@ const SearchScreen = ({ navigation} : any) => {
       enabled: search.trim() !== "" && currentTab === "People",
       placeholderData: (previous: any) => previous,
     });
-    const { data: threads, isLoading: threadsLoading } = useQuery({ queryKey: ["threads"], queryFn: getThreads });
+    const { data: threads = [], isLoading: threadsLoading } = useQuery({
+      queryKey: ["threadSearch", search],
+      queryFn: () => searchThreads(search),
+      // Same as People: nothing is shown until something is typed, so the first
+      // request would be for a list nobody is looking at.
+      enabled: search.trim() !== "" && currentTab === "Threads",
+      placeholderData: (previous: any) => previous,
+    });
 
 
-    // People results arrive asynchronously now, so they are copied into
+    // Both sets of results arrive asynchronously, so they are copied into
     // filteredData when they land rather than computed during the keystroke.
     useEffect(() => {
-      if (currentTab === 'People' && search.trim() !== '') {
-        setFilteredData(people);
+      if (search.trim() === '') {
+        setFilteredData([]);
+        return;
       }
-    }, [people, currentTab, search]);
+      setFilteredData(currentTab === 'People' ? people : threads);
+    }, [people, threads, currentTab, search]);
 
     useFocusEffect(
       useCallback(() => {
@@ -49,24 +60,14 @@ const SearchScreen = ({ navigation} : any) => {
     );
     
 
+  // Only records what was typed. Both queries re-run on the new term and the
+  // effect above copies whichever tab's result into filteredData.
+  //
+  // What was here filtered `threads` in place - and `threads` is a FeedPage
+  // object, not an array, so `threads.filter` threw on every keystroke in the
+  // Threads tab. That is why searching threads did nothing at all.
   const handleSearch = (text: string) => {
     setSearch(text);
-    
-    if (text.trim() === '') {
-      setFilteredData([]);
-    } else {
-      if(currentTab === 'People'){
-        // Nothing to do here any more: the query above re-runs on the new term
-        // and an effect copies the result into filteredData. Filtering in place
-        // would have searched only whatever page happened to be cached.
-      }else{
-        setFilteredData(
-          threads.filter((item: any) => 
-            item.title.toLowerCase().includes(text.toLowerCase())
-          )
-        );
-      }
-    }
   };
 
 

@@ -88,6 +88,21 @@ export const removeThread = async(tid) =>{
 //
 // An empty term returns the first names alphabetically, so a picker opens with a
 // list rather than a blank screen.
+// Threads matching a term. Server-side, and visibility-aware.
+//
+// The search screen used to filter the cached feed in memory, which searched one
+// page of however many threads exist - and an empty result looks identical to
+// "no matches", so it read as working.
+export const searchThreads = async(term) =>{
+  try {
+      const threads = await axios.get(IP_STRING + "/api/threads/search", { params: { q: term } });
+      return threads.data;
+  } catch (error) {
+    console.error("Thread search failed:", error.response?.status ?? error.message);
+    return [];
+  }
+}
+
 export const searchUsers = async(term) =>{
     try {
         const query = term ? "?q=" + encodeURIComponent(term) : "";
