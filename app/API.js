@@ -694,6 +694,27 @@ export const exportMyData = async() =>{
   }
 }
 
+// One-time permission to open the chat socket.
+//
+// The handshake needs an authenticated session and can only carry one as a
+// cookie, which React Native does not reliably attach to a ws:// connection. So
+// the ticket is fetched here, over HTTP, where the session works - and goes in
+// the socket URL. It is spent by the handshake and expires in thirty seconds.
+//
+// Quiet on failure: this runs on every connection attempt including retries, and
+// an alert per attempt would be unusable. WebSocketService logs instead.
+export const requestHandshakeTicket = async() =>{
+  try {
+    const result = await axios.post(IP_STRING + "/api/ws/ticket");
+    return result.data.ticket;
+  } catch (error) {
+    console.error("Couldnt get a socket ticket:",
+      error.response?.status ?? error.message,
+      "- the chat socket will fall back to the session cookie.");
+    return null;
+  }
+}
+
 // A URL the phone's browser can open to save that same export as a file.
 //
 // The app cannot write anywhere its owner can find the file again - from Android

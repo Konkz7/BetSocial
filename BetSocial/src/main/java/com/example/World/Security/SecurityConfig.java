@@ -1,5 +1,6 @@
 package com.example.World.Security;
 
+import com.example.World.External.WebSocket.HandshakeTicketFilter;
 import com.example.World.RateLimit.Limits;
 import com.example.World.RateLimit.LoginRateLimitFilter;
 import com.example.World.RateLimit.RateLimiter;
@@ -40,14 +41,17 @@ public class SecurityConfig {
     private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
     private final RateLimiter rateLimiter;
     private final LoginRateLimitFilter loginRateLimitFilter;
+    private final HandshakeTicketFilter handshakeTicketFilter;
 
     SecurityConfig(UserService userService, CustomLogoutSuccessHandler customLogoutSuccessHandler, CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler,
-                   RateLimiter rateLimiter, LoginRateLimitFilter loginRateLimitFilter){
+                   RateLimiter rateLimiter, LoginRateLimitFilter loginRateLimitFilter,
+                   HandshakeTicketFilter handshakeTicketFilter){
         this.userService = userService;
         this.customLogoutSuccessHandler = customLogoutSuccessHandler;
         this.customAuthenticationSuccessHandler = customAuthenticationSuccessHandler;
         this.rateLimiter = rateLimiter;
         this.loginRateLimitFilter = loginRateLimitFilter;
+        this.handshakeTicketFilter = handshakeTicketFilter;
     }
 
     @Bean
@@ -75,6 +79,10 @@ public class SecurityConfig {
         // Before the login filter on purpose: the point is to stop the password
         // being checked at all, not to notice afterwards that it was.
         .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+        // After the session has been read, so a handshake that did carry the
+        // cookie is already authenticated and its ticket is left unspent. Before
+        // authorization, so one that did not can still be let in.
+        .addFilterBefore(handshakeTicketFilter, UsernamePasswordAuthenticationFilter.class)
         .authorizeHttpRequests(registry -> {
             registry.requestMatchers("/req/**").permitAll();
             // Opened for the phone's browser, which has no session cookie - the
@@ -82,8 +90,11 @@ public class SecurityConfig {
             // this path and this method: /api/users/my-data itself stays behind
             // the session, and a wildcard here would open it too.
             registry.requestMatchers(HttpMethod.GET, "/api/users/my-data/download").permitAll();
-            // The STOMP handshake must carry the session cookie: WebSocket identity
-            // is now derived from the authenticated principal, not a client header.
+            // WebSocket identity is derived from the authenticated principal, not
+            // from a client header. The handshake proves who it is with the
+            // session cookie, or - when React Native does not send one - with a
+            // one-time ticket, which HandshakeTicketFilter turns into the same
+            // authentication a cookie would have produced.
             registry.requestMatchers("/ws/**").authenticated();
             // ROLE_SUPERUSER / ROLE_ADMIN are the only elevated roles UserService grants
             // (see getGrantedAuthorities). "IMAGE" and "TEXT" were never issued to anyone,

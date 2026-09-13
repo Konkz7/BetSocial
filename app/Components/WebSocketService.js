@@ -1,6 +1,7 @@
 // WebSocketService.js
 import { Client } from '@stomp/stompjs';
 import { IP_STRING } from '../Constants';
+import { requestHandshakeTicket } from '../API';
  
 /**
  * The most messages held while the socket is down.
@@ -35,8 +36,34 @@ class WebSocketService {
     // on its own schedule.
     this.disconnect();
 
+    const socketUrl = `ws://${IP_STRING.replace(/^http:\/\//, '')}/ws`; // Use ws:// not http://
+
     const client = new Client({
-      brokerURL: `ws://${IP_STRING.replace(/^http:\/\//, '')}/ws`, // Use ws:// not http://
+      brokerURL: socketUrl,
+
+      /**
+       * Fetches a ticket immediately before each connection attempt.
+       *
+       * The handshake needs an authenticated session, and the only way a
+       * WebSocket has of carrying one is the cookie - which React Native does
+       * not reliably attach. A ticket asked for over HTTP, where the session
+       * does work, goes in the URL instead.
+       *
+       * Per attempt rather than once, because a ticket is spent by the
+       * handshake that uses it and expires in thirty seconds: a reconnect five
+       * seconds later needs its own. Awaited by stompjs before it opens the
+       * socket, which is the only reason this can be asynchronous at all.
+       *
+       * If the ticket cannot be fetched the URL is left alone and the cookie
+       * gets its chance - that is the path that is supposed to work, and this
+       * must not be what breaks it.
+       */
+      beforeConnect: async () => {
+        const ticket = await requestHandshakeTicket();
+        client.brokerURL = ticket
+          ? `${socketUrl}?ticket=${encodeURIComponent(ticket)}`
+          : socketUrl;
+      },
 
       connectHeaders: {
         userId: String(uid), // Send userId as a native STOMP header
@@ -83,8 +110,9 @@ class WebSocketService {
       onWebSocketClose: (event) => {
         console.error(
           `WebSocket closed (code ${event?.code}). ` +
-          'Code 1006 with no frames usually means the handshake was refused - '
-          + 'most often a signed-out session, since /ws needs the login cookie.'
+          'Code 1006 with no frames means the handshake was refused. /ws needs '
+          + 'either the session cookie or a ticket, so this is now a signed-out '
+          + 'session - look for the ticket request failing just above.'
         );
       },
       onDisconnect: () => {

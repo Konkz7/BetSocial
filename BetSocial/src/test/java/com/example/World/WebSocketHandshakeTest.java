@@ -71,7 +71,102 @@ class WebSocketHandshakeTest extends AbstractIntegrationTest {
         assertThat(response.getStatusCode().is3xxRedirection()).isFalse();
     }
 
+    @Test
+    @DisplayName("a ticket gets a handshake in without a cookie")
+    void ticketsAuthenticateTheHandshake() {
+        String ticket = ticketFor(user());
+
+        ResponseEntity<String> response = handshake(null, ticket);
+
+        assertThat(response.getStatusCode())
+                .as("this is the whole point: React Native does not reliably attach "
+                        + "the cookie to a ws:// handshake, so there has to be another way in")
+                .isNotEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @DisplayName("a ticket works once")
+    void ticketsAreSingleUse() {
+        String ticket = ticketFor(user());
+
+        assertThat(handshake(null, ticket).getStatusCode()).isNotEqualTo(HttpStatus.UNAUTHORIZED);
+
+        assertThat(handshake(null, ticket).getStatusCode())
+                .as("a reusable credential in a query string is one that stays in "
+                        + "logs and history and keeps working")
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @DisplayName("a ticket nobody issued opens nothing")
+    void refusesInventedTickets() {
+        assertThat(handshake(null, "not-a-real-ticket").getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @DisplayName("a ticket cannot be asked for without signing in")
+    void refusesAnonymousTicketRequests() {
+        ResponseEntity<String> response = rest.exchange("/api/ws/ticket", HttpMethod.POST,
+                new HttpEntity<>(new HttpHeaders()), String.class);
+
+        assertThat(response.getStatusCode())
+                .as("minting these without a session would put the impersonation "
+                        + "hole straight back, one level down")
+                .isNotEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("a ticket opens nothing but the handshake")
+    void ticketsDoNotAuthenticateAnythingElse() {
+        String ticket = ticketFor(user());
+
+        ResponseEntity<String> elsewhere = rest.exchange(
+                "/api/users/my-data?ticket=" + ticket, HttpMethod.GET,
+                new HttpEntity<>(new HttpHeaders()), String.class);
+
+        assertThat(elsewhere.getStatusCode())
+                .as("the filter is scoped to /ws; a ticket accepted anywhere else "
+                        + "would be a second way to authenticate the whole API")
+                .isNotEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("a handshake with a cookie does not spend its ticket")
+    void aWorkingCookieLeavesTheTicketAlone() {
+        User_ person = user();
+        String session = loginAs(person);
+        String ticket = ticketFor(person);
+
+        // Cookie present, so the request is authenticated before the filter runs.
+        handshake(session, ticket);
+
+        assertThat(handshake(null, ticket).getStatusCode())
+                .as("the ticket is a fallback - where the cookie works it should "
+                        + "cost nothing, or every reconnect burns one for no reason")
+                .isNotEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
     // --- helpers ----------------------------------------------------------
+
+    private String ticketFor(User_ person) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.COOKIE, loginAs(person));
+        ResponseEntity<String> response = rest.exchange("/api/ws/ticket", HttpMethod.POST,
+                new HttpEntity<>(headers), String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return response.getBody().replaceAll(".*\"ticket\"\\s*:\\s*\"([^\"]+)\".*", "$1");
+    }
+
+    private ResponseEntity<String> handshake(String session, String ticket) {
+        HttpHeaders headers = new HttpHeaders();
+        if (session != null) {
+            headers.add(HttpHeaders.COOKIE, session);
+        }
+        return rest.exchange("/ws?ticket=" + ticket, HttpMethod.GET,
+                new HttpEntity<>(headers), String.class);
+    }
 
     private ResponseEntity<String> handshake(String session) {
         HttpHeaders headers = new HttpHeaders();

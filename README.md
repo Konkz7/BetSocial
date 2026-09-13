@@ -328,6 +328,47 @@ re-mints once and retries.
 default test rules is writable by anyone who has the project's client config,
 which ships inside the app.
 
+## How the chat socket authenticates
+
+`/ws` requires an authenticated session — WebSocket identity comes from the
+Spring principal, not from a client header, so a client cannot claim to be
+somebody else. The handshake proves who it is in one of two ways:
+
+```
+1. the JSESSIONID cookie          — what a browser does, and what this expected
+2. ?ticket=<one-time token>       — when the cookie does not arrive
+```
+
+React Native's Android `WebSocketModule` *does* attach cookies to a `ws://`
+handshake (`getCookie` reads the same store the HTTP stack writes to, mapping
+`ws://` to `http://` so the domain matches), and iOS was never verified at all.
+That was enough to build on and not enough to rely on: in practice the cookie
+does not always arrive, and the failure is a refused handshake with nothing to
+say why.
+
+So the app asks for a ticket over HTTP — where the session demonstrably works —
+and puts it in the socket URL:
+
+```
+POST /api/ws/ticket    (session)  → a ticket, good for 30 seconds, once
+ws://host/ws?ticket=…             → HandshakeTicketFilter turns it into the
+                                    same authentication a cookie would have
+```
+
+The cookie is still tried first. `HandshakeTicketFilter` only looks at the
+ticket when the request reached it unauthenticated, so a working cookie costs
+nothing and leaves the ticket unspent.
+
+A credential in a query string is a thing to keep small: the ticket is 256 bits
+of `SecureRandom`, single-use, dead in 30 seconds, stored only as a hash, and the
+filter is scoped to `/ws` so it authenticates nothing else. Consuming it goes
+back through `UserDetailsService`, which is where a deleted account is refused
+and where current roles come from.
+
+The client fetches one in stompjs's `beforeConnect`, which runs before *every*
+attempt — a ticket is spent by the handshake that uses it, so a reconnect five
+seconds later needs its own.
+
 ## Downloading your data
 
 *Settings → Download My Data* saves a JSON file with everything held about the
@@ -455,12 +496,18 @@ npm start -- --reset-cache
 ```
 
 **The chat socket hangs on "Opening Web Socket..."** — the handshake is being
-refused and the client cannot tell. `/ws` needs the login session cookie, and a
-refusal now comes back as `401`; it used to be a `302` to the login page, which
-a WebSocket client can do nothing with, so it retried every five seconds in
-silence. `WebSocketService` logs the close code: **1006 with no frames means the
-handshake was refused**, most often because the session has gone. Signing in
-again is the fix.
+refused and the client cannot tell. A refusal now comes back as `401`; it used
+to be a `302` to the login page, which a WebSocket client can do nothing with,
+so it retried every five seconds in silence. `WebSocketService` logs the close
+code: **1006 with no frames means the handshake was refused.**
+
+`/ws` accepts either the session cookie or a one-time ticket — see
+[How the chat socket authenticates](#how-the-chat-socket-authenticates) — so a
+refusal means neither arrived. Look just above the close for
+`Couldnt get a socket ticket`: a `401` there means the app is signed out, and
+signing in again is the fix. No such line, and the ticket was fetched and still
+refused — check the clock skew between phone and server, since a ticket only
+lives 30 seconds.
 
 ---
 
