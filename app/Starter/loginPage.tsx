@@ -51,13 +51,9 @@ const LoginScreen = ({navigation}:any) => {
   useFocusEffect(
     useCallback(() => {
       screenStore.set("Login");
-      console.log("Screen is focused! Perform refresh or action here.");  
       logout();
       LoginStore.set(false);
       //removeFBNToken();
-      return () => {
-        console.log("Screen is unfocused! Cleanup if needed.");
-      };
     }, [])
   );
 

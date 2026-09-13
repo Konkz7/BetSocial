@@ -17,7 +17,6 @@ const MessageScreen = ({ navigation } : any) => {
     try {
       const data = await getConversations();
       setConversations(data);
-      console.log(data);
     } catch (error) {
       console.error("Error fetching conversations:", error);
     }
@@ -38,8 +37,6 @@ const MessageScreen = ({ navigation } : any) => {
     }    
 
 
-    console.log(conversations);
-    console.log("Message seen status updated:", messageSeenStore.get())
   };
 
   function markRead(gid:number){
@@ -94,7 +91,6 @@ const MessageScreen = ({ navigation } : any) => {
 
         const sub =  eventEmitter.addListener('notificationReceived', (data : any) => {
           fetchConversations();
-          console.log("Notification received via event bus" + data.title);    
         });
 
         

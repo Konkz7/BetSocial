@@ -213,7 +213,6 @@ const HomeScreen = ({navigation,route}:any) => {
   useEffect(() => {
     (async () => {
       refetchFollows();
-      console.log(follows);
     })(); 
   }, [follows]);
   
@@ -286,14 +285,12 @@ const HomeScreen = ({navigation,route}:any) => {
  
   useFocusEffect(
     useCallback(() => {
-      console.log("Screen focused → refresh threads" + route.params?.params);
       screenStore.set("Home");
       refetchWallet();
       refetchAwaiting();
 
       (async () => {
         if (route.params?.refresh) {
-          console.log("Refetching because refetch flag is true");
           refetchThreads();
           // clear the flag so it doesn’t loop forever
           navigation.setParams({ refresh: false });
@@ -312,7 +309,6 @@ const HomeScreen = ({navigation,route}:any) => {
         }
       })();
       return () => {
-        console.log("Screen unfocused");
       };
     }, [threadData,route.params,activeCategory])
   );

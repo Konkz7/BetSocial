@@ -62,10 +62,6 @@ type RootStackParamList = {
   useFocusEffect(
     useCallback(() => {
       screenStore.set("Register"); 
-      console.log("Screen is focused! Perform refresh or action here.");  
-      return () => {
-        console.log("Screen is unfocused! Cleanup if needed.");
-      };
     }, [])
   );
 

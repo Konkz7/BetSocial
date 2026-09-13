@@ -52,10 +52,6 @@ const SearchScreen = ({ navigation} : any) => {
     useFocusEffect(
       useCallback(() => {
         screenStore.set("Search");
-        console.log("Screen is focused! Perform refresh or action here.");      
-        return () => {
-          console.log("Screen is unfocused! Cleanup if needed."); 
-        };
       }, [])
     );
     

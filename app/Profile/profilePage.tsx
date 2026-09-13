@@ -102,7 +102,6 @@ const ProfileScreen = ({navigation , route}: any) => {
      
     useFocusEffect(
         useCallback(() => {
-            console.log("Screen is focused! Refetching threads and friendship...");
             screenStore.set("Profile");
             refetchThreads();
             refetchFollow(); // Ensure this refetches correctly
@@ -114,7 +113,6 @@ const ProfileScreen = ({navigation , route}: any) => {
 
             return async () => {
 
-                console.log("Screen is unfocused! Cleanup if needed.");       
             };
         }, []) 
     );

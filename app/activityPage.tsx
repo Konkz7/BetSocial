@@ -50,10 +50,8 @@ const ActivityScreen = ({ navigation, route } : any) => {
             });
 
         
-            console.log("Screen is focused! Refetching threads...");
             return () => {     
                 sub.remove();
-                console.log("Screen is unfocused! Cleanup if needed.");
             };
         }, [refetchUsers, refetchNotifications,notifications])
     );

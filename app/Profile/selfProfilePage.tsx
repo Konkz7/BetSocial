@@ -106,7 +106,6 @@ const SelfProfileScreen = ({navigation , route}: any) => {
     
     useFocusEffect(
         useCallback(() => {
-            console.log("Screen is focused! Refetching threads and friendship...");
             screenStore.set("SelfProfile");
             console.log(user.profile_picture);
 
@@ -118,7 +117,6 @@ const SelfProfileScreen = ({navigation , route}: any) => {
             
             return async () => {
                 queryClient.invalidateQueries({queryKey: ["user"]});
-                console.log("Screen is unfocused! Cleanup if needed.");       
             };
         }, []) 
     );
