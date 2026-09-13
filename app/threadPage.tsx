@@ -39,6 +39,9 @@ const ThreadScreen = ({navigation,route}:any) => {
   const [threadLike , setThreadLike] = useState(false);
 
   const [bets, setBets] = useState<any>([]);
+  // bid -> { people_for, people_against }. Empty until the request lands, and
+  // empty forever if it fails, which the render treats as 0 rather than as a gap.
+  const [sideCounts, setSideCounts] = useState<Record<string, {people_for: number, people_against: number}>>({});
   const [betStats, setBetStats] = useState<boolean[]>([]);
   const [betSaves, setBetSaves] = useState<boolean[]>([]);
 
@@ -172,6 +175,7 @@ const ThreadScreen = ({navigation,route}:any) => {
               // Refresh both: the pools have moved, and this bet is now closed to
               // this person.
               await getBets();
+              await getSideCounts();
               await loadMyPredictions();
             }
           },
@@ -188,6 +192,28 @@ const ThreadScreen = ({navigation,route}:any) => {
         //Alert.alert("Error:", "Unable to generate bets.")
     }finally {
         setLoading(false); // Hide loading indicator
+    }
+  }
+
+  // How many people took each side of each bet.
+  //
+  // Separate from the bets themselves because Bet_ has seventeen columns and a
+  // view repeating them so two counts could ride along goes out of date the
+  // first time one is added. The money side needs no request at all -
+  // amount_for and amount_against are already on the bet.
+  //
+  // Quiet on failure: the counts are decoration on a screen whose point is the
+  // bets, so a missing count shows as 0 rather than as an alert over the thread.
+  const getSideCounts = async () => {
+    try {
+        const response = await axios.get(IP_STRING + "/api/bets/side-counts/"+threadObject.tid);
+        const byBet: Record<string, {people_for: number, people_against: number}> = {};
+        response.data.forEach((row: any) => {
+          byBet[row.bid] = { people_for: row.people_for, people_against: row.people_against };
+        });
+        setSideCounts(byBet);
+    } catch (error) {
+        console.error("Side counts unavailable:", error.response?.status ?? error.message);
     }
   }
 
@@ -293,6 +319,7 @@ const ThreadScreen = ({navigation,route}:any) => {
         console.log("ThreadScreen is focused! Perform refresh or action here."); 
         screenStore.set("Thread");
         getBets();
+        getSideCounts();
         getComments(threadObject.tid).then(res => {
           setLoadedComments(res);
         });
@@ -518,18 +545,22 @@ const ThreadScreen = ({navigation,route}:any) => {
                     <Text style = {[styles.title,{fontSize: 20 , paddingVertical: 0}]}>Bet {index+1}: </Text>
 
                     <TouchableOpacity  onPress={() => toggle(setBetStats,index)}>
+                        {/* Both halves of this toggle used to read "for / against" -
+                            the words, on every bet. The people view is counted by the
+                            server; the money view was always available, since
+                            amount_for and amount_against are columns on the bet. */}
                         {betStats.at(index) ? 
                         (<View style = {{flexDirection: "row"}}>
                             <Users size={18} color={"#03FB52"}></Users>
-                            <Text style = {{color: "#03FB52",fontWeight: "bold"}}> for </Text> 
+                            <Text style = {{color: "#03FB52",fontWeight: "bold"}}> {sideCounts[bet.bid]?.people_for ?? 0} </Text> 
                             <Text style = {{color: "black",fontWeight: "bold"}}> / </Text> 
-                            <Text style = {{color: "red",fontWeight: "bold"}}> against </Text> 
+                            <Text style = {{color: "red",fontWeight: "bold"}}> {sideCounts[bet.bid]?.people_against ?? 0} </Text> 
                         </View>) :
                         (<View style = {{flexDirection: "row"}}>
                             <DollarSign size={18} color={"#03FB52"}></DollarSign>
-                            <Text style = {{color: "#03FB52",fontWeight: "bold"}}> for </Text> 
+                            <Text style = {{color: "#03FB52",fontWeight: "bold"}}> {bet.amount_for ?? 0} </Text> 
                             <Text style = {{color: "black",fontWeight: "bold"}}> / </Text> 
-                            <Text style = {{color: "red",fontWeight: "bold"}}> against </Text> 
+                            <Text style = {{color: "red",fontWeight: "bold"}}> {bet.amount_against ?? 0} </Text> 
                         </View>)}      
                     </TouchableOpacity>
 
