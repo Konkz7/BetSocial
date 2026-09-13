@@ -34,10 +34,6 @@ public record Bet_(
         Long ends_at,
         @NonNull
         Boolean is_verified,
-        @NonNull
-        Boolean king_mode,
-        @NonNull
-        Boolean profit_mode,
         /** The largest single stake allowed, or 0 for no limit. */
         @NonNull
         Long max_amount,

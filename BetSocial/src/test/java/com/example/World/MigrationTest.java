@@ -27,7 +27,7 @@ class MigrationTest extends AbstractIntegrationTest {
                 String.class);
 
         assertThat(applied).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
-                "11", "12", "13", "14");
+                "11", "12", "13", "14", "15");
     }
 
     @Test
@@ -149,6 +149,15 @@ class MigrationTest extends AbstractIntegrationTest {
         assertThat(columnsOf("user_"))
                 .as("the Notifications toggle has nothing behind it without this")
                 .contains("push_enabled");
+
+        // V15. Stored, read back, and never once branched on - two booleans the
+        // client set and rendered as controls nobody could explain.
+        assertThat(columnsOf("bet_"))
+                .as("a column that means nothing is worse than no column: the next "
+                        + "person has to grep the whole codebase to find out that "
+                        + "the answer is nothing")
+                .doesNotContain("king_mode")
+                .doesNotContain("profit_mode");
     }
 
     private List<String> columnsOf(String table) {

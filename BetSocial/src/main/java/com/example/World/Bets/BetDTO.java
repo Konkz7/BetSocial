@@ -19,10 +19,6 @@ public record BetDTO(
      @NonNull
      Boolean is_verified,
      @NonNull
-     Boolean king_mode,
-     @NonNull
-     Boolean profit_mode,
-     @NonNull
      Long max_amount,
      @NonNull
      Long min_amount

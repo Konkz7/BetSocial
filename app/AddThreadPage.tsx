@@ -6,9 +6,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import axios, { Axios, AxiosError } from "axios";
 import { errorHandler, getProfilePictureUrl, IP_STRING } from "./Constants";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { SquarePlus, ArrowLeft,HandCoins, ShieldCheck, CircleX, ImageUp, X } from "lucide-react-native";
+import { SquarePlus, ArrowLeft, ShieldCheck, CircleX, ImageUp, X } from "lucide-react-native";
 import Card from "./Components/Card"; 
-import ToggleSwitch from "./Components/ToggleSwitch"; 
 import DatePickerButton from "./Components/DatePicker"; 
 import { uploadImage, uploadVideo, selectLocalMedia} from './Components/FBStorageService';
 import { QueryClient, QueryClientProvider,useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -101,11 +100,11 @@ const AddThreadScreen = ({navigation}:any) => {
         return; 
       }
 
-      if(!bet.king_mode){
-        if (bet.min_amount >=  bet.max_amount && bet.max_amount !== 0) {
-          Alert.alert("Error", "A bet's min and max bet values arent set correctly.");
-          return; 
-        }
+      // Previously skipped whenever king_mode was on, so a bet could be created
+      // with a minimum above its maximum - nothing downstream checked either.
+      if (bet.min_amount >= bet.max_amount && bet.max_amount !== 0) {
+        Alert.alert("Error", "A bet's min and max bet values arent set correctly.");
+        return;
       }
 
       
@@ -170,24 +169,10 @@ const AddThreadScreen = ({navigation}:any) => {
       "description": "", 
       "ends_at": 0,
       "is_verified": false,
-      "king_mode": false, 
-      "profit_mode": false , 
       "max_amount": 0 , 
       "min_amount": 0,
       }]);
   }
-
-  const handleBetProfitChange = ( index:number) => {
-    const updatedBets = [...bets];
-    updatedBets[index].profit_mode = !updatedBets[index].profit_mode;
-    setBets(updatedBets); // Assuming you have setBets as a state updater
-  };
-
-  const handleBetKingChange = ( index:number) => {
-    const updatedBets = [...bets];
-    updatedBets[index].king_mode = !updatedBets[index].king_mode;
-    setBets(updatedBets); // Assuming you have setBets as a state updater
-  };
 
   const handleBetVerifiedChange = ( index:number) => {
     const updatedBets = [...bets];
@@ -343,67 +328,53 @@ const AddThreadScreen = ({navigation}:any) => {
                   />
                 </View>
 
-                <View style = {{flexDirection: "row"}}>
-                  <View style = {{borderRightWidth: 1, borderRightColor: "#ddd"}}>
-                    <TouchableOpacity style = {[styles.betButtonContainer, {marginTop: 10},
-                        bet.is_verified ? {backgroundColor: "#4CAF50" } : {backgroundColor: "#ccc"}]}
-                        onPress={() => handleBetVerifiedChange(index)}>
-                        <ShieldCheck  size={36} color={bet.is_verified ? "white" : "black"}></ShieldCheck>
-                      </TouchableOpacity>
-                    
-                    <TouchableOpacity style = {[styles.betButtonContainer, 
-                      bet.profit_mode ? {backgroundColor: "#4CAF50" } : {backgroundColor: "#ccc"}]}
-                      onPress={() => handleBetProfitChange(index)}>
-                      <HandCoins  size={36} color={bet.profit_mode ? "white" : "black"}></HandCoins>
-                    </TouchableOpacity>
-                  </View>
+                {/* Every control labelled. What stood here was two icon buttons -
+                    a shield and a pair of hands - and an unlabelled switch, with
+                    no way to tell what any of them did. Two of them turned out to
+                    do nothing at all. */}
+                <View style={styles.betFields}>
 
-                  <View style = {{}}>
-                    <View style = {{marginHorizontal: 20, marginVertical:5 , flexDirection: "row" , 
-                      justifyContent:"space-between", width: 208}}>
-                      <View style = {{marginTop: 10}}>
-                      <ToggleSwitch onClick={() => handleBetKingChange(index)}/>
-                      </View>
-                    <View>
-                      <TextInput style = {[styles.maxInputBox, bet.king_mode ? {backgroundColor: "gray", opacity: 0.2} : 
-                        {backgroundColor: "white", opacity: 1}]}
-                        disabled = {bet.king_mode}
-                        value={bet.max_amount}
-                        onChangeText={(text) => handleBetMaxChange(Number.parseFloat(text), index)}
-                        inputMode="numeric"
-                        maxLength={6}
-                        placeholder="Max Bet:">
+                  <TouchableOpacity
+                    style={[styles.betOption, bet.is_verified && styles.betOptionOn]}
+                    onPress={() => handleBetVerifiedChange(index)}>
+                    <ShieldCheck size={20} color={bet.is_verified ? "white" : "#6B7280"} />
+                    <Text style={[styles.betOptionText, bet.is_verified && styles.betOptionTextOn]}>
+                      Verified outcome
+                    </Text>
+                  </TouchableOpacity>
 
-                      </TextInput>
-                      <TextInput style = {[styles.maxInputBox, bet.king_mode ? {backgroundColor: "gray", opacity: 0.2} : 
-                        {backgroundColor: "white", opacity: 1}]}
-                        disabled = {bet.king_mode}
-                        value={bet.min_amount}
+                  <View style={styles.betRow}>
+                    <Text style={styles.betLabel}>Stake limits</Text>
+                    <View style={styles.betInputs}>
+                      <TextInput
+                        style={styles.amountBox}
+                        value={bet.min_amount ? String(bet.min_amount) : ""}
                         onChangeText={(text) => handleBetMinChange(Number.parseFloat(text), index)}
                         inputMode="numeric"
                         maxLength={6}
-                        placeholder="Min Bet:">
-
-                      </TextInput>
+                        placeholder="Min"
+                        placeholderTextColor="#9CA3AF"
+                      />
+                      <Text style={styles.betSeparator}>to</Text>
+                      <TextInput
+                        style={styles.amountBox}
+                        value={bet.max_amount ? String(bet.max_amount) : ""}
+                        onChangeText={(text) => handleBetMaxChange(Number.parseFloat(text), index)}
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="Max"
+                        placeholderTextColor="#9CA3AF"
+                      />
                     </View>
-                        
-               
-                    </View>
+                  </View>
 
-                    
-
-                    <View style = {{flexDirection: "row", alignItems: "center", marginLeft:20, marginTop:15}}>
-                        <Text style = {{marginRight: 20}}>Ends at:</Text>
-                        <DatePickerButton onDateSelect={(number) => handleBetEndChange(number,index)}/>
-                    </View>
-                  <View>
-
-                 </View>
-                    
+                  <View style={styles.betRow}>
+                    <Text style={styles.betLabel}>Closes</Text>
+                    <DatePickerButton onDateSelect={(number) => handleBetEndChange(number,index)}/>
                   </View>
 
                 </View>
-                
+
               </Card>
             ))}
           </View>
@@ -436,6 +407,39 @@ const AddThreadScreen = ({navigation}:any) => {
 };
 
 const styles = StyleSheet.create({
+  betFields: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 4 },
+  betRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
+  betLabel: { fontSize: 14, color: "#374151", fontWeight: "500" },
+  betInputs: { flexDirection: "row", alignItems: "center" },
+  betSeparator: { marginHorizontal: 8, color: "#6B7280" },
+  amountBox: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    width: 74,
+    textAlign: "center",
+    backgroundColor: "white",
+  },
+  betOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  betOptionOn: { backgroundColor: "#10B981", borderColor: "#10B981" },
+  betOptionText: { marginLeft: 6, fontSize: 13, color: "#374151", fontWeight: "500" },
+  betOptionTextOn: { color: "white" },
   container:{
     flex: 1,
     backgroundColor: "#f6f2e6",

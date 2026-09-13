@@ -96,7 +96,7 @@ class PredictionRepositoryTest extends AbstractIntegrationTest {
     private Bet_ newBet(Long tid, long now) {
         return new Bet_(null, tid, Status.ACTIVE.toInt(), null, 0L, 0L,
                 "phase4 regression bet", now, null, now + 86_400_000L,
-                false, false, false, 100L, 1L, null);
+                false, 100L, 1L, null);
     }
 
     private User_ user(String name) {

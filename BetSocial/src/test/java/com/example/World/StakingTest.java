@@ -258,7 +258,7 @@ class StakingTest extends AbstractIntegrationTest {
                 "test", 0L, now, null, false, null));
         return bets.save(new Bet_(null, thread.tid(), Status.ACTIVE.toInt(), null, 0L, 0L,
                 "will it happen", now, null, now + 86_400_000L,
-                false, false, false, max, min, null));
+                false, max, min, null));
     }
 
     private String adminSession() {

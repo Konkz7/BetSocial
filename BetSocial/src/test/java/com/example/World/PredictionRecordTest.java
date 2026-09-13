@@ -193,7 +193,7 @@ class PredictionRecordTest extends AbstractIntegrationTest {
     private Bet_ bet(Thread_ thread) {
         return bets.save(new Bet_(null, thread.tid(), 0, null, 0L, 0L, "a bet",
                 new Date().getTime(), null, new Date().getTime() + 86_400_000L,
-                true, false, false, 0L, 0L, null));
+                true, 0L, 0L, null));
     }
 
     private Thread_ thread() {
