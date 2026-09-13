@@ -833,12 +833,13 @@ export const deleteMyAccount = async(pass_word) =>{
   }
 }
 
-// Asks for a password reset link. The answer is the same whether or not that
-// address has an account - the server will not say, because answering turns this
-// into a way to find out who has one.
-export const requestPasswordReset = async(email) =>{
+// Asks for a password reset link, by username or email address - the same two
+// things the login field takes. The answer is the same whether or not the account
+// exists: the server will not say, because answering turns this into a way to
+// find out who has one.
+export const requestPasswordReset = async(account) =>{
   try {
-    const result = await axios.post(IP_STRING + "/req/forgot-password", { email });
+    const result = await axios.post(IP_STRING + "/req/forgot-password", { account });
     return result.data;
   } catch (error) {
     Alert.alert("Couldnt send that", error.response?.data?.message ?? error.message);

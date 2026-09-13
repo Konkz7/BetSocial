@@ -60,20 +60,26 @@ public class PasswordResetService {
     }
 
     /**
-     * Sends a reset link, if that address belongs to an account.
+     * Sends a reset link, if that name or address belongs to an account.
      *
-     * Returns nothing and says nothing either way. Answering "no such account"
-     * turns this endpoint into a way to ask whether somebody has one, which for a
-     * social app is worth more to whoever is asking than it is to the person who
-     * mistyped their address.
+     * Takes either, because the field it is typed into is the one on the login
+     * screen and that accepts either - a box that signs you in with your
+     * username but cannot find you by it is the kind of thing people read as
+     * "my account is gone".
+     *
+     * The link is always sent to the account's own email address, whichever way
+     * the account was named. Returns nothing and says nothing either way:
+     * answering "no such account" turns this endpoint into a way to ask whether
+     * somebody has one, which for a social app is worth more to whoever is
+     * asking than it is to the person who mistyped their address.
      */
-    public void requestReset(String email) {
-        Optional<User_> account = userRepository.findByEmail(email);
+    public void requestReset(String account_name) {
+        Optional<User_> account = userRepository.findByLogin(account_name);
 
         if (account.isEmpty()) {
-            // Logged, because a lot of these for addresses that do not exist is
+            // Logged, because a lot of these for accounts that do not exist is
             // worth being able to see.
-            log.info("Password reset asked for an address with no account");
+            log.info("Password reset asked for a name with no account");
             return;
         }
 

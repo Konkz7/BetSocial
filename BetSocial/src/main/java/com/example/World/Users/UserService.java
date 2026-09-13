@@ -55,15 +55,13 @@ public class UserService implements UserDetailsService {
      * message to whatever is in that box. So an address is what people type,
      * and only a username used to work.
      *
-     * Username is tried first. Both columns are unique, so neither can match two
-     * accounts - but a username may legally contain '@' and could therefore
-     * equal somebody else's address, and a tie has to resolve the same way every
-     * time. It resolves to the value this method has always accepted.
+     * Which of the two it matched, and how a tie between them breaks, is
+     * UserRepository.findByLogin - the same rule the password-reset request
+     * uses, so the two screens cannot disagree about who somebody is.
      */
     @Override
     public UserDetails loadUserByUsername(String login) throws UsernameNotFoundException {
-        Optional<User_> user = userRepository.findByUsername(login)
-                .or(() -> userRepository.findByEmail(login));
+        Optional<User_> user = userRepository.findByLogin(login);
         if(user.isPresent()){
             User_ user_obj = user.get();
 

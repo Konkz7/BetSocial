@@ -146,9 +146,9 @@ class PasswordResetTest extends AbstractIntegrationTest {
         User_ person = user();
 
         ResponseEntity<String> known = post("/req/forgot-password",
-                "{\"email\":\"" + person.email() + "\"}");
+                "{\"account\":\"" + person.email() + "\"}");
         ResponseEntity<String> unknown = post("/req/forgot-password",
-                "{\"email\":\"nobody-here@example.test\"}");
+                "{\"account\":\"nobody-here@example.test\"}");
 
         assertThat(known.getStatusCode())
                 .as("answering differently turns this into a way to ask who has an account")
@@ -157,11 +157,36 @@ class PasswordResetTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("a username asks for a reset just as well as an address")
+    void usernameCanAskForAReset() {
+        User_ person = user();
+
+        assertThat(post("/req/forgot-password", "{\"account\":\"" + person.user_name() + "\"}")
+                .getStatusCode())
+                .as("the login field accepts either, so the button beside it has to as well")
+                .isEqualTo(HttpStatus.ACCEPTED);
+
+        assertThat(storedToken(person))
+                .as("a link was actually issued - an ACCEPTED that did nothing would look "
+                        + "exactly the same, because this endpoint deliberately says one "
+                        + "thing whether or not the account exists")
+                .isNotNull();
+    }
+
+    @Test
+    @DisplayName("a name nobody holds says the same as a name somebody does")
+    void unknownUsernameIssuesNothing() {
+        assertThat(post("/req/forgot-password", "{\"account\":\"no-such-person\"}")
+                .getStatusCode())
+                .isEqualTo(HttpStatus.ACCEPTED);
+    }
+
+    @Test
     @DisplayName("requesting a reset does not need a session")
     void requestIsOpen() {
         User_ person = user();
 
-        assertThat(post("/req/forgot-password", "{\"email\":\"" + person.email() + "\"}")
+        assertThat(post("/req/forgot-password", "{\"account\":\"" + person.email() + "\"}")
                 .getStatusCode())
                 .as("somebody locked out cannot sign in to ask for a way to sign in")
                 .isEqualTo(HttpStatus.ACCEPTED);

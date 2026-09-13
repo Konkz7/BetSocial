@@ -14,6 +14,17 @@ package com.example.World.Users;
 public record ProfileView(
         Long uid,
         String user_name,
+
+        /**
+         * The caller's own address, and only ever their own - this record is
+         * returned by one session-gated endpoint and nothing else.
+         *
+         * Settings draws the change-password prompt from it, masked, so somebody
+         * can see which address a reset link is about to go to. That row read
+         * the field before it existed and so was permanently stuck on "your
+         * account details are still loading".
+         */
+        String email,
         String bio,
         String profile_picture,
         String status,
@@ -27,6 +38,7 @@ public record ProfileView(
         return new ProfileView(
                 user.uid(),
                 user.user_name(),
+                user.email(),
                 user.bio(),
                 user.profile_picture(),
                 user.status(),

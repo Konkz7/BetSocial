@@ -71,8 +71,8 @@ public class AccountController {
         rateLimiter.require(RateLimiter.scopeOf("forgot-password", servletRequest.getRemoteAddr()),
                 Limits.FORGOT_PASSWORD);
 
-        passwordResetService.requestReset(request.email());
-        return "If that address has an account, a reset link is on its way.";
+        passwordResetService.requestReset(request.account());
+        return "If that account exists, a reset link is on its way to its email address.";
     }
 
     /**
