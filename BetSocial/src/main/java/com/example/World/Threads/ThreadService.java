@@ -201,6 +201,37 @@ public class ThreadService {
                 hasMore);
     }
 
+    /** How many matches a search returns. A screenful to choose from, not a feed. */
+    static final int SEARCH_LIMIT = 30;
+
+    /**
+     * Threads matching a term, with the same visibility as the feed.
+     *
+     * An empty term returns nothing rather than everything: the search screen
+     * shows this list only once something has been typed, and "no term" meaning
+     * "every thread you can see" would be an unbounded query behind a blank box.
+     *
+     * The term is escaped before it reaches LIKE. % and _ are wildcards there, so
+     * searching for "50%" would otherwise return every thread in the database -
+     * which reads as a broken search rather than a greedy one.
+     */
+    public List<ThreadProfile> search(Long viewerUid, String term){
+        String trimmed = term == null ? "" : term.trim();
+        if(trimmed.isEmpty()){
+            return List.of();
+        }
+
+        // Backslash first, or the escapes added below would themselves be escaped.
+        String escaped = trimmed
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+
+        return assemble(
+                threadRepository.searchVisibleTo(viewerUid, "%" + escaped + "%", SEARCH_LIMIT),
+                viewerUid);
+    }
+
     public List<ThreadProfile> threadProfileList(Long user_uid,Long target_uid){
         return assemble(threadRepository.findUserThreadsVisibleTo(user_uid, target_uid), user_uid);
     }

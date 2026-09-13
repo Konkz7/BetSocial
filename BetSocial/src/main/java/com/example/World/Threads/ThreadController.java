@@ -61,6 +61,19 @@ public class ThreadController {
         return threadService.feedPage(uid, cursor_created_at, cursor_tid);
     }
 
+    /**
+     * Threads matching a term, for the search screen.
+     *
+     * The screen filtered the cached feed in memory before this existed, which
+     * searched one page of however many threads there are - and returned an empty
+     * list for everything else, which looks exactly like "no matches".
+     */
+    @GetMapping("/search")
+    List<ThreadProfile> search(@RequestParam(required = false) String q, HttpSession session){
+        Long uid = (Long) session.getAttribute("userId");
+        return threadService.search(uid, q);
+    }
+
     @GetMapping("/user/{other_uid}")
     List<ThreadProfile> findAllByUID(@PathVariable Long other_uid,HttpSession session){
         Long uid = (Long) session.getAttribute("userId");

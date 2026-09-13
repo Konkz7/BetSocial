@@ -123,6 +123,45 @@ public interface ThreadRepository extends ListCrudRepository<Thread_, Long> {
                                @Param("cursorCreatedAt") Long cursorCreatedAt,
                                @Param("cursorTid") Long cursorTid,
                                @Param("limit") int limit);
+
+    /**
+     * Threads whose title matches, among the ones this viewer may see.
+     *
+     * The search screen filtered the cached feed in memory, so it searched
+     * whatever page happened to be loaded and nothing else - on a fresh open,
+     * twenty threads out of however many exist. Worse, it looked like it worked:
+     * an empty result is indistinguishable from no matches.
+     *
+     * The visibility rules are repeated here rather than shared for the same
+     * reason findUserThreadsVisibleTo repeats them - a Spring Data @Query is a
+     * string with nowhere to put a fragment. ThreadSearchTest runs the same
+     * cases against this as FeedVisibilityTest does against the feed, so the two
+     * cannot drift without something failing.
+     *
+     * ESCAPE matters: a term containing % or _ is a wildcard to LIKE, so
+     * searching for "50%" would otherwise match every thread there is.
+     */
+    @Query("""
+    SELECT t.* FROM Thread_ t
+    JOIN User_ u ON u.uid = t.uid
+    WHERE t.deleted_at IS NULL
+      AND LOWER(t.title) LIKE LOWER(:term) ESCAPE '\\'
+      AND NOT EXISTS (
+          SELECT 1 FROM Block_ b
+          WHERE (b.blocker_uid = :viewer AND b.blocked_uid = t.uid)
+             OR (b.blocker_uid = t.uid AND b.blocked_uid = :viewer))
+      AND (t.uid = :viewer
+           OR t.is_private = false
+           OR (EXISTS (SELECT 1 FROM Follow_ f
+                       WHERE f.request_id = :viewer AND f.receive_id = t.uid)
+           AND EXISTS (SELECT 1 FROM Follow_ f
+                       WHERE f.request_id = t.uid AND f.receive_id = :viewer)))
+    ORDER BY t.created_at DESC, t.tid DESC
+    LIMIT :limit
+    """)
+    List<Thread_> searchVisibleTo(@Param("viewer") Long viewer,
+                                  @Param("term") String term,
+                                  @Param("limit") int limit);
 /*
     List<Thread> findAll();
 
