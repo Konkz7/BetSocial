@@ -126,3 +126,11 @@ ios/newProject/GoogleService-Info.plist
 android/keystore.properties
 android/app/*.jks
 android/app/release.keystore
+
+# Build output and JVM crash dumps from the Android build. Five hs_err/replay
+# files had been committed from earlier Gradle crashes; they are per-run
+# diagnostics for a JVM that is no longer running and mean nothing to anybody
+# else.
+android/hs_err_pid*.log
+android/replay_pid*.log
+*.aab
