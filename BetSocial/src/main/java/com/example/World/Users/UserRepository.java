@@ -72,6 +72,24 @@ public interface UserRepository extends ListCrudRepository<User_, Long> {
     @Query("SELECT * FROM User_ WHERE email = :email AND deleted_at IS NULL")
     Optional<User_> findByEmail(String email);
 
+    /**
+     * Whoever somebody named, by either of the two things they can be named by.
+     *
+     * Both sign-in screens ask for "email or username" and mean it, so the rule
+     * for turning one string into an account lives here rather than once per
+     * caller - two copies of a precedence rule is two chances for them to
+     * disagree about who is signing in.
+     *
+     * Username first. Both columns are unique, so neither lookup can match two
+     * accounts - but nothing stops a username containing '@', so one can equal
+     * somebody else's address, and that tie has to break the same way every
+     * time. It breaks toward the username, which is the value login accepted
+     * before an address was allowed at all.
+     */
+    default Optional<User_> findByLogin(String login) {
+        return findByUsername(login).or(() -> findByEmail(login));
+    }
+
     @Query("SELECT * FROM User_ WHERE verification_token = :token AND deleted_at IS NULL")
     Optional<User_> findByVerificationToken(String token);
 

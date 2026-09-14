@@ -17,7 +17,10 @@ import { isPrivileged } from "../Roles";
 
 
 const LoginScreen = ({navigation}:any) => {
-  const [email, setEmail] = useState("");
+  // "identifier" rather than "email": the server accepts either a username or an
+  // address here, and calling it email is what made the screen disagree with
+  // itself - the label asked for one thing and login matched on the other.
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
 
   useNotificationListener();
@@ -66,7 +69,7 @@ const LoginScreen = ({navigation}:any) => {
       // string concatenation into a URL truncated them at "&" and turned "+"
       // into a space.
       const body =
-        `username=${encodeURIComponent(email)}` +
+        `username=${encodeURIComponent(identifier)}` +
         `&password=${encodeURIComponent(password)}`;
 
       const response = await axios.post(IP_STRING + "/login", body, {
@@ -96,23 +99,26 @@ const LoginScreen = ({navigation}:any) => {
   };
 
   /**
-   * Sends a reset link to whatever is in the email field.
+   * Sends a reset link to the account named in the field above.
    *
    * Uses the field already on screen rather than opening a second one: somebody
-   * who has just failed to sign in has usually typed their address already, and
-   * the alert says which address it went to so a typo is visible.
+   * who has just failed to sign in has usually typed their name already. It
+   * takes either of the two things that field accepts, and the link always goes
+   * to the account's own address - which is why this no longer says where it
+   * went: when a username was typed, that address is not on screen to repeat.
    */
   const forgotPassword = async () => {
-    if (!email.trim()) {
-      Alert.alert("Your email first", "Type the address you signed up with, then tap this again.");
+    if (!identifier.trim()) {
+      Alert.alert("Your email or username first",
+        "Type the one you signed up with, then tap this again.");
       return;
     }
 
-    const answer = await requestPasswordReset(email.trim());
+    const answer = await requestPasswordReset(identifier.trim());
     if (answer) {
-      // The server deliberately does not say whether the address has an account,
-      // so neither does this.
-      Alert.alert("Check your email", answer + "\n\nSent to " + email.trim());
+      // The server deliberately does not say whether the account exists, so
+      // neither does this.
+      Alert.alert("Check your email", answer);
     }
   };
 
@@ -124,11 +130,14 @@ const LoginScreen = ({navigation}:any) => {
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
       <TextInput
-        label="Email"
-        value={email}
-        onChangeText={setEmail}
+        label="Email or username"
+        value={identifier}
+        onChangeText={setIdentifier}
+        // Still the email keyboard: it puts @ and . on the first layer and
+        // capitalises nothing, which suits both of the things this accepts.
         keyboardType="email-address"
         autoCapitalize="none"
+        autoCorrect={false}
         style={styles.input}
       />
       <TextInput

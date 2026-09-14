@@ -111,6 +111,29 @@ class SecurityRegressionTest extends AbstractIntegrationTest {
         String body = get("/req/profile", login("john", "password")).getBody();
 
         assertThat(body).contains("uid", "user_name", "bio", "profile_picture", "status");
+
+        // Settings masks this address in the "change your password" prompt, so a
+        // person can see where the link is about to go. It was read before it was
+        // ever sent, which left that row permanently reporting itself as still
+        // loading - a dead button rather than a visible error.
+        assertThat(body)
+                .as("the caller's own address, which only this endpoint returns")
+                .contains("\"email\"");
+    }
+
+    @Test
+    @DisplayName("somebody else's profile still carries no address")
+    void otherPeoplesViewsCarryNoEmail() {
+        // ProfileView gained an email so the account's owner can be shown their
+        // own. UserView is what everybody else is rendered from, and this is what
+        // keeps the two from being tidied into one later.
+        String session = login("john", "password");
+
+        for (String path : new String[]{"/api/users/all", "/api/threads/active"}) {
+            assertThat(get(path, session).getBody())
+                    .as("%s renders other people, and an address is not theirs to hand out", path)
+                    .doesNotContain("\"email\"");
+        }
     }
 
     // --- removed endpoints ------------------------------------------------

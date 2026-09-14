@@ -46,9 +46,22 @@ public class UserService implements UserDetailsService {
         this.messageOperations = messageOperations;
     }
 
+    /**
+     * Resolves whoever is signing in, by username or by email address.
+     *
+     * The name is Spring Security's, and so is the "username" form field the
+     * login screen posts - but the screen itself is labelled Email, types with
+     * an email keyboard, and the forgot-password button beside it sends a real
+     * message to whatever is in that box. So an address is what people type,
+     * and only a username used to work.
+     *
+     * Which of the two it matched, and how a tie between them breaks, is
+     * UserRepository.findByLogin - the same rule the password-reset request
+     * uses, so the two screens cannot disagree about who somebody is.
+     */
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Optional<User_> user = userRepository.findByUsername(username);
+    public UserDetails loadUserByUsername(String login) throws UsernameNotFoundException {
+        Optional<User_> user = userRepository.findByLogin(login);
         if(user.isPresent()){
             User_ user_obj = user.get();
 
