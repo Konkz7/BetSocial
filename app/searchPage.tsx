@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
+
 import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet,SafeAreaView } from 'react-native';
 import { Search ,X} from 'lucide-react-native';
 import { TextInput,Searchbar } from 'react-native-paper';
@@ -9,11 +10,15 @@ import threadList from './Components/ThreadList';
 import { screenStore } from './GlobalFlags';
 import { getProfilePictureUrl } from './Constants';
 
+// One shared empty array. A fresh [] on every render is exactly what made the
+// results loop when they were copied into state, and a stable reference costs
+// nothing to keep.
+const NOTHING: any[] = [];
+
 
 const SearchScreen = ({ navigation} : any) => {
     const [search,setSearch] = useState('');
     const [currentTab,setCurrentTab] = useState('People');
-    const [filteredData, setFilteredData] = useState<any[]>([]);
 
 
     // Both are searched on the server. Threads used to be filtered here from the
@@ -21,7 +26,7 @@ const SearchScreen = ({ navigation} : any) => {
     // an empty list for everything else, which is indistinguishable from "no
     // matches". It also called getThreads as the queryFn directly, so React Query
     // passed its context object where a cursor was expected.
-    const { data: people = [], isLoading: usersLoading } = useQuery({
+    const { data: people, isLoading: usersLoading } = useQuery({
       queryKey: ["userSearch", search],
       queryFn: () => searchUsers(search),
       // Only ask once something has been typed: this tab shows nothing until
@@ -29,7 +34,7 @@ const SearchScreen = ({ navigation} : any) => {
       enabled: search.trim() !== "" && currentTab === "People",
       placeholderData: (previous: any) => previous,
     });
-    const { data: threads = [], isLoading: threadsLoading } = useQuery({
+    const { data: threads, isLoading: threadsLoading } = useQuery({
       queryKey: ["threadSearch", search],
       queryFn: () => searchThreads(search),
       // Same as People: nothing is shown until something is typed, so the first
@@ -39,15 +44,16 @@ const SearchScreen = ({ navigation} : any) => {
     });
 
 
-    // Both sets of results arrive asynchronously, so they are copied into
-    // filteredData when they land rather than computed during the keystroke.
-    useEffect(() => {
-      if (search.trim() === '') {
-        setFilteredData([]);
-        return;
-      }
-      setFilteredData(currentTab === 'People' ? people : threads);
-    }, [people, threads, currentTab, search]);
+    // Derived rather than held in state. Copying the results into state through
+    // an effect meant the effect depended on the query data, set state, and so
+    // ran again - and because both queries defaulted to a fresh [], every render
+    // looked like new data. That is the loop React reports as "maximum update
+    // depth exceeded", and it started the moment this screen opened, since an
+    // empty search box takes the branch that sets a new [] every time.
+    const filteredData =
+      search.trim() === ''
+        ? NOTHING
+        : (currentTab === 'People' ? people : threads) ?? NOTHING;
 
     useFocusEffect(
       useCallback(() => {

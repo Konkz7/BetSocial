@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { View, StyleSheet,Alert } from "react-native";
+import { View, StyleSheet, Alert, Keyboard } from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
@@ -62,6 +62,14 @@ const LoginScreen = ({navigation}:any) => {
 
 
   const handleLogin = async () => {
+    // Android resizes the whole activity window for the soft keyboard
+    // (windowSoftInputMode=adjustResize), and this screen stays mounted
+    // underneath the tabs after signing in. A password field still holding
+    // focus therefore keeps the window short, and every flex:1 container in the
+    // app is laid out into what is left - the feed appeared to stop halfway down
+    // with the old keyboard area showing through beneath it.
+    Keyboard.dismiss();
+
     try {
       // Credentials go in a form-encoded body, never the URL: query strings are
       // recorded in server access logs, proxy logs and crash reports. Values are
