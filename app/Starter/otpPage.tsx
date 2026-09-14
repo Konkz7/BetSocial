@@ -90,7 +90,7 @@ const OtpScreen = ({navigation,route}: any) => {
         <View style = {styles.container}>
         <View style = {styles.headerBlock}>
             <Text style={styles.header}>Register</Text>
-            <Text style={styles.headerCaption}>Welcome! Create a free account with Stakes</Text>
+            <Text style={styles.headerCaption}>Welcome! Create a free account with BetSocial</Text>
         </View>
         <View style={styles.bodyBlock}>
             
@@ -120,23 +120,28 @@ const styles = StyleSheet.create({
   headerBlock:{
     flex: .3,
     backgroundColor: "#32cd32",
-    justifyContent: "center"
+    justifyContent: "center",
+    // The same 20 the form below uses, so the title starts on the line the
+    // fields start on instead of ten pixels to the left of them.
+    paddingHorizontal: 20,
+    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: 30,
   },
   header: {
-    fontSize: 48,
+    fontSize: 40,
     fontWeight: "bold",
     textAlign: "left",
-    marginBottom: 20,
-    paddingLeft: 10,
+    letterSpacing: -0.5,
     color: "white",
   },
   headerCaption: {
-    fontSize: 20,
-    fontWeight: "bold",
+    // Quieter than the title on purpose. Both were bold and only four points
+    // apart, which read as two headings arguing rather than one greeting.
+    fontSize: 16,
+    lineHeight: 22,
     textAlign: "left",
-    marginBottom: 20,
-    paddingLeft: 10,
-    color: "white",
+    marginTop: 6,
+    color: "rgba(255, 255, 255, 0.9)",
   },
   bodyBlock: {
     flex: .7,

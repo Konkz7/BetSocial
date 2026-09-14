@@ -235,12 +235,30 @@ public class AccountController {
                 null            // Retain the version for optimistic locking
         );
 
-        emailService.sendVerificationEmail(userWithHashedPassword.email(), token);
+        // Saved first, emailed after.
+        //
+        // The other way round sent a verification link for an account that did not
+        // exist yet, and let a mail failure - a wrong MAIL_PASSWORD, a provider
+        // having a moment - come back to the client as a failed registration. Both
+        // of those are unrecoverable in the same way: there is nothing to verify,
+        // and the person has been told to try again rather than that they have an
+        // account. An account whose email did not arrive is recoverable, because
+        // is_verified gates nothing - they can sign in, and the token is still on
+        // the row for a resend to use.
+        //
+        // There is no transaction to send after: save() runs in Spring Data JDBC's
+        // own, grantOpeningBalance() in LedgerService's, and register is not
+        // annotated - so both have committed by the time the send happens.
         User_ saved = userRepository.save(userWithHashedPassword);
 
         // The opening grant, without which a new account cannot stake anything and
         // has no way to earn its first coin either.
         ledgerService.grantOpeningBalance(saved.uid());
+
+        // EmailService swallows MailException and logs it, so an SMTP failure
+        // leaves this a 200 with an unverified account rather than a 500 over an
+        // account that exists anyway.
+        emailService.sendVerificationEmail(saved.email(), token);
 
         return ResponseEntity.ok("User registered successfully!");
     }
