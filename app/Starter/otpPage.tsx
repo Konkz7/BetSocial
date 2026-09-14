@@ -40,7 +40,18 @@ const OtpScreen = ({navigation,route}: any) => {
 
             console.log("Server Response:", response.data);
             Alert.alert("Success", "Phone number verified successfully!");
-            sendEmail();
+            // A verified phone is not an account. The account only exists once
+            // /req/register accepts it, so wait for that answer before deciding
+            // where to send anyone - this used to race, and Login always won.
+            const registered = await sendEmail();
+            if (!registered) {
+                // Register is still mounted underneath this screen, so going
+                // back reveals it with their details as they left them and only
+                // the one the server objected to needing a change. Login would
+                // promise them an account the server just refused to create.
+                navigation.goBack();
+                return;
+            }
             navigation.reset({
               index: 0,
               routes: [{ name: 'Login' }], // Replace with your first screen name
@@ -65,7 +76,7 @@ const OtpScreen = ({navigation,route}: any) => {
       }
 
     
-    async function sendEmail() {
+    async function sendEmail(): Promise<boolean> {
         try {
             const details ={
                 "user_name": bundle.name,             
@@ -75,9 +86,24 @@ const OtpScreen = ({navigation,route}: any) => {
             }
             const register = await axios.post(IP_STRING + "/req/register",details);
             Alert.alert("Email Sent", "Please check your email for the verification link.");
-        } catch (error) {
+            return true;
+        } catch (error: any) {
             console.error("Error sending email:", error);
+            // The server refuses a duplicate detail by name - "Email is already
+            // in use." - and showing "Failed to send email" instead leaves the
+            // person with nothing to act on. Two body shapes come back: the
+            // controller's own refusals are a plain string, while anything
+            // routed through ApiErrorHandler (a validation failure, a rate
+            // limit) is {status, error, message}, which would read as
+            // "[object Object]" if it were handed to Alert as it arrives.
+            if (error.response) {
+                const data = error.response.data;
+                Alert.alert("Error", typeof data === "string" ? data : data?.message ?? "Registration failed. Please try again.");
+                return false;
+            }
+            // No response at all - the request never reached the server.
             Alert.alert("Error", "Failed to send email. Please try again.");
+            return false;
         }
     }
     
