@@ -3,12 +3,22 @@ package com.example.World;
 import com.example.World.Users.UserRepository;
 import com.example.World.Users.UserRole;
 import com.example.World.Users.User_;
+import com.example.World.Wallet.LedgerService;
 import com.example.World.support.AbstractIntegrationTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * There is always an admin account to sign in with.
@@ -75,6 +85,65 @@ class AdminSeedingTest extends AbstractIntegrationTest {
         });
         jdbc.update("UPDATE User_ SET user_name = ?, email = ?, phone_number = ? WHERE uid = ?",
                 original.user_name(), original.email(), original.phone_number(), displaced);
+    }
+
+    @Test
+    @DisplayName("a soft-deleted admin does not stop the application starting")
+    void softDeletedAdminDoesNotBlockStartup() {
+        // Every lookup in UserRepository filters deleted_at IS NULL, but
+        // user_name, email and phone_number are UNIQUE with no deleted_at in the
+        // constraint - so a soft-deleted admin is invisible to the seeding lookup
+        // while still holding all three values. Seeding looks for the admin, does
+        // not find it, tries to insert one, and collides.
+        User_ original = users.findByUsername("admin").orElseThrow();
+        long uid = original.uid();
+        // deleted_at >= created_at is a CHECK constraint (V3), so this cannot be
+        // an arbitrary marker value.
+        jdbc.update("UPDATE User_ SET deleted_at = ? WHERE uid = ?",
+                System.currentTimeMillis(), uid);
+        try {
+            assertThat(users.findByUsername("admin"))
+                    .as("the row has to be invisible to the seeding lookup, or "
+                            + "ensureAdmin returns early and never inserts")
+                    .isEmpty();
+
+            assertThatCode(startup::onApplicationReady)
+                    .as("a deleted row holding the admin's username is worth a "
+                            + "warning, not a refusal to start")
+                    .doesNotThrowAnyException();
+        } finally {
+            // Drop anything the seed managed to create, then bring the original
+            // row back - the container is shared with the rest of the suite, and
+            // the other tests here expect a live admin.
+            users.findByUsername("admin").ifPresent(created -> {
+                if (created.uid() != uid) {
+                    jdbc.update("DELETE FROM ledger_entry_ WHERE uid = ?", created.uid());
+                    jdbc.update("DELETE FROM User_ WHERE uid = ?", created.uid());
+                }
+            });
+            jdbc.update("UPDATE User_ SET deleted_at = NULL WHERE uid = ?", uid);
+        }
+    }
+
+    @Test
+    @DisplayName("a failure that is not a collision still stops the application")
+    void nonCollisionFailurePropagates() {
+        // Surviving the collision means catching DbActionExecutionException, which
+        // is a plain RuntimeException - wide enough to swallow a database that is
+        // simply not there. It must not: a deleted row is not the explanation for
+        // that, and starting anyway would hide a dead database behind a warning
+        // about a username.
+        UserRepository failing = mock(UserRepository.class);
+        when(failing.findByUsername("admin")).thenReturn(Optional.empty());
+        when(failing.save(any(User_.class)))
+                .thenThrow(new DataAccessResourceFailureException("the database is down"));
+
+        Startup withDeadDatabase = new Startup(failing, mock(PasswordEncoder.class),
+                mock(LedgerService.class), true, "");
+
+        assertThatThrownBy(withDeadDatabase::onApplicationReady)
+                .as("only an integrity violation is recoverable here")
+                .isInstanceOf(DataAccessResourceFailureException.class);
     }
 
     @Test
