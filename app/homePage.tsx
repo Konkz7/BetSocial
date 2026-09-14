@@ -47,6 +47,23 @@ const categories = [
 ];
 
 
+/**
+ * Which of the loaded threads a category shows.
+ *
+ * Pure and outside the component on purpose: it closes over nothing, so it
+ * cannot read a stale follows list the way the old in-component version did.
+ */
+const threadsForCategory = (category: string, all: any[], following: any) => {
+  if (category === "All") return all;
+
+  if (category === "People I Follow") {
+    return all.filter(thread =>
+      following?.some((follow: any) => follow.receive_id === thread.user?.uid));
+  }
+
+  return all.filter(thread => thread.category === category);
+};
+
 const HomeScreen = ({navigation,route}:any) => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [threads, setActiveThreads] = useState<any[]>([]);
@@ -134,23 +151,23 @@ const HomeScreen = ({navigation,route}:any) => {
   };
   */
 
-  const updateThreadCat = (category:string, threads : any[] , resetCat:boolean) => {
-    if(resetCat){
-      setActiveCategory(category);
-    }
-    if (category === "All") {
-      setActiveThreads(threads);
-    } else {
-      if(category === "People I Follow"){
-        
-        threads = threads.filter(thread => follows?.some((follow: any) => follow.receive_id === thread.user.uid));
-        setActiveThreads(threads);
-        return;
-      }
-      setActiveThreads(threads.filter(thread => thread.category === category));
-    }  
-
-  }
+  /**
+   * The visible list, kept in step with the loaded one.
+   *
+   * This used to be an imperative updateThreadCat(category, threads) called from
+   * each place that changed the feed - including from inside a setTrueThreads
+   * updater, which is the part that was actually wrong. Updater functions have
+   * to be pure: React is free to call them more than once, and does so
+   * deliberately in development, so setting other state from inside one lets the
+   * rendered list and the loaded list disagree.
+   *
+   * Deriving it here also fixes the follow filter, which used whatever follows
+   * happened to be captured when the caller was created rather than the current
+   * value.
+   */
+  useEffect(() => {
+    setActiveThreads(threadsForCategory(activeCategory, trueThreads, follows));
+  }, [trueThreads, activeCategory, follows]);
 
   const updateThreadLikes = async (baseThreads: any[]) => {
     try {
@@ -261,9 +278,7 @@ const HomeScreen = ({navigation,route}:any) => {
         // thread twice, but a refresh landing mid-scroll can, and a duplicate
         // key in a FlatList is a crash rather than a cosmetic problem.
         const seen = new Set(prev.map(t => t.tid));
-        const merged = [...prev, ...withLikes.filter(t => !seen.has(t.tid))];
-        updateThreadCat(activeCategory, merged, false);
-        return merged;
+        return [...prev, ...withLikes.filter(t => !seen.has(t.tid))];
       });
 
       setCursor(page.has_more
@@ -283,6 +298,10 @@ const HomeScreen = ({navigation,route}:any) => {
   }, [threadData]);
 
  
+  // activeCategory used to be a dependency of this effect, because the category
+  // was applied imperatively from inside it. Switching tab therefore re-ran the
+  // whole thing, and applyFirstPage threw away every page loaded so far, cursor
+  // included. The category is a view concern now, so changing it costs nothing.
   useFocusEffect(
     useCallback(() => {
       screenStore.set("Home");
@@ -303,15 +322,14 @@ const HomeScreen = ({navigation,route}:any) => {
           // refresh, and keeping pages loaded while re-reading page one from
           // cache is the combination that puts the cursor out of step with the
           // list.
-          const updated = await applyFirstPage(threadData);
-          updateThreadCat(activeCategory,updated,false)
+          await applyFirstPage(threadData);
         } else {
           await refetchThreads();
         }
       })();
       return () => {
       };
-    }, [threadData,route.params,activeCategory])
+    }, [threadData,route.params])
   );
 
   return (
@@ -349,7 +367,7 @@ const HomeScreen = ({navigation,route}:any) => {
           {categories.map((category) => (
             <TouchableOpacity
               key={category}
-              onPress={() =>updateThreadCat(category,trueThreads,true)}
+              onPress={() => setActiveCategory(category)}
               style={[
                 styles.categoryButton,
                 activeCategory === category && styles.categoryActive,
