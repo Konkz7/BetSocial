@@ -7,7 +7,10 @@ import com.example.World.Wallet.LedgerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.core.NestedExceptionUtils;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.relational.core.conversion.DbActionExecutionException;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -157,13 +160,48 @@ public class Startup {
         try {
             createUser(ADMIN_USERNAME, ADMIN_PHONE, UserRole.ADMIN);
             log.info("Seeded the '{}' account.", ADMIN_USERNAME);
-        } catch (DataIntegrityViolationException e) {
+        } catch (DbActionExecutionException | DataAccessException e) {
             // user_name, email and phone_number are unique regardless of
             // deleted_at, so a soft-deleted admin still holds those values.
             // Worth a warning, not worth refusing to start.
+            //
+            // Both types have to be caught, because save() does not let the
+            // translated DataIntegrityViolationException out: Spring Data JDBC
+            // catches everything the insert throws and rethrows it wrapped in a
+            // DbActionExecutionException, which extends RuntimeException and is
+            // not a DataAccessException at all. Catching only the translated
+            // exception - as this did - caught nothing, and the collision this
+            // means to survive took the application down on startup instead.
+            if (!hasCause(e, DataIntegrityViolationException.class)) {
+                // Not the collision: a database that cannot be reached, or any
+                // other failure that a missing admin is not the explanation for.
+                // Starting anyway would hide it behind a warning about a deleted
+                // row that may not exist.
+                throw e;
+            }
+            // The constraint name only appears in the driver's message at the
+            // bottom of the chain, so the warning quotes it rather than guessing
+            // which of the three values collided.
             log.warn("Could not seed the '{}' account - a deleted row still holds its username, "
-                    + "email or phone number.", ADMIN_USERNAME);
+                    + "email or phone number: {}", ADMIN_USERNAME,
+                    NestedExceptionUtils.getMostSpecificCause(e).getMessage());
         }
+    }
+
+    /** Whether {@code type} appears anywhere in the exception's cause chain. */
+    private static boolean hasCause(Throwable thrown, Class<? extends Throwable> type) {
+        for (Throwable cause = thrown; cause != null; cause = cause.getCause()) {
+            if (type.isInstance(cause)) {
+                return true;
+            }
+            // A throwable is not supposed to be its own cause; this is a cheap
+            // guarantee that a malformed one cannot spin here forever. Startup
+            // is the worst place to hang, because nothing is serving yet.
+            if (cause.getCause() == cause) {
+                break;
+            }
+        }
+        return false;
     }
 
     private void createUser(String username, String phoneNumber, UserRole role) {
