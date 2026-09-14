@@ -12,6 +12,9 @@ import com.google.firebase.auth.FirebaseToken;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.relational.core.conversion.DbActionExecutionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +25,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 
 import java.util.Date;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static com.example.World.Users.UserRole.USER;
@@ -173,12 +179,9 @@ public class AccountController {
             return ResponseEntity.badRequest().body(result.getAllErrors().getFirst().getDefaultMessage());
         }
 
-        if (userRepository.existsByEmail(details.email())) {
-            return ResponseEntity.badRequest().body("Email is already in use.");
-        }else if (userRepository.existsByPhoneNumber(details.phone_number())) {
-            return ResponseEntity.badRequest().body("Phone number is already in use.");
-        }else if (userRepository.existsByUserName(details.user_name())) {
-            return ResponseEntity.badRequest().body("Username is already in use.");
+        Optional<String> taken = alreadyTaken(details);
+        if (taken.isPresent()) {
+            return ResponseEntity.badRequest().body(taken.get());
         }
 
         if(details.pass_word().length() < 8){
@@ -199,12 +202,17 @@ public class AccountController {
         rateLimiter.require(RateLimiter.scopeOf("register", request.getRemoteAddr()),
                 Limits.REGISTER);
 
-        /*
-        if (userRepository.existsByEmail(user.email())) {
-            return ResponseEntity.badRequest().body("Email is already in use.");
+        // The same three checks check-details runs, so the form and the thing it
+        // is asking about cannot disagree. Racy on its own - two registrations
+        // for one address can both pass this before either inserts - which is
+        // what the catch around save() below is for. Worth doing anyway: it is
+        // the only path that can say which field is taken before an account is
+        // created, and check-details is advisory rather than a gate.
+        Optional<String> taken = alreadyTaken(user);
+        if (taken.isPresent()) {
+            return ResponseEntity.badRequest().body(taken.get());
         }
 
-         */
         if(session.getAttribute("userId") != null){
             return ResponseEntity.badRequest().body("Logout first to register as a new user.");
         }
@@ -249,7 +257,22 @@ public class AccountController {
         // There is no transaction to send after: save() runs in Spring Data JDBC's
         // own, grantOpeningBalance() in LedgerService's, and register is not
         // annotated - so both have committed by the time the send happens.
-        User_ saved = userRepository.save(userWithHashedPassword);
+        //
+        // Wrapped because user_name, email and phone_number are unique and the
+        // pre-check above cannot be relied on alone - see takenDetail below.
+        User_ saved;
+        try {
+            saved = userRepository.save(userWithHashedPassword);
+        } catch (DbActionExecutionException | DataAccessException failure) {
+            Optional<String> collided = takenDetail(failure);
+            if (collided.isEmpty()) {
+                // Not a collision. A database that is down arrives here too, and
+                // answering "already in use" would report it as the person's
+                // mistake and hide an outage behind a form error.
+                throw failure;
+            }
+            return ResponseEntity.badRequest().body(collided.get());
+        }
 
         // The opening grant, without which a new account cannot stake anything and
         // has no way to earn its first coin either.
@@ -261,6 +284,99 @@ public class AccountController {
         emailService.sendVerificationEmail(saved.email(), token);
 
         return ResponseEntity.ok("User registered successfully!");
+    }
+
+    /**
+     * Which of the three unique fields somebody already holds, if any.
+     *
+     * One copy, because check-details exists only to tell a form in advance what
+     * register is going to say. Two copies of that answer is two chances for
+     * them to disagree, and the disagreement would show up as a form that passes
+     * and a registration that then fails.
+     *
+     * Order is email, phone, username - the order the fields appear on the
+     * signup screen, so the first thing named is the first thing to fix.
+     */
+    private Optional<String> alreadyTaken(DetailDTO details) {
+        if (userRepository.existsByEmail(details.email())) {
+            return Optional.of("Email is already in use.");
+        }
+        if (userRepository.existsByPhoneNumber(details.phone_number())) {
+            return Optional.of("Phone number is already in use.");
+        }
+        if (userRepository.existsByUserName(details.user_name())) {
+            return Optional.of("Username is already in use.");
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * What each unique constraint on User_ means to the person who tripped it.
+     *
+     * Keyed by constraint name rather than by reading the column out of the
+     * driver's "Key (email)=(...)" line: these names are ours, they are written
+     * in V1__baseline_schema.sql, and they do not move when PostgreSQL rewords
+     * its own message. The wording matches alreadyTaken above, so a detail the
+     * pre-check already refuses is not described twice in two ways.
+     */
+    private static final Map<String, String> TAKEN_BY_CONSTRAINT = Map.of(
+            "user__email_key", "Email is already in use.",
+            "user__user_name_key", "Username is already in use.",
+            "user__phone_number_key", "Phone number is already in use.");
+
+    /**
+     * Which detail a failed save collided on, or empty if it did not collide.
+     *
+     * Two things make this more than a catch block.
+     *
+     * The first is where the exception is. Spring Data JDBC does not let the
+     * translated DataIntegrityViolationException out of save(): the executor
+     * catches it and rethrows it inside DbActionExecutionException, which
+     * extends RuntimeException and is not a DataAccessException - so catching
+     * the latter alone catches nothing, and the failure lands on
+     * ApiErrorHandler's catch-all as a 500. Both wrappers are caught and the
+     * chain is walked, so this keeps working whichever one a future version
+     * throws. Startup.ensureAdmin has the same shape for the same reason.
+     *
+     * The second is that the pre-check in register cannot replace this. Every
+     * exists* query in UserRepository filters deleted_at IS NULL and none of the
+     * three constraints do, so a suspended or deleted account still holds its
+     * username, email and phone number while answering "no" to every question
+     * asked about it. Two registrations racing each other would beat the
+     * pre-check as well. The insert is the only thing that actually knows.
+     *
+     * Nothing from the exception reaches the caller - only which of the three
+     * constants above matched - so the driver's SQL stays in the log where it
+     * belongs.
+     */
+    private static Optional<String> takenDetail(Throwable failure) {
+        boolean integrityViolation = false;
+        String constraint = null;
+
+        for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+            integrityViolation |= cause instanceof DataIntegrityViolationException;
+
+            if (constraint == null && cause.getMessage() != null) {
+                String message = cause.getMessage().toLowerCase(Locale.ROOT);
+                constraint = TAKEN_BY_CONSTRAINT.keySet().stream()
+                        .filter(message::contains)
+                        .findFirst()
+                        .orElse(null);
+            }
+
+            // A throwable is not supposed to be its own cause; this is a cheap
+            // guarantee that a malformed one cannot spin here forever.
+            if (cause.getCause() == cause) {
+                break;
+            }
+        }
+
+        // Both halves are required. Without the name there is nothing useful to
+        // say, and without the violation a constraint named in some unrelated
+        // exception would turn an outage into "Email is already in use."
+        return integrityViolation && constraint != null
+                ? Optional.of(TAKEN_BY_CONSTRAINT.get(constraint))
+                : Optional.empty();
     }
 
     /**
