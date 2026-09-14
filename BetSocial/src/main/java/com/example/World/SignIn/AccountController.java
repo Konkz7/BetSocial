@@ -336,7 +336,8 @@ public class AccountController {
      * the latter alone catches nothing, and the failure lands on
      * ApiErrorHandler's catch-all as a 500. Both wrappers are caught and the
      * chain is walked, so this keeps working whichever one a future version
-     * throws. Startup.ensureAdmin has the same shape for the same reason.
+     * throws. Startup.ensureAdmin catches the translated exception alone and
+     * has the same bug for the same reason - it is not a precedent to copy.
      *
      * The second is that the pre-check in register cannot replace this. Every
      * exists* query in UserRepository filters deleted_at IS NULL and none of the
