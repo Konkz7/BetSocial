@@ -17,6 +17,7 @@ const NOTHING: any[] = [];
 
 
 const SearchScreen = ({ navigation} : any) => {
+    const queryClient = useQueryClient();
     const [search,setSearch] = useState('');
     const [currentTab,setCurrentTab] = useState('People');
 
@@ -54,6 +55,26 @@ const SearchScreen = ({ navigation} : any) => {
       search.trim() === ''
         ? NOTHING
         : (currentTab === 'People' ? people : threads) ?? NOTHING;
+
+    /**
+     * How ThreadList changes a row here.
+     *
+     * It is handed a setter so it can update a thread optimistically - a like,
+     * say - and it calls that setter with either a whole array or an updater
+     * function. This screen used to pass filteredData itself, an array, which
+     * would have thrown the moment anything called it. Nothing does yet: the
+     * like button is hidden when page is "search" and deleting needs "self". So
+     * this was a landmine rather than a crash, and it is armed by whoever
+     * enables the first action on this screen.
+     *
+     * These results belong to react-query rather than to local state, so the
+     * write goes to the cache for this search term - which is where filteredData
+     * reads from, so the row updates without a round trip.
+     */
+    const setThreadResults = (update: any) => {
+      queryClient.setQueryData(["threadSearch", search], (prev: any) =>
+        typeof update === "function" ? update(prev ?? NOTHING) : update);
+    };
 
     useFocusEffect(
       useCallback(() => {
@@ -118,7 +139,7 @@ const SearchScreen = ({ navigation} : any) => {
 
 
 
-    {currentTab === 'Threads' ? threadList(filteredData,() =>{} , threadsLoading,navigation,"Thread_S",filteredData,"search") :
+    {currentTab === 'Threads' ? threadList(filteredData,() =>{} , threadsLoading,navigation,"Thread_S",setThreadResults,"search") :
     
       usersLoading ? (<Text style={styles.loadingText}>Loading...</Text>) :
         <FlatList
