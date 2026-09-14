@@ -196,25 +196,25 @@ const HomeScreen = ({navigation,route}:any) => {
   };
 
   const is_Unread_Activity = async () => {
-    try {
-  
-      if(notifications.length == 0){
-          activitySeenStore.set(true);
-      }
-      if (!notifications[0].is_read) {
-        activitySeenStore.set(false);   
-      }
-      
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
+    // The empty case used to set the flag and then carry on into
+    // notifications[0].is_read, which threw every time somebody had no
+    // notifications. The catch logged it as a fetch failure, so it read as a
+    // network problem when nothing was being fetched.
+    if (!notifications || notifications.length === 0) {
+      activitySeenStore.set(true);
+      return;
+    }
+
+    if (!notifications[0].is_read) {
+      activitySeenStore.set(false);
     }
   };
 
-  useEffect(() => {
-    (async () => {
-      refetchFollows();
-    })(); 
-  }, [follows]);
+  // refetchFollows used to live in an effect keyed on [follows], which cannot
+  // terminate: the refetch produces a new value, the new value re-runs the
+  // effect, the effect refetches. useQuery already fetches on mount, so the only
+  // part worth keeping was refreshing on return - which is what useFocusEffect
+  // below does, alongside the wallet and the awaiting-decision count.
   
 
   useEffect(() => {
@@ -288,6 +288,7 @@ const HomeScreen = ({navigation,route}:any) => {
       screenStore.set("Home");
       refetchWallet();
       refetchAwaiting();
+      refetchFollows();
 
       (async () => {
         if (route.params?.refresh) {
