@@ -417,12 +417,20 @@ Play, as described in [Installing the app](#installing-the-app). That is what
 `assembleRelease` builds:
 
 ```bash
-cd android && ./gradlew assembleRelease
+cd android && ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a
 ```
 
 It lands at `android/app/build/outputs/apk/release/app-release.apk`. Attach it to
 a GitHub release, and bump `versionCode` in `android/app/build.gradle` first so
 the new build installs over the old one rather than being refused as a downgrade.
+
+The architecture override matters here. `gradle.properties` lists all four
+architectures, including `x86` and `x86_64`, because the emulators used for
+development are x86 - take them out of that file and local testing stops working.
+But no real phone uses them, and in a single APK that everybody downloads, every
+user pays for all four: it is the difference between roughly 74MB and 40MB. Play
+would have split the bundle per device and made this moot, which is why the
+override belongs on the release command rather than in the file.
 
 `bundleRelease` produces `app-release.aab` instead, which is the format Play
 takes. The Play material below is kept because the signing setup is the same
