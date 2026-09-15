@@ -27,14 +27,28 @@ only works while that server is up.
 
 Every release is signed with the same key, which is also why an update installs
 over an existing copy only if it genuinely came from here - Android refuses a
-same-package install signed by anybody else. To check a file before installing
-it:
+same-package install signed by anybody else.
+
+Each release lists the APK's SHA-256 checksum. That is the quickest check and
+needs nothing installed:
 
 ```bash
-keytool -printcert -jarfile BetSocial.apk
+certutil -hashfile BetSocial.apk SHA256    # Windows
+shasum -a 256 BetSocial.apk                # macOS or Linux
 ```
 
-The SHA-256 fingerprint should be:
+To go further and check who signed it, rather than only that the file is intact,
+`apksigner` from the Android SDK build-tools reads the signature itself:
+
+```bash
+apksigner verify --print-certs BetSocial.apk
+```
+
+Builds are signed with APK Signature Scheme v2, which every supported Android
+version understands. `keytool -printcert -jarfile` prints nothing for these -
+it only reads the older v1 JAR signatures, which these builds do not carry.
+
+The signer's SHA-256 should be:
 
 ```
 4B:E2:BF:45:59:71:EA:1C:F8:95:FD:8E:C2:99:DB:9E:85:48:88:F9:53:FE:95:A5:5E:A9:A9:83:33:CE:E7:C7
