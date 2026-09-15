@@ -428,7 +428,7 @@ The architecture override matters here. `gradle.properties` lists all four
 architectures, including `x86` and `x86_64`, because the emulators used for
 development are x86 - take them out of that file and local testing stops working.
 But no real phone uses them, and in a single APK that everybody downloads, every
-user pays for all four: it is the difference between roughly 74MB and 40MB. Play
+user pays for all four: measured on this app, 74MB against 41MB. Play
 would have split the bundle per device and made this moot, which is why the
 override belongs on the release command rather than in the file.
 
