@@ -8,6 +8,45 @@ The focus is social interaction and engagement, not real-money gambling.
 
 ---
 
+## Installing the app
+
+BetSocial is not on Google Play. The signed APK is on the
+[releases page](https://github.com/Konkz7/BetSocial/releases/latest) and installs
+directly on any phone running Android 7.0 or newer. There is no iOS build.
+
+1. Open the releases page on the phone and download the `.apk`.
+2. Android asks whether to allow installs from the browser you downloaded it
+   with. That permission is per-app and can be switched back off afterwards.
+3. Play Protect warns that the app did not come from Play and offers to scan it.
+   That warning appears for everything installed this way.
+
+The app talks to `betsocial.duckdns.org`, so it needs a network connection and
+only works while that server is up.
+
+### Checking you have the real one
+
+Every release is signed with the same key, which is also why an update installs
+over an existing copy only if it genuinely came from here - Android refuses a
+same-package install signed by anybody else. To check a file before installing
+it:
+
+```bash
+keytool -printcert -jarfile BetSocial.apk
+```
+
+The SHA-256 fingerprint should be:
+
+```
+4B:E2:BF:45:59:71:EA:1C:F8:95:FD:8E:C2:99:DB:9E:85:48:88:F9:53:FE:95:A5:5E:A9:A9:83:33:CE:E7:C7
+```
+
+A fingerprint is public by design - it is in every installed copy of the app -
+so this one being written down here is not a secret going astray. A file that
+prints anything else was not built here. See
+[Releasing on Android](#releasing-on-android) for how the APK is produced.
+
+---
+
 ## Repository layout
 
 This is a single repository containing both halves of the application:
@@ -359,13 +398,28 @@ which ships inside the app.
 
 ## Releasing on Android
 
+The app is distributed as an APK from the releases page rather than through
+Play, as described in [Installing the app](#installing-the-app). That is what
+`assembleRelease` builds:
+
 ```bash
-cd android && ./gradlew bundleRelease
+cd android && ./gradlew assembleRelease
 ```
 
-The bundle lands at `android/app/build/outputs/bundle/release/app-release.aab`
-and is what Play takes. `assembleRelease` produces an APK instead, useful for
-installing on a device directly but not for the store.
+It lands at `android/app/build/outputs/apk/release/app-release.apk`. Attach it to
+a GitHub release, and bump `versionCode` in `android/app/build.gradle` first so
+the new build installs over the old one rather than being refused as a downgrade.
+
+`bundleRelease` produces `app-release.aab` instead, which is the format Play
+takes. The Play material below is kept because the signing setup is the same
+either way, and because going to Play later only needs the store paperwork rather
+than a different build.
+
+**Build from the main checkout, not from a git worktree.** The CMake object
+paths in `react-native-reanimated` are already 216 characters against a
+250-character limit, and a worktree prefix pushes them over - the build fails
+with `ninja: error: manifest 'build.ninja' still dirty after 100 tries`. `subst`
+does not help, because Java resolves the mapped drive back to the real path.
 
 ### Before the first upload
 
